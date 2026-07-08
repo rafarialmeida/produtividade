@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Plus, UserPlus, Users } from 'lucide-react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { ArrowLeft, Plus, Trash2, UserPlus, Users } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import ProcrastinationWall from '../components/ProcrastinationWall'
 import TaskCard from '../components/TaskCard'
@@ -12,9 +12,11 @@ import { SEVERITY_LABEL } from '../types'
 
 export default function CommunityPage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const currentUserId = useAppStore((s) => s.currentUserId)!
   const currentUser = useAppStore((s) => s.getUserById(currentUserId))
   const community = useAppStore((s) => (id ? s.getCommunityById(id) : undefined))
+  const deleteCommunity = useAppStore((s) => s.deleteCommunity)
   const allTasks = useAppStore((s) => s.tasks)
   const tasks = useMemo(() => allTasks.filter((t) => t.communityId === id), [allTasks, id])
   const [showForm, setShowForm] = useState(false)
@@ -35,6 +37,16 @@ export default function CommunityPage() {
   const cfg = URGENCY_CONFIG[community.severity]
   const typeCfg = COMMUNITY_TYPE_CONFIG[community.type]
   const canInvite = currentUser?.role === 'admin' || community.memberIds.includes(currentUserId)
+  const canDelete = currentUser?.role === 'admin' || community.creatorId === currentUserId
+
+  function handleDeleteCommunity() {
+    if (!community) return
+    if (window.confirm(`Excluir a comunidade "${community.name}"? Todas as tarefas dela serão perdidas. Essa ação não pode ser desfeita.`)) {
+      deleteCommunity(community.id)
+      navigate('/communities')
+    }
+  }
+
   const filtered = tasks
     .filter((t) => {
       if (filter === 'active') return !t.completed && !t.expired
@@ -77,6 +89,15 @@ export default function CommunityPage() {
             <button onClick={() => setShowForm(true)} className="btn-secondary !w-auto px-4">
               <Plus size={16} /> Nova Tarefa
             </button>
+            {canDelete && (
+              <button
+                onClick={handleDeleteCommunity}
+                title="Excluir comunidade"
+                className="p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-rose-500/10 hover:border-rose-500/30 text-zinc-500 hover:text-rose-400 transition-colors"
+              >
+                <Trash2 size={15} />
+              </button>
+            )}
           </div>
         </div>
       </div>

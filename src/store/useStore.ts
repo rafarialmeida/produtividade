@@ -31,6 +31,7 @@ interface State {
   createCommunity: (name: string, severity: Severity, type: CommunityType) => Community
   addFictionalMember: (communityId: string, name: string) => User
   regenerateInviteCode: (communityId: string) => void
+  deleteCommunity: (communityId: string) => void
 
   // task actions
   createTask: (input: {
@@ -44,6 +45,7 @@ interface State {
   }) => void
   toggleSubtask: (taskId: string, subtaskId: string) => void
   completeTask: (taskId: string) => void
+  deleteTask: (taskId: string) => void
   checkExpirations: () => void
 
   // notifications
@@ -350,6 +352,14 @@ export const useAppStore = create<State>()(
         }))
       },
 
+      deleteCommunity: (communityId) => {
+        set((s) => ({
+          communities: s.communities.filter((c) => c.id !== communityId),
+          tasks: s.tasks.filter((t) => t.communityId !== communityId),
+          users: s.users.map((u) => ({ ...u, communityIds: u.communityIds.filter((id) => id !== communityId) })),
+        }))
+      },
+
       createTask: ({ communityId, userId, macroObjective, title, subtasks, deadline, urgency }) => {
         const task: Task = {
           id: uid('task'),
@@ -383,6 +393,10 @@ export const useAppStore = create<State>()(
             t.id === taskId ? { ...t, completed: true, completedAt: new Date().toISOString() } : t,
           ),
         }))
+      },
+
+      deleteTask: (taskId) => {
+        set((s) => ({ tasks: s.tasks.filter((t) => t.id !== taskId) }))
       },
 
       checkExpirations: () => {
@@ -427,10 +441,29 @@ export const useAppStore = create<State>()(
     }),
     {
       name: 'failsync-storage',
-      onRehydrateStorage: () => (state) => {
-        state?.checkExpirations()
-        useAppStore.setState({ hydrated: true })
+      version: 2,
+      migrate: (persistedState) => {
+        const state = persistedState as { communities?: Community[] } | undefined
+        if (state?.communities) {
+          state.communities = state.communities.map((c) => ({
+            ...c,
+            type: c.type ?? 'trabalho',
+            creatorId: c.creatorId ?? c.memberIds?.[0] ?? seedAdmin.id,
+          }))
+        }
+        return state
       },
     },
   ),
 )
+
+function finishHydration() {
+  useAppStore.getState().checkExpirations()
+  useAppStore.setState({ hydrated: true })
+}
+
+if (useAppStore.persist.hasHydrated()) {
+  finishHydration()
+} else {
+  useAppStore.persist.onFinishHydration(finishHydration)
+}

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Flame, KeyRound, Plus, Users } from 'lucide-react'
+import { Flame, KeyRound, Plus, Trash2, Users } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import CreateCommunityModal from '../components/CreateCommunityModal'
 import InviteModal from '../components/InviteModal'
@@ -15,6 +15,7 @@ export default function CommunitiesHub() {
   const users = useAppStore((s) => s.users)
   const tasks = useAppStore((s) => s.tasks)
   const joinCommunityWithCode = useAppStore((s) => s.joinCommunityWithCode)
+  const deleteCommunity = useAppStore((s) => s.deleteCommunity)
 
   const [showCreate, setShowCreate] = useState(false)
   const [inviteFor, setInviteFor] = useState<string | null>(null)
@@ -39,6 +40,12 @@ export default function CommunitiesHub() {
     }
     setJoinSuccess(`Você entrou em "${community.name}"!`)
     setJoinCode('')
+  }
+
+  function handleDelete(communityId: string, name: string) {
+    if (window.confirm(`Excluir a comunidade "${name}"? Todas as tarefas dela serão perdidas. Essa ação não pode ser desfeita.`)) {
+      deleteCommunity(communityId)
+    }
   }
 
   return (
@@ -88,6 +95,8 @@ export default function CommunitiesHub() {
             })
             .sort((a, b) => b.lost - a.lost)[0]
 
+          const canDelete = user.role === 'admin' || c.creatorId === user.id
+
           return (
             <div key={c.id} className="glass-panel rounded-2xl p-5 flex flex-col gap-4">
               <div className="flex items-start justify-between gap-3">
@@ -102,6 +111,15 @@ export default function CommunitiesHub() {
                     </p>
                   </div>
                 </div>
+                {canDelete && (
+                  <button
+                    onClick={() => handleDelete(c.id, c.name)}
+                    title="Excluir comunidade"
+                    className="shrink-0 p-1.5 rounded-lg text-zinc-600 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-2">

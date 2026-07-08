@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, Clock, Target, TriangleAlert } from 'lucide-react'
+import { CheckCircle2, Circle, Clock, Target, Trash2, TriangleAlert } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import type { Task } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
@@ -14,12 +14,21 @@ export default function TaskCard({
   showOwner?: boolean
   showCommunity?: boolean
 }) {
+  const currentUserId = useAppStore((s) => s.currentUserId)
   const toggleSubtask = useAppStore((s) => s.toggleSubtask)
   const completeTask = useAppStore((s) => s.completeTask)
+  const deleteTask = useAppStore((s) => s.deleteTask)
   const owner = useAppStore((s) => s.getUserById(task.userId))
   const community = useAppStore((s) => (showCommunity ? s.getCommunityById(task.communityId) : undefined))
   const cfg = URGENCY_CONFIG[task.urgency]
   const communityTypeCfg = community ? COMMUNITY_TYPE_CONFIG[community.type] : null
+  const isOwner = task.userId === currentUserId
+
+  function handleDelete() {
+    if (window.confirm(`Excluir a tarefa "${task.title}"? Essa ação não pode ser desfeita.`)) {
+      deleteTask(task.id)
+    }
+  }
 
   const near = !task.completed && !task.expired && isNearDeadline(task.deadline)
   const doneCount = task.subtasks.filter((s) => s.done).length
@@ -52,9 +61,20 @@ export default function TaskCard({
             </p>
           )}
         </div>
-        <span className={`shrink-0 text-[11px] font-semibold px-2 py-1 rounded-lg border ${cfg.bg} ${cfg.border} ${cfg.color}`}>
-          {cfg.label}
-        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className={`text-[11px] font-semibold px-2 py-1 rounded-lg border ${cfg.bg} ${cfg.border} ${cfg.color}`}>
+            {cfg.label}
+          </span>
+          {isOwner && (
+            <button
+              onClick={handleDelete}
+              title="Excluir tarefa"
+              className="p-1.5 rounded-lg text-zinc-600 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="mt-3 flex flex-col gap-1.5">

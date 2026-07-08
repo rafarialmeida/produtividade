@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { KeyRound, ShieldCheck, Sparkles, Ticket, User, Zap } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 
@@ -7,6 +7,7 @@ type Tab = 'admin' | 'member' | 'invite'
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const currentUserId = useAppStore((s) => s.currentUserId)
   const loginAdmin = useAppStore((s) => s.loginAdmin)
   const loginMember = useAppStore((s) => s.loginMember)
   const joinWithInviteCode = useAppStore((s) => s.joinWithInviteCode)
@@ -60,6 +61,8 @@ export default function LoginPage() {
     }
     navigate('/day')
   }
+
+  if (currentUserId) return <Navigate to="/day" replace />
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-10">

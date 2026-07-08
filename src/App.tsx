@@ -29,7 +29,18 @@ function RootRedirect() {
   return <Navigate to="/day" replace />
 }
 
+function AppSplash() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-emerald-400 animate-pulse" />
+    </div>
+  )
+}
+
 function App() {
+  const hydrated = useAppStore((s) => s.hydrated)
+  if (!hydrated) return <AppSplash />
+
   return (
     <Routes>
       <Route path="/" element={<RootRedirect />} />
