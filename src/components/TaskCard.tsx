@@ -2,13 +2,24 @@ import { CheckCircle2, Circle, Clock, Target, TriangleAlert } from 'lucide-react
 import { useAppStore } from '../store/useStore'
 import type { Task } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
+import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
 import { formatDeadline, formatRelative, isNearDeadline } from '../utils/date'
 
-export default function TaskCard({ task, showOwner = false }: { task: Task; showOwner?: boolean }) {
+export default function TaskCard({
+  task,
+  showOwner = false,
+  showCommunity = false,
+}: {
+  task: Task
+  showOwner?: boolean
+  showCommunity?: boolean
+}) {
   const toggleSubtask = useAppStore((s) => s.toggleSubtask)
   const completeTask = useAppStore((s) => s.completeTask)
   const owner = useAppStore((s) => s.getUserById(task.userId))
+  const community = useAppStore((s) => (showCommunity ? s.getCommunityById(task.communityId) : undefined))
   const cfg = URGENCY_CONFIG[task.urgency]
+  const communityTypeCfg = community ? COMMUNITY_TYPE_CONFIG[community.type] : null
 
   const near = !task.completed && !task.expired && isNearDeadline(task.deadline)
   const doneCount = task.subtasks.filter((s) => s.done).length
@@ -35,6 +46,11 @@ export default function TaskCard({ task, showOwner = false }: { task: Task; show
             {task.title}
           </h3>
           {showOwner && owner && <p className="text-xs text-zinc-500 mt-0.5">Responsável: {owner.name}</p>}
+          {showCommunity && community && communityTypeCfg && (
+            <p className={`flex items-center gap-1 text-[11px] mt-1 ${communityTypeCfg.color}`}>
+              <communityTypeCfg.icon size={11} /> {community.name}
+            </p>
+          )}
         </div>
         <span className={`shrink-0 text-[11px] font-semibold px-2 py-1 rounded-lg border ${cfg.bg} ${cfg.border} ${cfg.color}`}>
           {cfg.label}

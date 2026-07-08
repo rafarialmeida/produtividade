@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Community, Notification, Severity, SubTask, Task, User } from '../types'
+import type { Community, CommunityType, Notification, Severity, SubTask, Task, User } from '../types'
 import { URGENCY_POINTS } from '../types'
 
 function uid(prefix: string) {
@@ -24,10 +24,11 @@ interface State {
   loginAdmin: (email: string, password: string) => User | null
   loginMember: (email: string) => User | null
   joinWithInviteCode: (name: string, email: string, code: string) => User | null
+  joinCommunityWithCode: (userId: string, code: string) => Community | null
   logout: () => void
 
-  // admin actions
-  createCommunity: (name: string, severity: Severity) => Community
+  // community actions
+  createCommunity: (name: string, severity: Severity, type: CommunityType) => Community
   addFictionalMember: (communityId: string, name: string) => User
   regenerateInviteCode: (communityId: string) => void
 
@@ -65,24 +66,37 @@ const seedAdmin: User = {
   email: 'admin@failsync.com',
   password: 'senha123',
   role: 'admin',
-  communityIds: ['comm-1'],
+  communityIds: ['comm-1', 'comm-2'],
   avatarSeed: 'admin',
 }
 
 const seedMembers: User[] = [
-  { id: 'mem-1', name: 'Ana Souza', email: 'ana@failsync.com', role: 'member', communityIds: ['comm-1'], avatarSeed: 'ana' },
+  { id: 'mem-1', name: 'Ana Souza', email: 'ana@failsync.com', role: 'member', communityIds: ['comm-1', 'comm-2'], avatarSeed: 'ana' },
   { id: 'mem-2', name: 'Bruno Lima', email: 'bruno@failsync.com', role: 'member', communityIds: ['comm-1'], avatarSeed: 'bruno' },
   { id: 'mem-3', name: 'Carla Mendes', email: 'carla@failsync.com', role: 'member', communityIds: ['comm-1'], avatarSeed: 'carla' },
-  { id: 'mem-4', name: 'Diego Torres', email: 'diego@failsync.com', role: 'member', communityIds: ['comm-1'], avatarSeed: 'diego' },
+  { id: 'mem-4', name: 'Diego Torres', email: 'diego@failsync.com', role: 'member', communityIds: ['comm-1', 'comm-2'], avatarSeed: 'diego' },
 ]
 
 const seedCommunity: Community = {
   id: 'comm-1',
   name: 'Squad Alpha — Lançamento Q3',
+  type: 'trabalho',
   severity: 'alta',
   inviteCode: inviteCode(),
   memberIds: ['admin-1', 'mem-1', 'mem-2', 'mem-3', 'mem-4'],
+  creatorId: 'admin-1',
   createdAt: agoHours(240),
+}
+
+const seedCompetitionCommunity: Community = {
+  id: 'comm-2',
+  name: 'Racha de Produtividade — Amigos',
+  type: 'competicao',
+  severity: 'media',
+  inviteCode: inviteCode(),
+  memberIds: ['admin-1', 'mem-1', 'mem-4'],
+  creatorId: 'mem-1',
+  createdAt: agoHours(120),
 }
 
 function seedSubtasks(texts: string[]): SubTask[] {
@@ -182,13 +196,52 @@ const seedTasks: Task[] = [
     expired: false,
     createdAt: agoHours(72),
   },
+  {
+    id: uid('task'),
+    communityId: 'comm-2',
+    userId: 'mem-4',
+    macroObjective: 'Meta pessoal: rotina de estudos',
+    title: 'Terminar curso de inglês — módulo 3',
+    subtasks: seedSubtasks(['Assistir aulas', 'Fazer exercícios', 'Fazer prova do módulo']),
+    deadline: agoHours(20),
+    urgency: 'critica',
+    completed: false,
+    expired: true,
+    createdAt: agoHours(90),
+  },
+  {
+    id: uid('task'),
+    communityId: 'comm-2',
+    userId: 'mem-1',
+    macroObjective: 'Meta pessoal: saúde',
+    title: 'Treinar 4x nesta semana',
+    subtasks: seedSubtasks(['Treino de pernas', 'Treino de costas', 'Corrida 5km']),
+    deadline: agoHours(6),
+    urgency: 'media',
+    completed: false,
+    expired: true,
+    createdAt: agoHours(50),
+  },
+  {
+    id: uid('task'),
+    communityId: 'comm-2',
+    userId: 'admin-1',
+    macroObjective: 'Meta pessoal: leitura',
+    title: 'Ler 2 capítulos do livro da vez',
+    subtasks: seedSubtasks(['Capítulo 5', 'Capítulo 6']),
+    deadline: inDays(1),
+    urgency: 'baixa',
+    completed: false,
+    expired: false,
+    createdAt: agoHours(15),
+  },
 ]
 
 export const useAppStore = create<State>()(
   persist(
     (set, get) => ({
       users: [seedAdmin, ...seedMembers],
-      communities: [seedCommunity],
+      communities: [seedCommunity, seedCompetitionCommunity],
       tasks: seedTasks,
       notifications: [],
       currentUserId: null,
@@ -238,22 +291,37 @@ export const useAppStore = create<State>()(
         return newUser
       },
 
+      joinCommunityWithCode: (userId, code) => {
+        const community = get().communities.find((c) => c.inviteCode.toUpperCase() === code.toUpperCase())
+        if (!community) return null
+        if (!community.memberIds.includes(userId)) {
+          set((s) => ({
+            users: s.users.map((u) => (u.id === userId ? { ...u, communityIds: [...u.communityIds, community.id] } : u)),
+            communities: s.communities.map((c) =>
+              c.id === community.id ? { ...c, memberIds: [...c.memberIds, userId] } : c,
+            ),
+          }))
+        }
+        return community
+      },
+
       logout: () => set({ currentUserId: null }),
 
-      createCommunity: (name, severity) => {
+      createCommunity: (name, severity, type) => {
+        const creatorId = get().currentUserId ?? seedAdmin.id
         const community: Community = {
           id: uid('comm'),
           name,
+          type,
           severity,
           inviteCode: inviteCode(),
-          memberIds: [get().currentUserId ?? seedAdmin.id],
+          memberIds: [creatorId],
+          creatorId,
           createdAt: new Date().toISOString(),
         }
         set((s) => ({
           communities: [...s.communities, community],
-          users: s.users.map((u) =>
-            u.id === community.memberIds[0] ? { ...u, communityIds: [...u.communityIds, community.id] } : u,
-          ),
+          users: s.users.map((u) => (u.id === creatorId ? { ...u, communityIds: [...u.communityIds, community.id] } : u)),
         }))
         return community
       },

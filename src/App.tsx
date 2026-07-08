@@ -3,7 +3,9 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAppStore } from './store/useStore'
 import Layout from './components/Layout'
 import LoginPage from './pages/LoginPage'
-import MemberDashboard from './pages/MemberDashboard'
+import MyDay from './pages/MyDay'
+import CommunitiesHub from './pages/CommunitiesHub'
+import GlobalWall from './pages/GlobalWall'
 import AdminDashboard from './pages/AdminDashboard'
 import CommunityPage from './pages/CommunityPage'
 
@@ -17,15 +19,14 @@ function RequireAdmin({ children }: { children: ReactNode }) {
   const currentUserId = useAppStore((s) => s.currentUserId)
   const user = useAppStore((s) => (currentUserId ? s.getUserById(currentUserId) : undefined))
   if (!currentUserId) return <Navigate to="/login" replace />
-  if (user?.role !== 'admin') return <Navigate to="/dashboard" replace />
+  if (user?.role !== 'admin') return <Navigate to="/day" replace />
   return <Layout>{children}</Layout>
 }
 
 function RootRedirect() {
   const currentUserId = useAppStore((s) => s.currentUserId)
-  const user = useAppStore((s) => (currentUserId ? s.getUserById(currentUserId) : undefined))
   if (!currentUserId) return <Navigate to="/login" replace />
-  return <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />
+  return <Navigate to="/day" replace />
 }
 
 function App() {
@@ -34,10 +35,26 @@ function App() {
       <Route path="/" element={<RootRedirect />} />
       <Route path="/login" element={<LoginPage />} />
       <Route
-        path="/dashboard"
+        path="/day"
         element={
           <RequireAuth>
-            <MemberDashboard />
+            <MyDay />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/communities"
+        element={
+          <RequireAuth>
+            <CommunitiesHub />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/global-wall"
+        element={
+          <RequireAuth>
+            <GlobalWall />
           </RequireAuth>
         }
       />

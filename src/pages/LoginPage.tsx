@@ -32,7 +32,7 @@ export default function LoginPage() {
       setError('Credenciais de administrador inválidas.')
       return
     }
-    navigate('/admin')
+    navigate('/day')
   }
 
   function handleMemberLogin(e: React.FormEvent) {
@@ -43,7 +43,7 @@ export default function LoginPage() {
       setError('E-mail não encontrado. Peça um código de convite ou fale com o admin.')
       return
     }
-    navigate(user.role === 'admin' ? '/admin' : '/dashboard')
+    navigate('/day')
   }
 
   function handleInviteJoin(e: React.FormEvent) {
@@ -58,7 +58,7 @@ export default function LoginPage() {
       setError('Código de convite inválido.')
       return
     }
-    navigate('/dashboard')
+    navigate('/day')
   }
 
   return (

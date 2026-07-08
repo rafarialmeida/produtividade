@@ -2,11 +2,18 @@ export type Role = 'admin' | 'member'
 
 export type Severity = 'baixa' | 'media' | 'alta' | 'critica'
 
+export type CommunityType = 'trabalho' | 'competicao'
+
 export const SEVERITY_LABEL: Record<Severity, string> = {
   baixa: 'Baixa',
   media: 'Média',
   alta: 'Alta',
   critica: 'Crítica',
+}
+
+export const COMMUNITY_TYPE_LABEL: Record<CommunityType, string> = {
+  trabalho: 'Trabalho',
+  competicao: 'Competição',
 }
 
 export const URGENCY_POINTS: Record<Severity, number> = {
@@ -29,9 +36,11 @@ export interface User {
 export interface Community {
   id: string
   name: string
+  type: CommunityType
   severity: Severity
   inviteCode: string
   memberIds: string[]
+  creatorId: string
   createdAt: string
 }
 

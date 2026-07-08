@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Layers, Plus, UserPlus, Users } from 'lucide-react'
+import { ArrowLeft, Plus, UserPlus, Users } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import ProcrastinationWall from '../components/ProcrastinationWall'
 import TaskCard from '../components/TaskCard'
 import TaskForm from '../components/TaskForm'
 import InviteModal from '../components/InviteModal'
 import { URGENCY_CONFIG } from '../utils/urgency'
+import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
 import { SEVERITY_LABEL } from '../types'
 
 export default function CommunityPage() {
@@ -24,14 +25,16 @@ export default function CommunityPage() {
     return (
       <div className="text-center py-20">
         <p className="text-zinc-400">Comunidade não encontrada.</p>
-        <Link to="/dashboard" className="text-purple-300 text-sm mt-2 inline-block">
-          Voltar ao dashboard
+        <Link to="/day" className="text-purple-300 text-sm mt-2 inline-block">
+          Voltar ao meu dia
         </Link>
       </div>
     )
   }
 
   const cfg = URGENCY_CONFIG[community.severity]
+  const typeCfg = COMMUNITY_TYPE_CONFIG[community.type]
+  const canInvite = currentUser?.role === 'admin' || community.memberIds.includes(currentUserId)
   const filtered = tasks
     .filter((t) => {
       if (filter === 'active') return !t.completed && !t.expired
@@ -44,18 +47,21 @@ export default function CommunityPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <Link to="/dashboard" className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 mb-3">
+        <Link to="/day" className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 mb-3">
           <ArrowLeft size={13} /> Voltar
         </Link>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center">
-              <Layers size={18} className="text-purple-300" />
+            <div className={`w-11 h-11 rounded-xl ${typeCfg.bg} border ${typeCfg.border} flex items-center justify-center`}>
+              <typeCfg.icon size={18} className={typeCfg.color} />
             </div>
             <div>
               <h1 className="text-xl font-bold text-white">{community.name}</h1>
-              <div className="flex items-center gap-2 mt-1 text-xs text-zinc-500">
+              <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-zinc-500">
                 <Users size={12} /> {community.memberIds.length} membros
+                <span className={`px-1.5 py-0.5 rounded border ${typeCfg.bg} ${typeCfg.border} ${typeCfg.color} font-medium`}>
+                  {typeCfg.label}
+                </span>
                 <span className={`px-1.5 py-0.5 rounded border ${cfg.bg} ${cfg.border} ${cfg.color} font-medium`}>
                   Gravidade {SEVERITY_LABEL[community.severity]}
                 </span>
@@ -63,7 +69,7 @@ export default function CommunityPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {currentUser?.role === 'admin' && (
+            {canInvite && (
               <button onClick={() => setShowInvite(true)} className="btn-ghost">
                 <UserPlus size={15} /> Convidar
               </button>

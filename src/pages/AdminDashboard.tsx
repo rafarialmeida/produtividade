@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, Layers, Plus, ShieldCheck, TrendingDown, Users } from 'lucide-react'
+import { ArrowUpRight, Plus, ShieldCheck, TrendingDown, Users } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import CreateCommunityModal from '../components/CreateCommunityModal'
 import { SEVERITY_LABEL, URGENCY_POINTS } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
+import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
 
 export default function AdminDashboard() {
   const communities = useAppStore((s) => s.communities)
@@ -49,6 +50,7 @@ export default function AdminDashboard() {
         <div className="grid sm:grid-cols-2 gap-3">
           {communities.map((c) => {
             const cfg = URGENCY_CONFIG[c.severity]
+            const typeCfg = COMMUNITY_TYPE_CONFIG[c.type]
             const communityTasks = tasks.filter((t) => t.communityId === c.id)
             const expiredCount = communityTasks.filter((t) => t.expired && !t.completed).length
             const members = c.memberIds.map((id) => users.find((u) => u.id === id)).filter(Boolean)
@@ -61,8 +63,8 @@ export default function AdminDashboard() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 shrink-0 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center">
-                      <Layers size={16} className="text-purple-300" />
+                    <div className={`w-10 h-10 shrink-0 rounded-xl ${typeCfg.bg} border ${typeCfg.border} flex items-center justify-center`}>
+                      <typeCfg.icon size={16} className={typeCfg.color} />
                     </div>
                     <div className="min-w-0">
                       <p className="font-semibold text-white truncate">{c.name}</p>
@@ -74,7 +76,10 @@ export default function AdminDashboard() {
                   <ArrowUpRight size={16} className="text-zinc-600 group-hover:text-purple-300 transition-colors shrink-0" />
                 </div>
 
-                <div className="flex items-center gap-2 mt-4">
+                <div className="flex flex-wrap items-center gap-2 mt-4">
+                  <span className={`text-[11px] font-medium px-2 py-0.5 rounded border ${typeCfg.bg} ${typeCfg.border} ${typeCfg.color}`}>
+                    {typeCfg.label}
+                  </span>
                   <span className={`text-[11px] font-medium px-2 py-0.5 rounded border ${cfg.bg} ${cfg.border} ${cfg.color}`}>
                     Gravidade {SEVERITY_LABEL[c.severity]}
                   </span>

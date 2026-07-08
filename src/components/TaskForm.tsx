@@ -1,21 +1,31 @@
 import { useMemo, useState } from 'react'
-import { CheckCircle2, ListChecks, Plus, Target, Trash2, X } from 'lucide-react'
+import { CheckCircle2, Layers, ListChecks, Plus, Target, Trash2, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import type { Severity } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { toDatetimeLocalValue } from '../utils/date'
 
 export default function TaskForm({
-  communityId,
+  communityId: fixedCommunityId,
   userId,
   onClose,
 }: {
-  communityId: string
+  communityId?: string
   userId: string
   onClose: () => void
 }) {
   const createTask = useAppStore((s) => s.createTask)
+  const allCommunities = useAppStore((s) => s.communities)
+  const user = useAppStore((s) => s.getUserById(userId))
+  const myCommunities = useMemo(
+    () => allCommunities.filter((c) => user?.communityIds.includes(c.id)),
+    [allCommunities, user],
+  )
+
+  const [selectedCommunityId, setSelectedCommunityId] = useState(fixedCommunityId ?? myCommunities[0]?.id ?? '')
+  const communityId = fixedCommunityId ?? selectedCommunityId
   const community = useAppStore((s) => s.getCommunityById(communityId))
+
   const allTasks = useAppStore((s) => s.tasks)
   const communityTasks = useMemo(() => allTasks.filter((t) => t.communityId === communityId), [allTasks, communityId])
 
@@ -31,6 +41,7 @@ export default function TaskForm({
   const cleanSubtasks = subtasks.map((s) => s.trim()).filter(Boolean)
 
   const isValid =
+    communityId.length > 0 &&
     macroObjective.trim().length >= 3 &&
     title.trim().length >= 3 &&
     cleanSubtasks.length >= 1 &&
@@ -71,7 +82,7 @@ export default function TaskForm({
           <div>
             <h2 className="text-lg font-bold text-white">Nova Tarefa</h2>
             <p className="text-xs text-zinc-500 mt-0.5">
-              {community?.name} · nenhuma tarefa solta é permitida
+              {fixedCommunityId ? community?.name : 'nenhuma tarefa solta é permitida — escolha a comunidade'}
             </p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10">
@@ -80,6 +91,29 @@ export default function TaskForm({
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-5">
+          {!fixedCommunityId && (
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 mb-1.5">
+                <Layers size={13} className="text-purple-400" /> Comunidade
+              </label>
+              {myCommunities.length > 0 ? (
+                <select
+                  value={selectedCommunityId}
+                  onChange={(e) => setSelectedCommunityId(e.target.value)}
+                  className="input"
+                >
+                  {myCommunities.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-xs text-rose-400">Você precisa entrar em uma comunidade antes de criar tarefas.</p>
+              )}
+            </div>
+          )}
+
           <div>
             <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 mb-1.5">
               <Target size={13} className="text-purple-400" /> Objetivo Macro — o "porquê"
@@ -87,7 +121,7 @@ export default function TaskForm({
             <input
               value={macroObjective}
               onChange={(e) => setMacroObjective(e.target.value)}
-              placeholder="Ex.: Lançamento Q3 do produto"
+              placeholder={community?.type === 'competicao' ? 'Ex.: Meta pessoal de saúde' : 'Ex.: Lançamento Q3 do produto'}
               list="macro-suggestions"
               className="input"
             />
@@ -181,7 +215,7 @@ export default function TaskForm({
           </button>
           {!isValid && (
             <p className="text-[11px] text-center text-zinc-600 -mt-3">
-              Preencha objetivo, título, ao menos uma subtarefa e um prazo futuro para liberar o salvamento.
+              Preencha comunidade, objetivo, título, ao menos uma subtarefa e um prazo futuro para liberar o salvamento.
             </p>
           )}
         </form>
