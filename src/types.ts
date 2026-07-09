@@ -26,10 +26,16 @@ export const URGENCY_POINTS: Record<Severity, number> = {
 export interface User {
   id: string
   name: string
-  email: string
-  password?: string
   role: Role
   communityIds: string[]
+  avatarSeed: string
+}
+
+export interface AuthUser {
+  id: string
+  email: string
+  name: string
+  role: Role
   avatarSeed: string
 }
 
@@ -74,10 +80,4 @@ export interface Notification {
   type: 'penalty' | 'warning' | 'info'
   createdAt: string
   read: boolean
-}
-
-export interface PointsRecord {
-  userId: string
-  communityId: string
-  lostPoints: number
 }

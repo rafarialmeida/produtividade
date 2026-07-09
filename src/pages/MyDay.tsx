@@ -10,12 +10,11 @@ import { isNearDeadline } from '../utils/date'
 import { URGENCY_POINTS } from '../types'
 
 export default function MyDay() {
-  const currentUserId = useAppStore((s) => s.currentUserId)!
-  const user = useAppStore((s) => s.getUserById(currentUserId))!
+  const user = useAppStore((s) => s.authUser)!
   const allCommunities = useAppStore((s) => s.communities)
   const communities = useMemo(
-    () => allCommunities.filter((c) => user.communityIds.includes(c.id)),
-    [allCommunities, user.communityIds],
+    () => allCommunities.filter((c) => c.memberIds.includes(user.id)),
+    [allCommunities, user.id],
   )
   const allTasks = useAppStore((s) => s.tasks)
 

@@ -1,509 +1,363 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import type { Community, CommunityType, Notification, Severity, SubTask, Task, User } from '../types'
+import { supabase } from '../lib/supabase'
+import type { AuthUser, Community, CommunityType, Notification, Severity, SubTask, Task, User } from '../types'
 import { URGENCY_POINTS } from '../types'
 
-function uid(prefix: string) {
-  return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`
+export interface GlobalWallEntry {
+  userId: string
+  name: string
+  avatarSeed: string
+  role: string
+  lostPoints: number
+  expiredCount: number
+  communityCount: number
 }
 
-function inviteCode() {
-  return Math.random().toString(36).slice(2, 8).toUpperCase()
+interface CreateTaskInput {
+  communityId?: string
+  userId: string
+  macroObjective: string
+  title: string
+  category: string
+  subtasks: string[]
+  deadline: string
+  urgency: Severity
 }
 
 interface State {
+  authUser: AuthUser | null
+  authLoading: boolean
+  dataLoading: boolean
+
   users: User[]
   communities: Community[]
   tasks: Task[]
   notifications: Notification[]
-  currentUserId: string | null
-
-  hydrated: boolean
 
   // auth
-  loginAdmin: (email: string, password: string) => User | null
-  loginMember: (email: string) => User | null
-  joinWithInviteCode: (name: string, email: string, code: string) => User | null
-  joinCommunityWithCode: (userId: string, code: string) => Community | null
-  logout: () => void
+  signUp: (name: string, email: string, password: string) => Promise<{ error: string | null; needsConfirmation: boolean }>
+  signIn: (email: string, password: string) => Promise<string | null>
+  signInWithGoogle: () => Promise<void>
+  signInWithMicrosoft: () => Promise<void>
+  signOut: () => Promise<void>
+
+  refreshAll: () => Promise<void>
 
   // community actions
-  createCommunity: (name: string, severity: Severity, type: CommunityType) => Community
-  addFictionalMember: (communityId: string, name: string) => User
-  regenerateInviteCode: (communityId: string) => void
-  deleteCommunity: (communityId: string) => void
+  createCommunity: (name: string, severity: Severity, type: CommunityType) => Promise<string | null>
+  joinCommunityWithCode: (code: string) => Promise<{ error: string | null; communityName: string | null }>
+  regenerateInviteCode: (communityId: string) => Promise<void>
+  deleteCommunity: (communityId: string) => Promise<void>
 
   // task actions
-  createTask: (input: {
-    communityId?: string
-    userId: string
-    macroObjective: string
-    title: string
-    category: string
-    subtasks: string[]
-    deadline: string
-    urgency: Severity
-  }) => void
-  toggleSubtask: (taskId: string, subtaskId: string) => void
-  setTaskStarted: (taskId: string, started: boolean) => void
-  completeTask: (taskId: string) => void
-  deleteTask: (taskId: string) => void
-  rescheduleTask: (taskId: string, deadline: string) => void
-  checkExpirations: () => void
+  createTask: (input: CreateTaskInput) => Promise<void>
+  toggleSubtask: (taskId: string, subtaskId: string) => Promise<void>
+  setTaskStarted: (taskId: string, started: boolean) => Promise<void>
+  completeTask: (taskId: string) => Promise<void>
+  deleteTask: (taskId: string) => Promise<void>
+  rescheduleTask: (taskId: string, deadline: string) => Promise<void>
+  checkExpirations: () => Promise<void>
 
   // notifications
-  markNotificationRead: (id: string) => void
-  clearNotifications: (userId: string) => void
+  markNotificationRead: (id: string) => Promise<void>
 
-  // selectors helpers
+  // global wall (calculado no servidor, não depende do cache local de tasks)
+  fetchGlobalWall: () => Promise<GlobalWallEntry[]>
+
+  // selectors
   getUserById: (id: string) => User | undefined
   getCommunityById: (id: string | undefined) => Community | undefined
-  getLostPoints: (userId: string, communityId: string) => number
 }
 
-const now = new Date()
-const inDays = (d: number, h = 0) => new Date(now.getTime() + d * 86400000 + h * 3600000).toISOString()
-const agoHours = (h: number) => new Date(now.getTime() - h * 3600000).toISOString()
-
-const seedAdmin: User = {
-  id: 'admin-1',
-  name: 'Rafael Almeida',
-  email: 'admin@flawless.com',
-  password: 'senha123',
-  role: 'admin',
-  communityIds: ['comm-1', 'comm-2'],
-  avatarSeed: 'admin',
+function mapSubtask(row: Record<string, unknown>): SubTask {
+  return { id: row.id as string, text: row.text as string, done: row.done as boolean }
 }
 
-const seedMembers: User[] = [
-  { id: 'mem-1', name: 'Ana Souza', email: 'ana@flawless.com', role: 'member', communityIds: ['comm-1', 'comm-2'], avatarSeed: 'ana' },
-  { id: 'mem-2', name: 'Bruno Lima', email: 'bruno@flawless.com', role: 'member', communityIds: ['comm-1'], avatarSeed: 'bruno' },
-  { id: 'mem-3', name: 'Carla Mendes', email: 'carla@flawless.com', role: 'member', communityIds: ['comm-1'], avatarSeed: 'carla' },
-  { id: 'mem-4', name: 'Diego Torres', email: 'diego@flawless.com', role: 'member', communityIds: ['comm-1', 'comm-2'], avatarSeed: 'diego' },
-]
-
-const seedCommunity: Community = {
-  id: 'comm-1',
-  name: 'Squad Alpha — Lançamento Q3',
-  type: 'trabalho',
-  severity: 'alta',
-  inviteCode: inviteCode(),
-  memberIds: ['admin-1', 'mem-1', 'mem-2', 'mem-3', 'mem-4'],
-  creatorId: 'admin-1',
-  createdAt: agoHours(240),
+function mapTask(row: Record<string, unknown>): Task {
+  return {
+    id: row.id as string,
+    communityId: (row.community_id as string | null) ?? undefined,
+    userId: row.user_id as string,
+    macroObjective: row.macro_objective as string,
+    title: row.title as string,
+    category: row.category as string,
+    subtasks: ((row.subtasks as Record<string, unknown>[] | null) ?? []).map(mapSubtask),
+    deadline: row.deadline as string,
+    urgency: row.urgency as Severity,
+    started: row.started as boolean,
+    completed: row.completed as boolean,
+    completedAt: (row.completed_at as string | null) ?? undefined,
+    expired: row.expired as boolean,
+    createdAt: row.created_at as string,
+  }
 }
 
-const seedCompetitionCommunity: Community = {
-  id: 'comm-2',
-  name: 'Racha de Produtividade — Amigos',
-  type: 'competicao',
-  severity: 'media',
-  inviteCode: inviteCode(),
-  memberIds: ['admin-1', 'mem-1', 'mem-4'],
-  creatorId: 'mem-1',
-  createdAt: agoHours(120),
+function mapCommunity(row: Record<string, unknown>, memberIds: string[]): Community {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    type: row.type as CommunityType,
+    severity: row.severity as Severity,
+    inviteCode: row.invite_code as string,
+    memberIds,
+    creatorId: row.creator_id as string,
+    createdAt: row.created_at as string,
+  }
 }
 
-function seedSubtasks(texts: string[]): SubTask[] {
-  return texts.map((t) => ({ id: uid('sub'), text: t, done: false }))
+function mapNotification(row: Record<string, unknown>): Notification {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    message: row.message as string,
+    type: row.type as Notification['type'],
+    createdAt: row.created_at as string,
+    read: row.read as boolean,
+  }
 }
 
-const seedTasks: Task[] = [
-  {
-    id: uid('task'),
-    communityId: 'comm-1',
-    userId: 'mem-1',
-    macroObjective: 'Lançamento Q3 do produto',
-    title: 'Finalizar landing page de vendas',
-    category: 'Trabalho',
-    started: true,
-    subtasks: seedSubtasks(['Escrever copy', 'Ajustar layout mobile', 'Revisar SEO']),
-    deadline: agoHours(30),
-    urgency: 'alta',
-    completed: false,
-    expired: true,
-    createdAt: agoHours(96),
+export const useAppStore = create<State>()((set, get) => ({
+  authUser: null,
+  authLoading: true,
+  dataLoading: false,
+
+  users: [],
+  communities: [],
+  tasks: [],
+  notifications: [],
+
+  signUp: async (name, email, password) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name } },
+    })
+    if (error) return { error: error.message, needsConfirmation: false }
+    return { error: null, needsConfirmation: !data.session }
   },
-  {
-    id: uid('task'),
-    communityId: 'comm-1',
-    userId: 'mem-2',
-    macroObjective: 'Lançamento Q3 do produto',
-    title: 'Configurar pipeline de CI/CD',
-    category: 'Trabalho',
-    started: true,
-    subtasks: seedSubtasks(['Criar workflow', 'Testar deploy staging']),
-    deadline: agoHours(80),
-    urgency: 'critica',
-    completed: false,
-    expired: true,
-    createdAt: agoHours(150),
+
+  signIn: async (email, password) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    return error?.message ?? null
   },
-  {
-    id: uid('task'),
-    communityId: 'comm-1',
-    userId: 'mem-2',
-    macroObjective: 'Retenção de clientes',
-    title: 'Responder tickets pendentes',
-    category: 'Trabalho',
-    started: true,
-    subtasks: seedSubtasks(['Triar fila', 'Responder top 10']),
-    deadline: agoHours(10),
-    urgency: 'media',
-    completed: false,
-    expired: true,
-    createdAt: agoHours(60),
+
+  signInWithGoogle: async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/day` },
+    })
   },
-  {
-    id: uid('task'),
-    communityId: 'comm-1',
-    userId: 'mem-3',
-    macroObjective: 'Retenção de clientes',
-    title: 'Atualizar documentação da API',
-    category: 'Trabalho',
-    started: true,
-    subtasks: seedSubtasks(['Revisar endpoints', 'Publicar changelog']),
-    deadline: agoHours(5),
-    urgency: 'baixa',
-    completed: false,
-    expired: true,
-    createdAt: agoHours(48),
+
+  signInWithMicrosoft: async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'azure',
+      options: { redirectTo: `${window.location.origin}/day`, scopes: 'email' },
+    })
   },
-  {
-    id: uid('task'),
-    communityId: 'comm-1',
-    userId: 'admin-1',
-    macroObjective: 'Lançamento Q3 do produto',
-    title: 'Preparar apresentação para investidores',
-    category: 'Trabalho',
-    started: true,
-    subtasks: seedSubtasks(['Montar slides', 'Revisar métricas', 'Ensaiar pitch']),
-    deadline: inDays(2),
-    urgency: 'critica',
-    completed: false,
-    expired: false,
-    createdAt: agoHours(20),
+
+  signOut: async () => {
+    await supabase.auth.signOut()
   },
-  {
-    id: uid('task'),
-    communityId: 'comm-1',
-    userId: 'mem-1',
-    macroObjective: 'Lançamento Q3 do produto',
-    title: 'Revisar contrato com fornecedor',
-    category: 'Trabalho',
-    started: false,
-    subtasks: seedSubtasks(['Ler cláusulas', 'Marcar reunião']),
-    deadline: inDays(0, 3),
-    urgency: 'media',
-    completed: false,
-    expired: false,
-    createdAt: agoHours(10),
+
+  refreshAll: async () => {
+    if (!get().authUser) return
+    set({ dataLoading: true })
+
+    const [profilesRes, communitiesRes, membersRes, tasksRes, notificationsRes] = await Promise.all([
+      supabase.from('profiles').select('*'),
+      supabase.from('communities').select('*'),
+      supabase.from('community_members').select('*'),
+      supabase.from('tasks').select('*, subtasks(*)').order('created_at', { ascending: false }),
+      supabase.from('notifications').select('*').order('created_at', { ascending: false }),
+    ])
+
+    const members = membersRes.data ?? []
+    const memberIdsByCommunity = new Map<string, string[]>()
+    const communityIdsByUser = new Map<string, string[]>()
+    for (const m of members) {
+      const a = memberIdsByCommunity.get(m.community_id) ?? []
+      a.push(m.user_id)
+      memberIdsByCommunity.set(m.community_id, a)
+
+      const b = communityIdsByUser.get(m.user_id) ?? []
+      b.push(m.community_id)
+      communityIdsByUser.set(m.user_id, b)
+    }
+
+    const users: User[] = (profilesRes.data ?? []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      role: p.role,
+      avatarSeed: p.avatar_seed,
+      communityIds: communityIdsByUser.get(p.id) ?? [],
+    }))
+
+    const communities = (communitiesRes.data ?? []).map((c) => mapCommunity(c, memberIdsByCommunity.get(c.id) ?? []))
+    const tasks = (tasksRes.data ?? []).map(mapTask)
+    const notifications = (notificationsRes.data ?? []).map(mapNotification)
+
+    set({ users, communities, tasks, notifications, dataLoading: false })
   },
-  {
-    id: uid('task'),
-    communityId: 'comm-1',
-    userId: 'mem-4',
-    macroObjective: 'Retenção de clientes',
-    title: 'Criar pesquisa de satisfação',
-    category: 'Trabalho',
-    started: true,
-    subtasks: seedSubtasks(['Definir perguntas', 'Configurar formulário']).map((s) => ({ ...s, done: true })),
-    deadline: inDays(5),
-    urgency: 'baixa',
-    completed: true,
-    completedAt: agoHours(2),
-    expired: false,
-    createdAt: agoHours(72),
+
+  createCommunity: async (name, severity, type) => {
+    const { data, error } = await supabase.rpc('create_community', { _name: name, _type: type, _severity: severity })
+    if (error || !data) return null
+    await get().refreshAll()
+    return (data as { id: string }).id
   },
-  {
-    id: uid('task'),
-    communityId: 'comm-2',
-    userId: 'mem-4',
-    macroObjective: 'Meta pessoal: rotina de estudos',
-    title: 'Terminar curso de inglês — módulo 3',
-    category: 'Estudos',
-    started: true,
-    subtasks: seedSubtasks(['Assistir aulas', 'Fazer exercícios', 'Fazer prova do módulo']),
-    deadline: agoHours(20),
-    urgency: 'critica',
-    completed: false,
-    expired: true,
-    createdAt: agoHours(90),
+
+  joinCommunityWithCode: async (code) => {
+    const { data, error } = await supabase.rpc('join_community_with_code', { _code: code })
+    if (error || !data) return { error: 'Código de convite inválido.', communityName: null }
+    await get().refreshAll()
+    return { error: null, communityName: (data as { name: string }).name }
   },
-  {
-    id: uid('task'),
-    communityId: 'comm-2',
-    userId: 'mem-1',
-    macroObjective: 'Meta pessoal: saúde',
-    title: 'Treinar 4x nesta semana',
-    category: 'Saúde',
-    started: true,
-    subtasks: seedSubtasks(['Treino de pernas', 'Treino de costas', 'Corrida 5km']),
-    deadline: agoHours(6),
-    urgency: 'media',
-    completed: false,
-    expired: true,
-    createdAt: agoHours(50),
+
+  regenerateInviteCode: async (communityId) => {
+    await supabase.rpc('regenerate_invite_code', { _community_id: communityId })
+    await get().refreshAll()
   },
-  {
-    id: uid('task'),
-    communityId: 'comm-2',
-    userId: 'admin-1',
-    macroObjective: 'Meta pessoal: leitura',
-    title: 'Ler 2 capítulos do livro da vez',
-    category: 'Estudos',
-    started: true,
-    subtasks: seedSubtasks(['Capítulo 5', 'Capítulo 6']),
-    deadline: inDays(1),
-    urgency: 'baixa',
-    completed: false,
-    expired: false,
-    createdAt: agoHours(15),
+
+  deleteCommunity: async (communityId) => {
+    await supabase.from('communities').delete().eq('id', communityId)
+    await get().refreshAll()
   },
-]
 
-export const useAppStore = create<State>()(
-  persist(
-    (set, get) => ({
-      users: [seedAdmin, ...seedMembers],
-      communities: [seedCommunity, seedCompetitionCommunity],
-      tasks: seedTasks,
-      notifications: [],
-      currentUserId: null,
-      hydrated: false,
+  createTask: async ({ communityId, userId, macroObjective, title, category, subtasks, deadline, urgency }) => {
+    const { data: task, error } = await supabase
+      .from('tasks')
+      .insert({
+        community_id: communityId ?? null,
+        user_id: userId,
+        macro_objective: macroObjective,
+        title,
+        category,
+        deadline,
+        urgency,
+      })
+      .select()
+      .single()
+    if (error || !task) return
 
-      loginAdmin: (email, password) => {
-        const user = get().users.find(
-          (u) => u.role === 'admin' && u.email.toLowerCase() === email.toLowerCase() && u.password === password,
-        )
-        if (user) set({ currentUserId: user.id })
-        return user ?? null
-      },
+    const cleanSubtasks = subtasks.filter(Boolean)
+    if (cleanSubtasks.length > 0) {
+      await supabase.from('subtasks').insert(cleanSubtasks.map((text, i) => ({ task_id: task.id, text, position: i })))
+    }
+    await get().refreshAll()
+  },
 
-      loginMember: (email) => {
-        const user = get().users.find((u) => u.email.toLowerCase() === email.toLowerCase())
-        if (user) set({ currentUserId: user.id })
-        return user ?? null
-      },
+  toggleSubtask: async (taskId, subtaskId) => {
+    const task = get().tasks.find((t) => t.id === taskId)
+    const subtask = task?.subtasks.find((s) => s.id === subtaskId)
+    if (!subtask) return
+    await supabase.from('subtasks').update({ done: !subtask.done }).eq('id', subtaskId)
+    await get().refreshAll()
+  },
 
-      joinWithInviteCode: (name, email, code) => {
-        const community = get().communities.find((c) => c.inviteCode.toUpperCase() === code.toUpperCase())
-        if (!community) return null
-        const existing = get().users.find((u) => u.email.toLowerCase() === email.toLowerCase())
-        if (existing) {
-          if (!existing.communityIds.includes(community.id)) {
-            set((s) => ({
-              users: s.users.map((u) => (u.id === existing.id ? { ...u, communityIds: [...u.communityIds, community.id] } : u)),
-              communities: s.communities.map((c) => (c.id === community.id ? { ...c, memberIds: [...c.memberIds, existing.id] } : c)),
-            }))
-          }
-          set({ currentUserId: existing.id })
-          return existing
-        }
-        const newUser: User = {
-          id: uid('mem'),
-          name,
-          email,
-          role: 'member',
-          communityIds: [community.id],
-          avatarSeed: name,
-        }
-        set((s) => ({
-          users: [...s.users, newUser],
-          communities: s.communities.map((c) => (c.id === community.id ? { ...c, memberIds: [...c.memberIds, newUser.id] } : c)),
-          currentUserId: newUser.id,
-        }))
-        return newUser
-      },
+  setTaskStarted: async (taskId, started) => {
+    await supabase.from('tasks').update({ started }).eq('id', taskId)
+    await get().refreshAll()
+  },
 
-      joinCommunityWithCode: (userId, code) => {
-        const community = get().communities.find((c) => c.inviteCode.toUpperCase() === code.toUpperCase())
-        if (!community) return null
-        if (!community.memberIds.includes(userId)) {
-          set((s) => ({
-            users: s.users.map((u) => (u.id === userId ? { ...u, communityIds: [...u.communityIds, community.id] } : u)),
-            communities: s.communities.map((c) =>
-              c.id === community.id ? { ...c, memberIds: [...c.memberIds, userId] } : c,
-            ),
-          }))
-        }
-        return community
-      },
+  completeTask: async (taskId) => {
+    await supabase.from('tasks').update({ completed: true, completed_at: new Date().toISOString() }).eq('id', taskId)
+    await get().refreshAll()
+  },
 
-      logout: () => set({ currentUserId: null }),
+  deleteTask: async (taskId) => {
+    await supabase.from('tasks').delete().eq('id', taskId)
+    await get().refreshAll()
+  },
 
-      createCommunity: (name, severity, type) => {
-        const creatorId = get().currentUserId ?? seedAdmin.id
-        const community: Community = {
-          id: uid('comm'),
-          name,
-          type,
-          severity,
-          inviteCode: inviteCode(),
-          memberIds: [creatorId],
-          creatorId,
-          createdAt: new Date().toISOString(),
-        }
-        set((s) => ({
-          communities: [...s.communities, community],
-          users: s.users.map((u) => (u.id === creatorId ? { ...u, communityIds: [...u.communityIds, community.id] } : u)),
-        }))
-        return community
-      },
+  rescheduleTask: async (taskId, deadline) => {
+    await supabase.from('tasks').update({ deadline }).eq('id', taskId)
+    await get().refreshAll()
+  },
 
-      addFictionalMember: (communityId, name) => {
-        const newUser: User = {
-          id: uid('mem'),
-          name,
-          email: `${name.toLowerCase().replace(/\s+/g, '.')}@flawless.com`,
-          role: 'member',
-          communityIds: [communityId],
-          avatarSeed: name,
-        }
-        set((s) => ({
-          users: [...s.users, newUser],
-          communities: s.communities.map((c) =>
-            c.id === communityId ? { ...c, memberIds: [...c.memberIds, newUser.id] } : c,
-          ),
-        }))
-        return newUser
-      },
+  checkExpirations: async () => {
+    const authUser = get().authUser
+    if (!authUser) return
+    const nowIso = new Date().toISOString()
+    const { data: toExpire } = await supabase
+      .from('tasks')
+      .select('id, title, urgency')
+      .eq('user_id', authUser.id)
+      .eq('completed', false)
+      .eq('expired', false)
+      .lt('deadline', nowIso)
 
-      regenerateInviteCode: (communityId) => {
-        set((s) => ({
-          communities: s.communities.map((c) => (c.id === communityId ? { ...c, inviteCode: inviteCode() } : c)),
-        }))
-      },
+    if (!toExpire || toExpire.length === 0) return
 
-      deleteCommunity: (communityId) => {
-        set((s) => ({
-          communities: s.communities.filter((c) => c.id !== communityId),
-          tasks: s.tasks.filter((t) => t.communityId !== communityId),
-          users: s.users.map((u) => ({ ...u, communityIds: u.communityIds.filter((id) => id !== communityId) })),
-        }))
-      },
+    await supabase
+      .from('tasks')
+      .update({ expired: true })
+      .in(
+        'id',
+        toExpire.map((t) => t.id),
+      )
 
-      createTask: ({ communityId, userId, macroObjective, title, category, subtasks, deadline, urgency }) => {
-        const task: Task = {
-          id: uid('task'),
-          communityId,
-          userId,
-          macroObjective,
-          title,
-          category,
-          subtasks: seedSubtasks(subtasks),
-          deadline,
-          urgency,
-          started: false,
-          completed: false,
-          expired: false,
-          createdAt: new Date().toISOString(),
-        }
-        set((s) => ({ tasks: [task, ...s.tasks] }))
-      },
-
-      toggleSubtask: (taskId, subtaskId) => {
-        set((s) => ({
-          tasks: s.tasks.map((t) =>
-            t.id === taskId
-              ? { ...t, subtasks: t.subtasks.map((st) => (st.id === subtaskId ? { ...st, done: !st.done } : st)) }
-              : t,
-          ),
-        }))
-      },
-
-      setTaskStarted: (taskId, started) => {
-        set((s) => ({ tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, started } : t)) }))
-      },
-
-      completeTask: (taskId) => {
-        set((s) => ({
-          tasks: s.tasks.map((t) =>
-            t.id === taskId ? { ...t, completed: true, completedAt: new Date().toISOString() } : t,
-          ),
-        }))
-      },
-
-      deleteTask: (taskId) => {
-        set((s) => ({ tasks: s.tasks.filter((t) => t.id !== taskId) }))
-      },
-
-      rescheduleTask: (taskId, deadline) => {
-        set((s) => ({ tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, deadline } : t)) }))
-      },
-
-      checkExpirations: () => {
-        const nowTs = Date.now()
-        const toPenalize: Task[] = []
-        set((s) => ({
-          tasks: s.tasks.map((t) => {
-            if (!t.completed && !t.expired && new Date(t.deadline).getTime() < nowTs) {
-              toPenalize.push(t)
-              return { ...t, expired: true }
-            }
-            return t
-          }),
-        }))
-        if (toPenalize.length === 0) return
-        const newNotifications: Notification[] = toPenalize.map((t) => ({
-          id: uid('notif'),
-          userId: t.userId,
-          message: `Tarefa "${t.title}" expirou! Você perdeu ${URGENCY_POINTS[t.urgency]} pt${URGENCY_POINTS[t.urgency] > 1 ? 's' : ''} de negligência.`,
+    await supabase.from('notifications').insert(
+      toExpire.map((t) => {
+        const pts = URGENCY_POINTS[t.urgency as Severity]
+        return {
+          user_id: authUser.id,
+          message: `Tarefa "${t.title}" expirou! Você perdeu ${pts} pt${pts > 1 ? 's' : ''} de negligência.`,
           type: 'penalty',
-          createdAt: new Date().toISOString(),
-          read: false,
-        }))
-        set((s) => ({ notifications: [...newNotifications, ...s.notifications] }))
-      },
-
-      markNotificationRead: (id) => {
-        set((s) => ({ notifications: s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)) }))
-      },
-
-      clearNotifications: (userId) => {
-        set((s) => ({ notifications: s.notifications.filter((n) => n.userId !== userId) }))
-      },
-
-      getUserById: (id) => get().users.find((u) => u.id === id),
-      getCommunityById: (id) => get().communities.find((c) => c.id === id),
-      getLostPoints: (userId, communityId) => {
-        return get()
-          .tasks.filter((t) => t.userId === userId && t.communityId === communityId && t.expired && !t.completed)
-          .reduce((sum, t) => sum + URGENCY_POINTS[t.urgency], 0)
-      },
-    }),
-    {
-      name: 'flawless-storage',
-      version: 3,
-      migrate: (persistedState) => {
-        const state = persistedState as { communities?: Community[]; tasks?: Task[] } | undefined
-        if (state?.communities) {
-          state.communities = state.communities.map((c) => ({
-            ...c,
-            type: c.type ?? 'trabalho',
-            creatorId: c.creatorId ?? c.memberIds?.[0] ?? seedAdmin.id,
-          }))
         }
-        if (state?.tasks) {
-          state.tasks = state.tasks.map((t) => ({
-            ...t,
-            category: t.category ?? 'Trabalho',
-            started: t.started ?? true,
-          }))
-        }
-        return state
-      },
-    },
-  ),
-)
+      }),
+    )
 
-function finishHydration() {
-  useAppStore.getState().checkExpirations()
-  useAppStore.setState({ hydrated: true })
+    await get().refreshAll()
+  },
+
+  markNotificationRead: async (id) => {
+    set((s) => ({ notifications: s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)) }))
+    await supabase.from('notifications').update({ read: true }).eq('id', id)
+  },
+
+  fetchGlobalWall: async () => {
+    const { data, error } = await supabase.rpc('global_wall')
+    if (error || !data) return []
+    return (data as Record<string, unknown>[]).map((row) => ({
+      userId: row.user_id as string,
+      name: row.name as string,
+      avatarSeed: row.avatar_seed as string,
+      role: row.role as string,
+      lostPoints: Number(row.lost_points),
+      expiredCount: Number(row.expired_count),
+      communityCount: Number(row.community_count),
+    }))
+  },
+
+  getUserById: (id) => get().users.find((u) => u.id === id),
+  getCommunityById: (id) => get().communities.find((c) => c.id === id),
+}))
+
+async function loadAuthUser(userId: string, email: string) {
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
+  if (!profile) {
+    useAppStore.setState({ authUser: null, authLoading: false })
+    return
+  }
+  useAppStore.setState({
+    authUser: { id: profile.id, email, name: profile.name, role: profile.role, avatarSeed: profile.avatar_seed },
+    authLoading: false,
+  })
+  await useAppStore.getState().refreshAll()
+  await useAppStore.getState().checkExpirations()
 }
 
-if (useAppStore.persist.hasHydrated()) {
-  finishHydration()
-} else {
-  useAppStore.persist.onFinishHydration(finishHydration)
-}
+supabase.auth.onAuthStateChange((_event, session) => {
+  if (session?.user) {
+    loadAuthUser(session.user.id, session.user.email ?? '')
+  } else {
+    useAppStore.setState({
+      authUser: null,
+      authLoading: false,
+      users: [],
+      communities: [],
+      tasks: [],
+      notifications: [],
+    })
+  }
+})

@@ -43,6 +43,7 @@ export default function TaskForm({
   const [subtasks, setSubtasks] = useState<string[]>([''])
   const [deadline, setDeadline] = useState('')
   const [urgency, setUrgency] = useState<Severity>('media')
+  const [submitting, setSubmitting] = useState(false)
 
   const minDeadline = toDatetimeLocalValue(new Date(Date.now() + 5 * 60000))
   const cleanSubtasks = subtasks.map((s) => s.trim()).filter(Boolean)
@@ -81,20 +82,25 @@ export default function TaskForm({
     setAddingCategory(false)
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!isValid) return
-    createTask({
-      communityId: communityId || undefined,
-      userId,
-      macroObjective: macroObjective.trim(),
-      title: title.trim(),
-      category: category.trim(),
-      subtasks: cleanSubtasks,
-      deadline: new Date(deadline).toISOString(),
-      urgency,
-    })
-    onClose()
+    if (!isValid || submitting) return
+    setSubmitting(true)
+    try {
+      await createTask({
+        communityId: communityId || undefined,
+        userId,
+        macroObjective: macroObjective.trim(),
+        title: title.trim(),
+        category: category.trim(),
+        subtasks: cleanSubtasks,
+        deadline: new Date(deadline).toISOString(),
+        urgency,
+      })
+      onClose()
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -284,8 +290,8 @@ export default function TaskForm({
             </div>
           </div>
 
-          <button type="submit" disabled={!isValid} className="btn-secondary mt-1 shrink-0">
-            <CheckCircle2 size={16} /> Salvar Tarefa
+          <button type="submit" disabled={!isValid || submitting} className="btn-secondary mt-1 shrink-0">
+            <CheckCircle2 size={16} /> {submitting ? 'Salvando…' : 'Salvar Tarefa'}
           </button>
           {!isValid && (
             <p className="text-[11px] text-center text-zinc-600 -mt-2">

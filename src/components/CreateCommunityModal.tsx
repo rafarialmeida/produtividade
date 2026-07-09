@@ -12,15 +12,21 @@ export default function CreateCommunityModal({ onClose }: { onClose: () => void 
   const [name, setName] = useState('')
   const [severity, setSeverity] = useState<Severity>('media')
   const [type, setType] = useState<CommunityType>('trabalho')
+  const [submitting, setSubmitting] = useState(false)
 
   const isValid = name.trim().length >= 3
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!isValid) return
-    const community = createCommunity(name.trim(), severity, type)
-    onClose()
-    navigate(`/community/${community.id}`)
+    if (!isValid || submitting) return
+    setSubmitting(true)
+    try {
+      const communityId = await createCommunity(name.trim(), severity, type)
+      onClose()
+      if (communityId) navigate(`/community/${communityId}`)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -91,8 +97,8 @@ export default function CreateCommunityModal({ onClose }: { onClose: () => void 
               })}
             </div>
           </div>
-          <button type="submit" disabled={!isValid} className="btn-primary">
-            Criar Comunidade
+          <button type="submit" disabled={!isValid || submitting} className="btn-primary">
+            {submitting ? 'Criando…' : 'Criar Comunidade'}
           </button>
         </form>
       </div>

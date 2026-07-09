@@ -13,8 +13,8 @@ import { SEVERITY_LABEL } from '../types'
 export default function CommunityPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const currentUserId = useAppStore((s) => s.currentUserId)!
-  const currentUser = useAppStore((s) => s.getUserById(currentUserId))
+  const currentUser = useAppStore((s) => s.authUser)!
+  const currentUserId = currentUser.id
   const community = useAppStore((s) => (id ? s.getCommunityById(id) : undefined))
   const deleteCommunity = useAppStore((s) => s.deleteCommunity)
   const allTasks = useAppStore((s) => s.tasks)
@@ -39,10 +39,10 @@ export default function CommunityPage() {
   const canInvite = currentUser?.role === 'admin' || community.memberIds.includes(currentUserId)
   const canDelete = currentUser?.role === 'admin' || community.creatorId === currentUserId
 
-  function handleDeleteCommunity() {
+  async function handleDeleteCommunity() {
     if (!community) return
     if (window.confirm(`Excluir a comunidade "${community.name}"? Todas as tarefas dela serão perdidas. Essa ação não pode ser desfeita.`)) {
-      deleteCommunity(community.id)
+      await deleteCommunity(community.id)
       navigate('/communities')
     }
   }

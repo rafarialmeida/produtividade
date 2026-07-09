@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { AlertTriangle } from 'lucide-react'
 import { useAppStore } from './store/useStore'
+import { isSupabaseConfigured } from './lib/supabase'
 import Layout from './components/Layout'
 import LoginPage from './pages/LoginPage'
 import MyDay from './pages/MyDay'
@@ -10,22 +12,21 @@ import AdminDashboard from './pages/AdminDashboard'
 import CommunityPage from './pages/CommunityPage'
 
 function RequireAuth({ children }: { children: ReactNode }) {
-  const currentUserId = useAppStore((s) => s.currentUserId)
-  if (!currentUserId) return <Navigate to="/login" replace />
+  const authUser = useAppStore((s) => s.authUser)
+  if (!authUser) return <Navigate to="/login" replace />
   return <Layout>{children}</Layout>
 }
 
 function RequireAdmin({ children }: { children: ReactNode }) {
-  const currentUserId = useAppStore((s) => s.currentUserId)
-  const user = useAppStore((s) => (currentUserId ? s.getUserById(currentUserId) : undefined))
-  if (!currentUserId) return <Navigate to="/login" replace />
-  if (user?.role !== 'admin') return <Navigate to="/day" replace />
+  const authUser = useAppStore((s) => s.authUser)
+  if (!authUser) return <Navigate to="/login" replace />
+  if (authUser.role !== 'admin') return <Navigate to="/day" replace />
   return <Layout>{children}</Layout>
 }
 
 function RootRedirect() {
-  const currentUserId = useAppStore((s) => s.currentUserId)
-  if (!currentUserId) return <Navigate to="/login" replace />
+  const authUser = useAppStore((s) => s.authUser)
+  if (!authUser) return <Navigate to="/login" replace />
   return <Navigate to="/day" replace />
 }
 
@@ -37,9 +38,28 @@ function AppSplash() {
   )
 }
 
+function SupabaseSetupNotice() {
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="glass-panel rounded-2xl p-6 max-w-md w-full flex flex-col gap-3">
+        <div className="flex items-center gap-2.5 text-amber-300">
+          <AlertTriangle size={20} />
+          <h1 className="text-lg font-bold text-white">Configuração do Supabase pendente</h1>
+        </div>
+        <p className="text-sm text-zinc-400">
+          Defina <code className="text-zinc-200">VITE_SUPABASE_URL</code> e{' '}
+          <code className="text-zinc-200">VITE_SUPABASE_ANON_KEY</code> (veja <code className="text-zinc-200">.env.example</code>)
+          e rode <code className="text-zinc-200">supabase/schema.sql</code> no seu projeto Supabase antes de usar o app.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 function App() {
-  const hydrated = useAppStore((s) => s.hydrated)
-  if (!hydrated) return <AppSplash />
+  const authLoading = useAppStore((s) => s.authLoading)
+  if (!isSupabaseConfigured) return <SupabaseSetupNotice />
+  if (authLoading) return <AppSplash />
 
   return (
     <Routes>

@@ -15,7 +15,7 @@ export default function TaskCard({
   showOwner?: boolean
   showCommunity?: boolean
 }) {
-  const currentUserId = useAppStore((s) => s.currentUserId)
+  const currentUserId = useAppStore((s) => s.authUser?.id)
   const toggleSubtask = useAppStore((s) => s.toggleSubtask)
   const setTaskStarted = useAppStore((s) => s.setTaskStarted)
   const completeTask = useAppStore((s) => s.completeTask)

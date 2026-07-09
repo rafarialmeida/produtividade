@@ -9,8 +9,7 @@ import { URGENCY_CONFIG } from '../utils/urgency'
 import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
 
 export default function CommunitiesHub() {
-  const currentUserId = useAppStore((s) => s.currentUserId)!
-  const user = useAppStore((s) => s.getUserById(currentUserId))!
+  const user = useAppStore((s) => s.authUser)!
   const allCommunities = useAppStore((s) => s.communities)
   const users = useAppStore((s) => s.users)
   const tasks = useAppStore((s) => s.tasks)
@@ -22,24 +21,30 @@ export default function CommunitiesHub() {
   const [joinCode, setJoinCode] = useState('')
   const [joinError, setJoinError] = useState('')
   const [joinSuccess, setJoinSuccess] = useState('')
+  const [joining, setJoining] = useState(false)
 
   const myCommunities = useMemo(
-    () => allCommunities.filter((c) => user.communityIds.includes(c.id)),
-    [allCommunities, user.communityIds],
+    () => allCommunities.filter((c) => c.memberIds.includes(user.id)),
+    [allCommunities, user.id],
   )
 
-  function handleJoin(e: React.FormEvent) {
+  async function handleJoin(e: React.FormEvent) {
     e.preventDefault()
     setJoinError('')
     setJoinSuccess('')
     if (!joinCode.trim()) return
-    const community = joinCommunityWithCode(user.id, joinCode.trim())
-    if (!community) {
-      setJoinError('Código de convite inválido.')
-      return
+    setJoining(true)
+    try {
+      const { error, communityName } = await joinCommunityWithCode(joinCode.trim())
+      if (error || !communityName) {
+        setJoinError(error ?? 'Código de convite inválido.')
+        return
+      }
+      setJoinSuccess(`Você entrou em "${communityName}"!`)
+      setJoinCode('')
+    } finally {
+      setJoining(false)
     }
-    setJoinSuccess(`Você entrou em "${community.name}"!`)
-    setJoinCode('')
   }
 
   function handleDelete(communityId: string, name: string) {
@@ -72,8 +77,8 @@ export default function CommunitiesHub() {
             className="input font-mono tracking-widest"
           />
         </div>
-        <button type="submit" className="btn-secondary !w-auto px-5">
-          Entrar
+        <button type="submit" disabled={joining} className="btn-secondary !w-auto px-5">
+          {joining ? 'Entrando…' : 'Entrar'}
         </button>
         {joinError && <p className="text-xs text-rose-400 sm:ml-3">{joinError}</p>}
         {joinSuccess && <p className="text-xs text-emerald-400 sm:ml-3">{joinSuccess}</p>}

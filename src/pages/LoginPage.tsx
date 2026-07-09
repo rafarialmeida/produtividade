@@ -1,68 +1,66 @@
 import { useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
-import { KeyRound, ShieldCheck, Sparkles, Ticket, User, Zap } from 'lucide-react'
+import { Navigate } from 'react-router-dom'
+import { Loader2, Lock, LogIn, Mail, User, UserPlus, Zap } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 
-type Tab = 'admin' | 'member' | 'invite'
+type Mode = 'login' | 'signup'
 
 export default function LoginPage() {
-  const navigate = useNavigate()
-  const currentUserId = useAppStore((s) => s.currentUserId)
-  const loginAdmin = useAppStore((s) => s.loginAdmin)
-  const loginMember = useAppStore((s) => s.loginMember)
-  const joinWithInviteCode = useAppStore((s) => s.joinWithInviteCode)
-  const users = useAppStore((s) => s.users)
+  const authUser = useAppStore((s) => s.authUser)
+  const signIn = useAppStore((s) => s.signIn)
+  const signUp = useAppStore((s) => s.signUp)
+  const signInWithGoogle = useAppStore((s) => s.signInWithGoogle)
+  const signInWithMicrosoft = useAppStore((s) => s.signInWithMicrosoft)
 
-  const [tab, setTab] = useState<Tab>('admin')
+  const [mode, setMode] = useState<Mode>('login')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [confirmationMessage, setConfirmationMessage] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState<'google' | 'microsoft' | null>(null)
 
-  const [adminEmail, setAdminEmail] = useState('')
-  const [adminPassword, setAdminPassword] = useState('')
-
-  const [memberEmail, setMemberEmail] = useState('')
-
-  const [inviteName, setInviteName] = useState('')
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteCode, setInviteCode] = useState('')
-
-  function handleAdminLogin(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    const user = loginAdmin(adminEmail.trim(), adminPassword)
-    if (!user) {
-      setError('Credenciais de administrador inválidas.')
-      return
+    setConfirmationMessage('')
+    setSubmitting(true)
+    try {
+      if (mode === 'signup') {
+        if (name.trim().length < 2) {
+          setError('Informe seu nome.')
+          return
+        }
+        const { error: signUpError, needsConfirmation } = await signUp(name.trim(), email.trim(), password)
+        if (signUpError) {
+          setError(signUpError)
+          return
+        }
+        if (needsConfirmation) {
+          setConfirmationMessage('Conta criada! Verifique seu e-mail para confirmar o cadastro antes de entrar.')
+        }
+      } else {
+        const loginError = await signIn(email.trim(), password)
+        if (loginError) setError(loginError)
+      }
+    } finally {
+      setSubmitting(false)
     }
-    navigate('/day')
   }
 
-  function handleMemberLogin(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleOAuth(provider: 'google' | 'microsoft') {
     setError('')
-    const user = loginMember(memberEmail.trim())
-    if (!user) {
-      setError('E-mail não encontrado. Peça um código de convite ou fale com o admin.')
-      return
+    setOauthLoading(provider)
+    try {
+      if (provider === 'google') await signInWithGoogle()
+      else await signInWithMicrosoft()
+    } finally {
+      setOauthLoading(null)
     }
-    navigate('/day')
   }
 
-  function handleInviteJoin(e: React.FormEvent) {
-    e.preventDefault()
-    setError('')
-    if (!inviteName.trim() || !inviteEmail.trim() || !inviteCode.trim()) {
-      setError('Preencha nome, e-mail e código de convite.')
-      return
-    }
-    const user = joinWithInviteCode(inviteName.trim(), inviteEmail.trim(), inviteCode.trim())
-    if (!user) {
-      setError('Código de convite inválido.')
-      return
-    }
-    navigate('/day')
-  }
-
-  if (currentUserId) return <Navigate to="/day" replace />
+  if (authUser) return <Navigate to="/day" replace />
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-10">
@@ -78,115 +76,98 @@ export default function LoginPage() {
         </div>
 
         <div className="glass-panel rounded-2xl p-1.5 flex gap-1 mb-6">
-          <TabButton active={tab === 'admin'} onClick={() => { setTab('admin'); setError('') }} icon={<ShieldCheck size={14} />}>
-            Admin
+          <TabButton active={mode === 'login'} onClick={() => { setMode('login'); setError(''); setConfirmationMessage('') }}>
+            Entrar
           </TabButton>
-          <TabButton active={tab === 'member'} onClick={() => { setTab('member'); setError('') }} icon={<User size={14} />}>
-            Membro
-          </TabButton>
-          <TabButton active={tab === 'invite'} onClick={() => { setTab('invite'); setError('') }} icon={<Ticket size={14} />}>
-            Convite
+          <TabButton active={mode === 'signup'} onClick={() => { setMode('signup'); setError(''); setConfirmationMessage('') }}>
+            Criar conta
           </TabButton>
         </div>
 
-        <div className="glass-panel rounded-2xl p-6 sm:p-7">
-          {tab === 'admin' && (
-            <form onSubmit={handleAdminLogin} className="flex flex-col gap-4">
-              <div>
-                <label className="text-xs font-medium text-zinc-400 mb-1.5 block">E-mail do administrador</label>
-                <input
-                  value={adminEmail}
-                  onChange={(e) => setAdminEmail(e.target.value)}
-                  type="email"
-                  placeholder="admin@flawless.com"
-                  className="input"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-zinc-400 mb-1.5 block">Senha</label>
-                <input
-                  value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  type="password"
-                  placeholder="••••••••"
-                  className="input"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setAdminEmail('admin@flawless.com')
-                  setAdminPassword('senha123')
-                }}
-                className="flex items-center justify-center gap-1.5 text-xs text-purple-300 hover:text-purple-200 -mt-1"
-              >
-                <Sparkles size={12} /> Preencher credenciais de demonstração
-              </button>
-              {error && <p className="text-xs text-rose-400">{error}</p>}
-              <button type="submit" className="btn-primary mt-1">
-                <KeyRound size={15} /> Entrar como Admin
-              </button>
-            </form>
-          )}
+        <div className="glass-panel rounded-2xl p-6 sm:p-7 flex flex-col gap-5">
+          <div className="flex flex-col gap-2.5">
+            <button
+              type="button"
+              onClick={() => handleOAuth('google')}
+              disabled={oauthLoading !== null}
+              className="flex items-center justify-center gap-2.5 rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] text-sm font-medium text-white py-2.5 transition-colors disabled:opacity-50"
+            >
+              {oauthLoading === 'google' ? <Loader2 size={16} className="animate-spin" /> : <GoogleIcon />}
+              Continuar com Google
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOAuth('microsoft')}
+              disabled={oauthLoading !== null}
+              className="flex items-center justify-center gap-2.5 rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] text-sm font-medium text-white py-2.5 transition-colors disabled:opacity-50"
+            >
+              {oauthLoading === 'microsoft' ? <Loader2 size={16} className="animate-spin" /> : <MicrosoftIcon />}
+              Continuar com Microsoft
+            </button>
+          </div>
 
-          {tab === 'member' && (
-            <form onSubmit={handleMemberLogin} className="flex flex-col gap-4">
-              <div>
-                <label className="text-xs font-medium text-zinc-400 mb-1.5 block">Seu e-mail</label>
-                <input
-                  value={memberEmail}
-                  onChange={(e) => setMemberEmail(e.target.value)}
-                  type="email"
-                  placeholder="ana@flawless.com"
-                  className="input"
-                />
-              </div>
-              <p className="text-[11px] text-zinc-500 -mt-1">
-                Membros de demonstração: ana@, bruno@, carla@ ou diego@flawless.com
-              </p>
-              {error && <p className="text-xs text-rose-400">{error}</p>}
-              <button type="submit" className="btn-primary mt-1">
-                <User size={15} /> Entrar como Membro
-              </button>
-            </form>
-          )}
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-white/10" />
+            <span className="text-[11px] text-zinc-600">ou</span>
+            <div className="h-px flex-1 bg-white/10" />
+          </div>
 
-          {tab === 'invite' && (
-            <form onSubmit={handleInviteJoin} className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {mode === 'signup' && (
               <div>
-                <label className="text-xs font-medium text-zinc-400 mb-1.5 block">Seu nome</label>
-                <input value={inviteName} onChange={(e) => setInviteName(e.target.value)} placeholder="Seu nome completo" className="input" />
+                <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 mb-1.5">
+                  <User size={13} /> Nome
+                </label>
+                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome completo" className="input" />
               </div>
-              <div>
-                <label className="text-xs font-medium text-zinc-400 mb-1.5 block">Seu e-mail</label>
-                <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} type="email" placeholder="voce@exemplo.com" className="input" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-zinc-400 mb-1.5 block">Código de convite</label>
-                <input
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                  placeholder="EX: 8F3K2A"
-                  className="input font-mono tracking-widest"
-                />
-              </div>
-              {error && <p className="text-xs text-rose-400">{error}</p>}
-              <button type="submit" className="btn-secondary mt-1">
-                <Ticket size={15} /> Entrar com convite
-              </button>
-            </form>
-          )}
+            )}
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 mb-1.5">
+                <Mail size={13} /> E-mail
+              </label>
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                placeholder="voce@exemplo.com"
+                className="input"
+              />
+            </div>
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 mb-1.5">
+                <Lock size={13} /> Senha
+              </label>
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type="password"
+                placeholder="••••••••"
+                minLength={6}
+                className="input"
+              />
+            </div>
+
+            {error && <p className="text-xs text-rose-400">{error}</p>}
+            {confirmationMessage && <p className="text-xs text-emerald-400">{confirmationMessage}</p>}
+
+            <button type="submit" disabled={submitting} className="btn-primary mt-1">
+              {submitting ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : mode === 'signup' ? (
+                <UserPlus size={15} />
+              ) : (
+                <LogIn size={15} />
+              )}
+              {mode === 'signup' ? 'Criar conta' : 'Entrar'}
+            </button>
+          </form>
         </div>
-
-        <p className="text-center text-[11px] text-zinc-600 mt-6">
-          {users.length} usuários cadastrados na plataforma de demonstração
-        </p>
       </div>
     </div>
   )
 }
 
-function TabButton({ active, onClick, children, icon }: { active: boolean; onClick: () => void; children: React.ReactNode; icon: React.ReactNode }) {
+function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       onClick={onClick}
@@ -194,7 +175,29 @@ function TabButton({ active, onClick, children, icon }: { active: boolean; onCli
         active ? 'bg-white/10 text-white shadow-inner' : 'text-zinc-500 hover:text-zinc-300'
       }`}
     >
-      {icon} {children}
+      {children}
     </button>
+  )
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"/>
+      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/>
+      <path fill="#4CAF50" d="M24 44c5.4 0 10.3-2.1 14-5.4l-6.5-5.5C29.3 34.7 26.8 36 24 36c-5.3 0-9.7-3.3-11.3-8.1l-6.5 5C9.5 39.6 16.2 44 24 44z"/>
+      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.7l6.5 5.5C39.9 37.6 44 31.7 44 24c0-1.2-.1-2.4-.4-3.5z"/>
+    </svg>
+  )
+}
+
+function MicrosoftIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 23 23" aria-hidden="true">
+      <path fill="#f35325" d="M1 1h10v10H1z" />
+      <path fill="#81bc06" d="M12 1h10v10H12z" />
+      <path fill="#05a6f0" d="M1 12h10v10H1z" />
+      <path fill="#ffba08" d="M12 12h10v10H12z" />
+    </svg>
   )
 }

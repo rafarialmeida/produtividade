@@ -14,9 +14,8 @@ const NAV_ITEMS = [
 export default function Layout({ children }: { children: ReactNode }) {
   useExpirationTicker()
   const navigate = useNavigate()
-  const currentUserId = useAppStore((s) => s.currentUserId)
-  const user = useAppStore((s) => (currentUserId ? s.getUserById(currentUserId) : undefined))
-  const logout = useAppStore((s) => s.logout)
+  const user = useAppStore((s) => s.authUser)
+  const signOut = useAppStore((s) => s.signOut)
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -70,8 +69,8 @@ export default function Layout({ children }: { children: ReactNode }) {
                   {user.name.slice(0, 1).toUpperCase()}
                 </div>
                 <button
-                  onClick={() => {
-                    logout()
+                  onClick={async () => {
+                    await signOut()
                     navigate('/login')
                   }}
                   title="Sair"

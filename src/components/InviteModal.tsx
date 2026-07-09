@@ -5,11 +5,10 @@ import { useAppStore } from '../store/useStore'
 export default function InviteModal({ communityId, onClose }: { communityId: string; onClose: () => void }) {
   const community = useAppStore((s) => s.getCommunityById(communityId))
   const users = useAppStore((s) => s.users)
-  const addFictionalMember = useAppStore((s) => s.addFictionalMember)
   const regenerateInviteCode = useAppStore((s) => s.regenerateInviteCode)
 
-  const [name, setName] = useState('')
   const [copied, setCopied] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
 
   if (!community) return null
 
@@ -21,11 +20,13 @@ export default function InviteModal({ communityId, onClose }: { communityId: str
     setTimeout(() => setCopied(false), 1500)
   }
 
-  function handleAdd(e: React.FormEvent) {
-    e.preventDefault()
-    if (!name.trim()) return
-    addFictionalMember(communityId, name.trim())
-    setName('')
+  async function handleRegenerate() {
+    setRegenerating(true)
+    try {
+      await regenerateInviteCode(communityId)
+    } finally {
+      setRegenerating(false)
+    }
   }
 
   return (
@@ -51,40 +52,29 @@ export default function InviteModal({ communityId, onClose }: { communityId: str
               <button onClick={handleCopy} className="btn-ghost !w-auto px-3" title="Copiar código">
                 {copied ? <Check size={15} className="text-emerald-400" /> : <Copy size={15} />}
               </button>
-              <button onClick={() => regenerateInviteCode(communityId)} className="btn-ghost !w-auto px-3" title="Gerar novo código">
-                <RefreshCcw size={15} />
+              <button
+                onClick={handleRegenerate}
+                disabled={regenerating}
+                className="btn-ghost !w-auto px-3 disabled:opacity-50"
+                title="Gerar novo código"
+              >
+                <RefreshCcw size={15} className={regenerating ? 'animate-spin' : ''} />
               </button>
             </div>
             <p className="text-[11px] text-zinc-500 mt-1.5">
-              Compartilhe este código na aba "Convite" da tela de login para novos membros entrarem.
-            </p>
-          </div>
-
-          <div className="border-t border-white/5 pt-5">
-            <label className="text-xs font-medium text-zinc-400 mb-1.5 block">Simular novo membro fictício</label>
-            <form onSubmit={handleAdd} className="flex gap-2">
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Marina Costa" className="input" />
-              <button type="submit" className="btn-secondary !w-auto px-4">
-                Adicionar
-              </button>
-            </form>
-            <p className="text-[11px] text-zinc-500 mt-1.5">
-              Adiciona instantaneamente um membro simulado para popular o ranking.
+              Compartilhe este código — a pessoa cria a conta (ou já tem uma) e entra na comunidade pela aba "Comunidades".
             </p>
           </div>
 
           <div className="border-t border-white/5 pt-5">
             <p className="text-xs font-medium text-zinc-400 mb-2">Membros ({members.length})</p>
-            <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
+            <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto pr-1">
               {members.map((m) => (
                 <div key={m!.id} className="flex items-center gap-2.5 py-1.5">
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 flex items-center justify-center text-[11px] font-semibold text-white">
                     {m!.name.slice(0, 1).toUpperCase()}
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm text-zinc-200 truncate">{m!.name}</p>
-                    <p className="text-[11px] text-zinc-600 truncate">{m!.email}</p>
-                  </div>
+                  <p className="text-sm text-zinc-200 truncate">{m!.name}</p>
                   {m!.role === 'admin' && (
                     <span className="ml-auto text-[10px] text-amber-400 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded">
                       admin
