@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CheckCircle2, Layers, ListChecks, Plus, Tag, Target, Trash2, X } from 'lucide-react'
+import { CalendarClock, CheckCircle2, Layers, ListChecks, Plus, Tag, Target, Trash2, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import type { Severity } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
@@ -40,13 +40,13 @@ export default function TaskForm({
   const [categories, setCategories] = useState(availableCategories)
   const [addingCategory, setAddingCategory] = useState(false)
   const [newCategory, setNewCategory] = useState('')
-  const [subtasks, setSubtasks] = useState<string[]>([''])
+  const [subtasks, setSubtasks] = useState<{ text: string; dueDate: string }[]>([{ text: '', dueDate: '' }])
   const [deadline, setDeadline] = useState('')
   const [urgency, setUrgency] = useState<Severity>('media')
   const [submitting, setSubmitting] = useState(false)
 
   const minDeadline = toDatetimeLocalValue(new Date(Date.now() + 5 * 60000))
-  const cleanSubtasks = subtasks.map((s) => s.trim()).filter(Boolean)
+  const cleanSubtasks = subtasks.map((s) => ({ ...s, text: s.text.trim() })).filter((s) => s.text.length > 0)
 
   const isValid =
     macroObjective.trim().length >= 3 &&
@@ -56,12 +56,16 @@ export default function TaskForm({
     deadline.length > 0 &&
     new Date(deadline).getTime() > Date.now()
 
-  function updateSubtask(index: number, value: string) {
-    setSubtasks((s) => s.map((item, i) => (i === index ? value : item)))
+  function updateSubtaskText(index: number, value: string) {
+    setSubtasks((s) => s.map((item, i) => (i === index ? { ...item, text: value } : item)))
+  }
+
+  function updateSubtaskDate(index: number, value: string) {
+    setSubtasks((s) => s.map((item, i) => (i === index ? { ...item, dueDate: value } : item)))
   }
 
   function addSubtaskField() {
-    setSubtasks((s) => [...s, ''])
+    setSubtasks((s) => [...s, { text: '', dueDate: '' }])
   }
 
   function removeSubtaskField(index: number) {
@@ -93,7 +97,10 @@ export default function TaskForm({
         macroObjective: macroObjective.trim(),
         title: title.trim(),
         category: category.trim(),
-        subtasks: cleanSubtasks,
+        subtasks: cleanSubtasks.map((s) => ({
+          text: s.text,
+          dueDate: s.dueDate ? new Date(s.dueDate).toISOString() : undefined,
+        })),
         deadline: new Date(deadline).toISOString(),
         urgency,
       })
@@ -224,26 +231,48 @@ export default function TaskForm({
 
           <div>
             <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 mb-1.5">
-              <ListChecks size={13} className="text-emerald-400" /> Plano de Execução — o "como" (checklist obrigatório)
+              <ListChecks size={13} className="text-emerald-400" /> Plano de Execução — o "como" (checklist obrigatório, prazo por item é opcional)
             </label>
             <div className="flex flex-col gap-2">
               {subtasks.map((s, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-600 w-4">{i + 1}.</span>
-                  <input
-                    value={s}
-                    onChange={(e) => updateSubtask(i, e.target.value)}
-                    placeholder="Subtarefa"
-                    className="input"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeSubtaskField(i)}
-                    disabled={subtasks.length === 1}
-                    className="p-2 rounded-lg text-zinc-600 hover:text-rose-400 hover:bg-rose-500/10 disabled:opacity-30"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                <div key={i} className="rounded-xl border border-white/5 bg-white/[0.02] p-2 flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-600 w-4">{i + 1}.</span>
+                    <input
+                      value={s.text}
+                      onChange={(e) => updateSubtaskText(i, e.target.value)}
+                      placeholder="Subtarefa"
+                      className="input"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeSubtaskField(i)}
+                      disabled={subtasks.length === 1}
+                      className="p-2 rounded-lg text-zinc-600 hover:text-rose-400 hover:bg-rose-500/10 disabled:opacity-30"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 pl-6">
+                    <CalendarClock size={12} className="text-zinc-600 shrink-0" />
+                    <input
+                      type="datetime-local"
+                      value={s.dueDate}
+                      onChange={(e) => updateSubtaskDate(i, e.target.value)}
+                      min={minDeadline}
+                      max={deadline || undefined}
+                      className="input !py-1 !text-xs !w-auto flex-1"
+                    />
+                    {s.dueDate && (
+                      <button
+                        type="button"
+                        onClick={() => updateSubtaskDate(i, '')}
+                        className="text-[10px] text-zinc-500 hover:text-rose-400 shrink-0"
+                      >
+                        Remover prazo
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

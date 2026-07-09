@@ -55,7 +55,8 @@ create table if not exists public.subtasks (
   task_id uuid not null references public.tasks (id) on delete cascade,
   text text not null,
   done boolean not null default false,
-  position int not null default 0
+  position int not null default 0,
+  due_date timestamptz
 );
 
 create table if not exists public.notifications (

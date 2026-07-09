@@ -54,6 +54,7 @@ export interface SubTask {
   id: string
   text: string
   done: boolean
+  dueDate?: string
 }
 
 export interface Task {

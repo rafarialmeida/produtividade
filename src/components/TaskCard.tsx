@@ -1,10 +1,10 @@
-import { CheckCircle2, Circle, Clock, Play, RotateCcw, Tag, Target, Trash2, TriangleAlert, User } from 'lucide-react'
+import { CalendarClock, CheckCircle2, Circle, Clock, Play, RotateCcw, Tag, Target, Trash2, TriangleAlert, User } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import type { Task } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
 import { getTaskStatus, TASK_STATUS_CONFIG } from '../utils/taskStatus'
-import { formatDeadline, formatRelative, isNearDeadline } from '../utils/date'
+import { formatDeadline, formatRelative, isNearDeadline, isPastDeadline } from '../utils/date'
 
 export default function TaskCard({
   task,
@@ -100,21 +100,34 @@ export default function TaskCard({
       </div>
 
       <div className="mt-3 flex flex-col gap-1.5">
-        {task.subtasks.map((st) => (
-          <button
-            key={st.id}
-            onClick={() => !task.completed && toggleSubtask(task.id, st.id)}
-            disabled={task.completed}
-            className="flex items-center gap-2 text-left group"
-          >
-            {st.done ? (
-              <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
-            ) : (
-              <Circle size={15} className="text-zinc-600 shrink-0 group-hover:text-zinc-400" />
-            )}
-            <span className={`text-sm ${st.done ? 'text-zinc-500 line-through' : 'text-zinc-300'}`}>{st.text}</span>
-          </button>
-        ))}
+        {task.subtasks.map((st) => {
+          const subtaskOverdue = !st.done && st.dueDate && isPastDeadline(st.dueDate)
+          const subtaskNear = !st.done && st.dueDate && isNearDeadline(st.dueDate)
+          return (
+            <button
+              key={st.id}
+              onClick={() => !task.completed && toggleSubtask(task.id, st.id)}
+              disabled={task.completed}
+              className="flex items-center gap-2 text-left group"
+            >
+              {st.done ? (
+                <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
+              ) : (
+                <Circle size={15} className="text-zinc-600 shrink-0 group-hover:text-zinc-400" />
+              )}
+              <span className={`text-sm ${st.done ? 'text-zinc-500 line-through' : 'text-zinc-300'}`}>{st.text}</span>
+              {st.dueDate && !st.done && (
+                <span
+                  className={`flex items-center gap-1 text-[10px] shrink-0 ${
+                    subtaskOverdue ? 'text-rose-400' : subtaskNear ? 'text-amber-400' : 'text-zinc-600'
+                  }`}
+                >
+                  <CalendarClock size={10} /> {formatRelative(st.dueDate)}
+                </span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-3">

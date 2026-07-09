@@ -19,7 +19,7 @@ interface CreateTaskInput {
   macroObjective: string
   title: string
   category: string
-  subtasks: string[]
+  subtasks: { text: string; dueDate?: string }[]
   deadline: string
   urgency: Severity
 }
@@ -70,7 +70,12 @@ interface State {
 }
 
 function mapSubtask(row: Record<string, unknown>): SubTask {
-  return { id: row.id as string, text: row.text as string, done: row.done as boolean }
+  return {
+    id: row.id as string,
+    text: row.text as string,
+    done: row.done as boolean,
+    dueDate: (row.due_date as string | null) ?? undefined,
+  }
 }
 
 function mapTask(row: Record<string, unknown>): Task {
@@ -167,7 +172,11 @@ export const useAppStore = create<State>()((set, get) => ({
       supabase.from('profiles').select('*'),
       supabase.from('communities').select('*'),
       supabase.from('community_members').select('*'),
-      supabase.from('tasks').select('*, subtasks(*)').order('created_at', { ascending: false }),
+      supabase
+        .from('tasks')
+        .select('*, subtasks(*)')
+        .order('created_at', { ascending: false })
+        .order('position', { foreignTable: 'subtasks', ascending: true }),
       supabase.from('notifications').select('*').order('created_at', { ascending: false }),
     ])
 
@@ -239,9 +248,16 @@ export const useAppStore = create<State>()((set, get) => ({
       .single()
     if (error || !task) return
 
-    const cleanSubtasks = subtasks.filter(Boolean)
+    const cleanSubtasks = subtasks.filter((s) => s.text.trim().length > 0)
     if (cleanSubtasks.length > 0) {
-      await supabase.from('subtasks').insert(cleanSubtasks.map((text, i) => ({ task_id: task.id, text, position: i })))
+      await supabase.from('subtasks').insert(
+        cleanSubtasks.map((s, i) => ({
+          task_id: task.id,
+          text: s.text.trim(),
+          position: i,
+          due_date: s.dueDate ?? null,
+        })),
+      )
     }
     await get().refreshAll()
   },
