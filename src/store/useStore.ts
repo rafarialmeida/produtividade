@@ -35,7 +35,7 @@ interface State {
 
   // task actions
   createTask: (input: {
-    communityId: string
+    communityId?: string
     userId: string
     macroObjective: string
     title: string
@@ -45,8 +45,10 @@ interface State {
     urgency: Severity
   }) => void
   toggleSubtask: (taskId: string, subtaskId: string) => void
+  setTaskStarted: (taskId: string, started: boolean) => void
   completeTask: (taskId: string) => void
   deleteTask: (taskId: string) => void
+  rescheduleTask: (taskId: string, deadline: string) => void
   checkExpirations: () => void
 
   // notifications
@@ -55,7 +57,7 @@ interface State {
 
   // selectors helpers
   getUserById: (id: string) => User | undefined
-  getCommunityById: (id: string) => Community | undefined
+  getCommunityById: (id: string | undefined) => Community | undefined
   getLostPoints: (userId: string, communityId: string) => number
 }
 
@@ -114,6 +116,7 @@ const seedTasks: Task[] = [
     macroObjective: 'Lançamento Q3 do produto',
     title: 'Finalizar landing page de vendas',
     category: 'Trabalho',
+    started: true,
     subtasks: seedSubtasks(['Escrever copy', 'Ajustar layout mobile', 'Revisar SEO']),
     deadline: agoHours(30),
     urgency: 'alta',
@@ -128,6 +131,7 @@ const seedTasks: Task[] = [
     macroObjective: 'Lançamento Q3 do produto',
     title: 'Configurar pipeline de CI/CD',
     category: 'Trabalho',
+    started: true,
     subtasks: seedSubtasks(['Criar workflow', 'Testar deploy staging']),
     deadline: agoHours(80),
     urgency: 'critica',
@@ -142,6 +146,7 @@ const seedTasks: Task[] = [
     macroObjective: 'Retenção de clientes',
     title: 'Responder tickets pendentes',
     category: 'Trabalho',
+    started: true,
     subtasks: seedSubtasks(['Triar fila', 'Responder top 10']),
     deadline: agoHours(10),
     urgency: 'media',
@@ -156,6 +161,7 @@ const seedTasks: Task[] = [
     macroObjective: 'Retenção de clientes',
     title: 'Atualizar documentação da API',
     category: 'Trabalho',
+    started: true,
     subtasks: seedSubtasks(['Revisar endpoints', 'Publicar changelog']),
     deadline: agoHours(5),
     urgency: 'baixa',
@@ -170,6 +176,7 @@ const seedTasks: Task[] = [
     macroObjective: 'Lançamento Q3 do produto',
     title: 'Preparar apresentação para investidores',
     category: 'Trabalho',
+    started: true,
     subtasks: seedSubtasks(['Montar slides', 'Revisar métricas', 'Ensaiar pitch']),
     deadline: inDays(2),
     urgency: 'critica',
@@ -184,6 +191,7 @@ const seedTasks: Task[] = [
     macroObjective: 'Lançamento Q3 do produto',
     title: 'Revisar contrato com fornecedor',
     category: 'Trabalho',
+    started: false,
     subtasks: seedSubtasks(['Ler cláusulas', 'Marcar reunião']),
     deadline: inDays(0, 3),
     urgency: 'media',
@@ -198,6 +206,7 @@ const seedTasks: Task[] = [
     macroObjective: 'Retenção de clientes',
     title: 'Criar pesquisa de satisfação',
     category: 'Trabalho',
+    started: true,
     subtasks: seedSubtasks(['Definir perguntas', 'Configurar formulário']).map((s) => ({ ...s, done: true })),
     deadline: inDays(5),
     urgency: 'baixa',
@@ -213,6 +222,7 @@ const seedTasks: Task[] = [
     macroObjective: 'Meta pessoal: rotina de estudos',
     title: 'Terminar curso de inglês — módulo 3',
     category: 'Estudos',
+    started: true,
     subtasks: seedSubtasks(['Assistir aulas', 'Fazer exercícios', 'Fazer prova do módulo']),
     deadline: agoHours(20),
     urgency: 'critica',
@@ -227,6 +237,7 @@ const seedTasks: Task[] = [
     macroObjective: 'Meta pessoal: saúde',
     title: 'Treinar 4x nesta semana',
     category: 'Saúde',
+    started: true,
     subtasks: seedSubtasks(['Treino de pernas', 'Treino de costas', 'Corrida 5km']),
     deadline: agoHours(6),
     urgency: 'media',
@@ -241,6 +252,7 @@ const seedTasks: Task[] = [
     macroObjective: 'Meta pessoal: leitura',
     title: 'Ler 2 capítulos do livro da vez',
     category: 'Estudos',
+    started: true,
     subtasks: seedSubtasks(['Capítulo 5', 'Capítulo 6']),
     deadline: inDays(1),
     urgency: 'baixa',
@@ -382,6 +394,7 @@ export const useAppStore = create<State>()(
           subtasks: seedSubtasks(subtasks),
           deadline,
           urgency,
+          started: false,
           completed: false,
           expired: false,
           createdAt: new Date().toISOString(),
@@ -399,6 +412,10 @@ export const useAppStore = create<State>()(
         }))
       },
 
+      setTaskStarted: (taskId, started) => {
+        set((s) => ({ tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, started } : t)) }))
+      },
+
       completeTask: (taskId) => {
         set((s) => ({
           tasks: s.tasks.map((t) =>
@@ -409,6 +426,10 @@ export const useAppStore = create<State>()(
 
       deleteTask: (taskId) => {
         set((s) => ({ tasks: s.tasks.filter((t) => t.id !== taskId) }))
+      },
+
+      rescheduleTask: (taskId, deadline) => {
+        set((s) => ({ tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, deadline } : t)) }))
       },
 
       checkExpirations: () => {
@@ -453,14 +474,21 @@ export const useAppStore = create<State>()(
     }),
     {
       name: 'flawless-storage',
-      version: 2,
+      version: 3,
       migrate: (persistedState) => {
-        const state = persistedState as { communities?: Community[] } | undefined
+        const state = persistedState as { communities?: Community[]; tasks?: Task[] } | undefined
         if (state?.communities) {
           state.communities = state.communities.map((c) => ({
             ...c,
             type: c.type ?? 'trabalho',
             creatorId: c.creatorId ?? c.memberIds?.[0] ?? seedAdmin.id,
+          }))
+        }
+        if (state?.tasks) {
+          state.tasks = state.tasks.map((t) => ({
+            ...t,
+            category: t.category ?? 'Trabalho',
+            started: t.started ?? true,
           }))
         }
         return state

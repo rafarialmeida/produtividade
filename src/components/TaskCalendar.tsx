@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Task } from '../types'
+import { useAppStore } from '../store/useStore'
 import { URGENCY_CONFIG } from '../utils/urgency'
+import TaskDetailModal from './TaskDetailModal'
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
@@ -12,6 +14,21 @@ interface DayCell {
 
 function isSameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+}
+
+function dayKey(d: Date) {
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+}
+
+function withNewDate(original: Date, target: Date) {
+  return new Date(
+    target.getFullYear(),
+    target.getMonth(),
+    target.getDate(),
+    original.getHours(),
+    original.getMinutes(),
+    original.getSeconds(),
+  )
 }
 
 function buildMonthGrid(year: number, month: number): DayCell[] {
@@ -35,16 +52,18 @@ function buildMonthGrid(year: number, month: number): DayCell[] {
 }
 
 export default function TaskCalendar({ tasks }: { tasks: Task[] }) {
+  const rescheduleTask = useAppStore((s) => s.rescheduleTask)
   const today = new Date()
   const [cursor, setCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null)
 
   const cells = useMemo(() => buildMonthGrid(cursor.getFullYear(), cursor.getMonth()), [cursor])
 
   const tasksByDay = useMemo(() => {
     const map = new Map<string, Task[]>()
     for (const t of tasks) {
-      const d = new Date(t.deadline)
-      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+      const key = dayKey(new Date(t.deadline))
       const list = map.get(key) ?? []
       list.push(t)
       map.set(key, list)
@@ -53,7 +72,17 @@ export default function TaskCalendar({ tasks }: { tasks: Task[] }) {
   }, [tasks])
 
   function tasksFor(date: Date) {
-    return tasksByDay.get(`${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`) ?? []
+    return tasksByDay.get(dayKey(date)) ?? []
+  }
+
+  function handleDrop(e: React.DragEvent, targetDate: Date) {
+    e.preventDefault()
+    setDragOverKey(null)
+    const taskId = e.dataTransfer.getData('text/plain')
+    const task = tasks.find((t) => t.id === taskId)
+    if (!task) return
+    const newDeadline = withNewDate(new Date(task.deadline), targetDate)
+    rescheduleTask(task.id, newDeadline.toISOString())
   }
 
   const monthLabel = cursor.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
@@ -65,7 +94,7 @@ export default function TaskCalendar({ tasks }: { tasks: Task[] }) {
           <CalendarDays className="text-purple-400" size={20} />
           <div>
             <h2 className="font-bold text-white text-lg capitalize">{monthLabel}</h2>
-            <p className="text-xs text-zinc-500">Prazos das suas tarefas no mês</p>
+            <p className="text-xs text-zinc-500">Clique numa tarefa para ver os detalhes, ou arraste para outro dia</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -104,13 +133,21 @@ export default function TaskCalendar({ tasks }: { tasks: Task[] }) {
           const visible = dayTasks.slice(0, 3)
           const overflow = dayTasks.length - visible.length
           const isToday = isSameDay(cell.date, today)
+          const cellKey = dayKey(cell.date)
+          const isDragOver = dragOverKey === cellKey
 
           return (
             <div
               key={i}
-              className={`min-h-[92px] p-1.5 border-b border-r border-white/5 [&:nth-child(7n)]:border-r-0 flex flex-col gap-1 ${
+              onDragOver={(e) => {
+                e.preventDefault()
+                setDragOverKey(cellKey)
+              }}
+              onDragLeave={() => setDragOverKey((k) => (k === cellKey ? null : k))}
+              onDrop={(e) => handleDrop(e, cell.date)}
+              className={`min-h-[92px] p-1.5 border-b border-r border-white/5 [&:nth-child(7n)]:border-r-0 flex flex-col gap-1 transition-colors ${
                 cell.inMonth ? '' : 'opacity-30'
-              }`}
+              } ${isDragOver ? 'bg-purple-500/10' : ''}`}
             >
               <span
                 className={`text-[11px] w-5 h-5 flex items-center justify-center rounded-full ${
@@ -122,16 +159,21 @@ export default function TaskCalendar({ tasks }: { tasks: Task[] }) {
               <div className="flex flex-col gap-0.5">
                 {visible.map((t) => {
                   const cfg = URGENCY_CONFIG[t.urgency]
+                  const draggable = !t.completed && !t.expired
                   return (
-                    <span
+                    <button
                       key={t.id}
+                      type="button"
                       title={t.title}
-                      className={`text-[10px] leading-tight px-1 py-0.5 rounded truncate border ${cfg.bg} ${cfg.border} ${cfg.color} ${
+                      draggable={draggable}
+                      onDragStart={(e) => e.dataTransfer.setData('text/plain', t.id)}
+                      onClick={() => setSelectedTaskId(t.id)}
+                      className={`text-[10px] leading-tight px-1 py-0.5 rounded truncate border text-left ${cfg.bg} ${cfg.border} ${cfg.color} ${
                         t.completed ? 'opacity-50 line-through' : ''
-                      }`}
+                      } ${draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} hover:brightness-125`}
                     >
                       {t.title}
-                    </span>
+                    </button>
                   )
                 })}
                 {overflow > 0 && <span className="text-[10px] text-zinc-500 px-1">+{overflow} mais</span>}
@@ -140,6 +182,8 @@ export default function TaskCalendar({ tasks }: { tasks: Task[] }) {
           )
         })}
       </div>
+
+      {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} />}
     </div>
   )
 }

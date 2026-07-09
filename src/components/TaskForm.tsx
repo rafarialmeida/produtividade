@@ -23,9 +23,9 @@ export default function TaskForm({
     [allCommunities, user],
   )
 
-  const [selectedCommunityId, setSelectedCommunityId] = useState(fixedCommunityId ?? myCommunities[0]?.id ?? '')
+  const [selectedCommunityId, setSelectedCommunityId] = useState(fixedCommunityId ?? '')
   const communityId = fixedCommunityId ?? selectedCommunityId
-  const community = useAppStore((s) => s.getCommunityById(communityId))
+  const community = useAppStore((s) => (communityId ? s.getCommunityById(communityId) : undefined))
 
   const allTasks = useAppStore((s) => s.tasks)
   const communityTasks = useMemo(() => allTasks.filter((t) => t.communityId === communityId), [allTasks, communityId])
@@ -48,7 +48,6 @@ export default function TaskForm({
   const cleanSubtasks = subtasks.map((s) => s.trim()).filter(Boolean)
 
   const isValid =
-    communityId.length > 0 &&
     macroObjective.trim().length >= 3 &&
     title.trim().length >= 3 &&
     category.trim().length > 0 &&
@@ -86,7 +85,7 @@ export default function TaskForm({
     e.preventDefault()
     if (!isValid) return
     createTask({
-      communityId,
+      communityId: communityId || undefined,
       userId,
       macroObjective: macroObjective.trim(),
       title: title.trim(),
@@ -105,7 +104,7 @@ export default function TaskForm({
           <div>
             <h2 className="text-lg font-bold text-white">Nova Tarefa</h2>
             <p className="text-xs text-zinc-500 mt-0.5">
-              {fixedCommunityId ? community?.name : 'nenhuma tarefa solta é permitida — escolha a comunidade'}
+              {fixedCommunityId ? community?.name : 'em grupo ou só sua — o planejamento continua obrigatório'}
             </p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10">
@@ -117,23 +116,22 @@ export default function TaskForm({
           {!fixedCommunityId && (
             <div>
               <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 mb-1.5">
-                <Layers size={13} className="text-purple-400" /> Comunidade
+                <Layers size={13} className="text-purple-400" /> Comunidade (opcional)
               </label>
-              {myCommunities.length > 0 ? (
-                <select
-                  value={selectedCommunityId}
-                  onChange={(e) => setSelectedCommunityId(e.target.value)}
-                  className="input"
-                >
-                  {myCommunities.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="text-xs text-rose-400">Você precisa entrar em uma comunidade antes de criar tarefas.</p>
-              )}
+              <select
+                value={selectedCommunityId}
+                onChange={(e) => setSelectedCommunityId(e.target.value)}
+                className="input"
+              >
+                <option value="" style={{ backgroundColor: '#0d0e14', color: '#fff' }}>
+                  Nenhuma — tarefa só minha
+                </option>
+                {myCommunities.map((c) => (
+                  <option key={c.id} value={c.id} style={{ backgroundColor: '#0d0e14', color: '#fff' }}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 

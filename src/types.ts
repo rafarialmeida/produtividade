@@ -52,7 +52,7 @@ export interface SubTask {
 
 export interface Task {
   id: string
-  communityId: string
+  communityId?: string
   userId: string
   macroObjective: string
   title: string
@@ -60,6 +60,7 @@ export interface Task {
   subtasks: SubTask[]
   deadline: string
   urgency: Severity
+  started: boolean
   completed: boolean
   completedAt?: string
   expired: boolean

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Globe2, Plus, TrendingDown, Users } from 'lucide-react'
+import { Circle, Globe2, Play, Plus, TrendingDown, Users } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import TaskForm from '../components/TaskForm'
 import TaskCard from '../components/TaskCard'
@@ -24,6 +24,8 @@ export default function MyDay() {
   const myTasks = useMemo(() => allTasks.filter((t) => t.userId === user.id), [allTasks, user.id])
 
   const active = myTasks.filter((t) => !t.completed && !t.expired).sort((a, b) => a.deadline.localeCompare(b.deadline))
+  const notStarted = active.filter((t) => !t.started)
+  const inProgress = active.filter((t) => t.started)
   const dueToday = active.filter((t) => isNearDeadline(t.deadline, 24))
   const expired = myTasks.filter((t) => t.expired && !t.completed)
   const completed = myTasks.filter((t) => t.completed).sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''))
@@ -97,13 +99,23 @@ export default function MyDay() {
         </Section>
       )}
 
-      <Section title="Em andamento">
-        {active.length === 0 ? (
+      <Section title="Não iniciadas" icon={<Circle size={14} className="text-zinc-400" />}>
+        {notStarted.length === 0 && inProgress.length === 0 ? (
           <EmptyState onCreate={() => setShowForm(true)} />
+        ) : notStarted.length === 0 ? (
+          <p className="sm:col-span-2 text-sm text-zinc-500 py-2">Nenhuma tarefa esperando para começar.</p>
         ) : (
-          active.map((t) => <TaskCard key={t.id} task={t} showCommunity={multiCommunity} />)
+          notStarted.map((t) => <TaskCard key={t.id} task={t} showCommunity={multiCommunity} />)
         )}
       </Section>
+
+      {inProgress.length > 0 && (
+        <Section title="Em andamento" icon={<Play size={14} className="text-sky-300" />}>
+          {inProgress.map((t) => (
+            <TaskCard key={t.id} task={t} showCommunity={multiCommunity} />
+          ))}
+        </Section>
+      )}
 
       <TaskCalendar tasks={myTasks} />
 

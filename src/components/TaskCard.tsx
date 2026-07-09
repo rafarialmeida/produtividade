@@ -1,8 +1,9 @@
-import { CheckCircle2, Circle, Clock, Tag, Target, Trash2, TriangleAlert } from 'lucide-react'
+import { CheckCircle2, Circle, Clock, Play, RotateCcw, Tag, Target, Trash2, TriangleAlert, User } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import type { Task } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
+import { getTaskStatus, TASK_STATUS_CONFIG } from '../utils/taskStatus'
 import { formatDeadline, formatRelative, isNearDeadline } from '../utils/date'
 
 export default function TaskCard({
@@ -16,6 +17,7 @@ export default function TaskCard({
 }) {
   const currentUserId = useAppStore((s) => s.currentUserId)
   const toggleSubtask = useAppStore((s) => s.toggleSubtask)
+  const setTaskStarted = useAppStore((s) => s.setTaskStarted)
   const completeTask = useAppStore((s) => s.completeTask)
   const deleteTask = useAppStore((s) => s.deleteTask)
   const owner = useAppStore((s) => s.getUserById(task.userId))
@@ -23,6 +25,8 @@ export default function TaskCard({
   const cfg = URGENCY_CONFIG[task.urgency]
   const communityTypeCfg = community ? COMMUNITY_TYPE_CONFIG[community.type] : null
   const isOwner = task.userId === currentUserId
+  const taskStatus = getTaskStatus(task)
+  const statusCfg = TASK_STATUS_CONFIG[taskStatus]
 
   function handleDelete() {
     if (window.confirm(`Excluir a tarefa "${task.title}"? Essa ação não pode ser desfeita.`)) {
@@ -34,7 +38,7 @@ export default function TaskCard({
   const doneCount = task.subtasks.filter((s) => s.done).length
   const allSubtasksDone = doneCount === task.subtasks.length
 
-  const status = task.completed ? 'completed' : task.expired ? 'expired' : near ? 'near' : 'active'
+  const cardStatus = task.completed ? 'completed' : task.expired ? 'expired' : near ? 'near' : 'active'
 
   const statusStyles: Record<string, string> = {
     completed: 'border-white/10 opacity-70',
@@ -44,7 +48,7 @@ export default function TaskCard({
   }
 
   return (
-    <div className={`glass-panel rounded-2xl p-5 border ${statusStyles[status]}`}>
+    <div className={`glass-panel rounded-2xl p-5 border ${statusStyles[cardStatus]}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 text-[11px] text-purple-300/80 mb-1.5">
@@ -54,13 +58,28 @@ export default function TaskCard({
           <h3 className={`font-semibold text-white ${task.completed ? 'line-through decoration-zinc-600' : ''}`}>
             {task.title}
           </h3>
-          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-zinc-400 bg-white/5 border border-white/10 rounded px-1.5 py-0.5 mt-1.5">
-            <Tag size={9} /> {task.category}
-          </span>
-          {showOwner && owner && <p className="text-xs text-zinc-500 mt-0.5">Responsável: {owner.name}</p>}
-          {showCommunity && community && communityTypeCfg && (
-            <p className={`flex items-center gap-1 text-[11px] mt-1 ${communityTypeCfg.color}`}>
-              <communityTypeCfg.icon size={11} /> {community.name}
+          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-zinc-400 bg-white/5 border border-white/10 rounded px-1.5 py-0.5">
+              <Tag size={9} /> {task.category}
+            </span>
+            {(taskStatus === 'nao_iniciada' || taskStatus === 'em_andamento') && (
+              <span className={`text-[10px] font-medium rounded px-1.5 py-0.5 border ${statusCfg.bg} ${statusCfg.border} ${statusCfg.color}`}>
+                {statusCfg.label}
+              </span>
+            )}
+          </div>
+          {showOwner && owner && <p className="text-xs text-zinc-500 mt-1">Responsável: {owner.name}</p>}
+          {showCommunity && (
+            <p className={`flex items-center gap-1 text-[11px] mt-1 ${communityTypeCfg ? communityTypeCfg.color : 'text-zinc-500'}`}>
+              {communityTypeCfg ? (
+                <>
+                  <communityTypeCfg.icon size={11} /> {community?.name}
+                </>
+              ) : (
+                <>
+                  <User size={11} /> Tarefa pessoal
+                </>
+              )}
             </p>
           )}
         </div>
@@ -116,14 +135,33 @@ export default function TaskCard({
         </div>
 
         {!task.completed && !task.expired && (
-          <button
-            onClick={() => completeTask(task.id)}
-            disabled={!allSubtasksDone}
-            title={!allSubtasksDone ? 'Conclua todas as subtarefas do plano de execução primeiro' : ''}
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          >
-            Concluir
-          </button>
+          <div className="flex items-center gap-1.5">
+            {taskStatus === 'nao_iniciada' && (
+              <button
+                onClick={() => setTaskStarted(task.id, true)}
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-sky-500/15 text-sky-300 border border-sky-500/30 hover:bg-sky-500/25 transition-colors"
+              >
+                <Play size={12} /> Iniciar
+              </button>
+            )}
+            {taskStatus === 'em_andamento' && (
+              <button
+                onClick={() => setTaskStarted(task.id, false)}
+                title="Mover para Não iniciada"
+                className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg text-zinc-400 border border-white/10 hover:bg-white/5 transition-colors"
+              >
+                <RotateCcw size={12} /> Não iniciada
+              </button>
+            )}
+            <button
+              onClick={() => completeTask(task.id)}
+              disabled={!allSubtasksDone}
+              title={!allSubtasksDone ? 'Conclua todas as subtarefas do plano de execução primeiro' : ''}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              Concluir
+            </button>
+          </div>
         )}
       </div>
     </div>
