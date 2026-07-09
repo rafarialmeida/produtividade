@@ -1,4 +1,4 @@
-# FailSync
+# Flawless
 
 Aplicativo de produtividade híbrido (pessoal/trabalho) com foco em execução estratégica, gestão de comunidades e **gamificação reversa**. Dark mode minimalista com detalhes em roxo e verde neon.
 
@@ -17,8 +17,8 @@ npm run dev
 
 ## Credenciais de demonstração
 
-- **Admin:** `admin@failsync.com` / `senha123`
-- **Membros:** `ana@failsync.com`, `bruno@failsync.com`, `carla@failsync.com`, `diego@failsync.com` (sem senha, login por e-mail)
+- **Admin:** `admin@flawless.com` / `senha123`
+- **Membros:** `ana@flawless.com`, `bruno@flawless.com`, `carla@flawless.com`, `diego@flawless.com` (sem senha, login por e-mail)
 - **Convite:** gere um código na tela de Admin de uma comunidade e entre pela aba "Convite" do login com nome/e-mail fictícios.
 
 ## Navegação

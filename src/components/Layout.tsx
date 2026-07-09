@@ -27,7 +27,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-emerald-400 flex items-center justify-center shadow-[0_0_16px_rgba(168,85,247,0.5)]">
               <Zap size={16} className="text-black" strokeWidth={2.5} />
             </div>
-            <span className="font-bold tracking-tight text-lg text-white hidden sm:inline">FailSync</span>
+            <span className="font-bold tracking-tight text-lg text-white hidden sm:inline">Flawless</span>
           </Link>
 
           {user && (

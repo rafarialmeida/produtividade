@@ -71,7 +71,7 @@ export default function LoginPage() {
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-emerald-400 flex items-center justify-center shadow-[0_0_32px_rgba(168,85,247,0.55)] mb-4">
             <Zap size={26} className="text-black" strokeWidth={2.5} />
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">FailSync</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Flawless</h1>
           <p className="text-zinc-500 text-sm mt-1 text-center">
             Execução estratégica. Sem desculpas. <span className="text-emerald-400">Sem procrastinação.</span>
           </p>
@@ -98,7 +98,7 @@ export default function LoginPage() {
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
                   type="email"
-                  placeholder="admin@failsync.com"
+                  placeholder="admin@flawless.com"
                   className="input"
                 />
               </div>
@@ -115,7 +115,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setAdminEmail('admin@failsync.com')
+                  setAdminEmail('admin@flawless.com')
                   setAdminPassword('senha123')
                 }}
                 className="flex items-center justify-center gap-1.5 text-xs text-purple-300 hover:text-purple-200 -mt-1"
@@ -137,12 +137,12 @@ export default function LoginPage() {
                   value={memberEmail}
                   onChange={(e) => setMemberEmail(e.target.value)}
                   type="email"
-                  placeholder="ana@failsync.com"
+                  placeholder="ana@flawless.com"
                   className="input"
                 />
               </div>
               <p className="text-[11px] text-zinc-500 -mt-1">
-                Membros de demonstração: ana@, bruno@, carla@ ou diego@failsync.com
+                Membros de demonstração: ana@, bruno@, carla@ ou diego@flawless.com
               </p>
               {error && <p className="text-xs text-rose-400">{error}</p>}
               <button type="submit" className="btn-primary mt-1">

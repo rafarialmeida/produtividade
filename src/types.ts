@@ -56,6 +56,7 @@ export interface Task {
   userId: string
   macroObjective: string
   title: string
+  category: string
   subtasks: SubTask[]
   deadline: string
   urgency: Severity

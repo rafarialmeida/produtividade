@@ -4,6 +4,8 @@ import { Globe2, Plus, TrendingDown, Users } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import TaskForm from '../components/TaskForm'
 import TaskCard from '../components/TaskCard'
+import TaskCalendar from '../components/TaskCalendar'
+import MoodWall from '../components/MoodWall'
 import { isNearDeadline } from '../utils/date'
 import { URGENCY_POINTS } from '../types'
 
@@ -102,6 +104,10 @@ export default function MyDay() {
           active.map((t) => <TaskCard key={t.id} task={t} showCommunity={multiCommunity} />)
         )}
       </Section>
+
+      <TaskCalendar tasks={myTasks} />
+
+      <MoodWall tasks={myTasks} />
 
       {completed.length > 0 && (
         <Section title="Concluídas">

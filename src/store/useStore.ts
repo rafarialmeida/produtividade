@@ -39,6 +39,7 @@ interface State {
     userId: string
     macroObjective: string
     title: string
+    category: string
     subtasks: string[]
     deadline: string
     urgency: Severity
@@ -65,7 +66,7 @@ const agoHours = (h: number) => new Date(now.getTime() - h * 3600000).toISOStrin
 const seedAdmin: User = {
   id: 'admin-1',
   name: 'Rafael Almeida',
-  email: 'admin@failsync.com',
+  email: 'admin@flawless.com',
   password: 'senha123',
   role: 'admin',
   communityIds: ['comm-1', 'comm-2'],
@@ -73,10 +74,10 @@ const seedAdmin: User = {
 }
 
 const seedMembers: User[] = [
-  { id: 'mem-1', name: 'Ana Souza', email: 'ana@failsync.com', role: 'member', communityIds: ['comm-1', 'comm-2'], avatarSeed: 'ana' },
-  { id: 'mem-2', name: 'Bruno Lima', email: 'bruno@failsync.com', role: 'member', communityIds: ['comm-1'], avatarSeed: 'bruno' },
-  { id: 'mem-3', name: 'Carla Mendes', email: 'carla@failsync.com', role: 'member', communityIds: ['comm-1'], avatarSeed: 'carla' },
-  { id: 'mem-4', name: 'Diego Torres', email: 'diego@failsync.com', role: 'member', communityIds: ['comm-1', 'comm-2'], avatarSeed: 'diego' },
+  { id: 'mem-1', name: 'Ana Souza', email: 'ana@flawless.com', role: 'member', communityIds: ['comm-1', 'comm-2'], avatarSeed: 'ana' },
+  { id: 'mem-2', name: 'Bruno Lima', email: 'bruno@flawless.com', role: 'member', communityIds: ['comm-1'], avatarSeed: 'bruno' },
+  { id: 'mem-3', name: 'Carla Mendes', email: 'carla@flawless.com', role: 'member', communityIds: ['comm-1'], avatarSeed: 'carla' },
+  { id: 'mem-4', name: 'Diego Torres', email: 'diego@flawless.com', role: 'member', communityIds: ['comm-1', 'comm-2'], avatarSeed: 'diego' },
 ]
 
 const seedCommunity: Community = {
@@ -112,6 +113,7 @@ const seedTasks: Task[] = [
     userId: 'mem-1',
     macroObjective: 'Lançamento Q3 do produto',
     title: 'Finalizar landing page de vendas',
+    category: 'Trabalho',
     subtasks: seedSubtasks(['Escrever copy', 'Ajustar layout mobile', 'Revisar SEO']),
     deadline: agoHours(30),
     urgency: 'alta',
@@ -125,6 +127,7 @@ const seedTasks: Task[] = [
     userId: 'mem-2',
     macroObjective: 'Lançamento Q3 do produto',
     title: 'Configurar pipeline de CI/CD',
+    category: 'Trabalho',
     subtasks: seedSubtasks(['Criar workflow', 'Testar deploy staging']),
     deadline: agoHours(80),
     urgency: 'critica',
@@ -138,6 +141,7 @@ const seedTasks: Task[] = [
     userId: 'mem-2',
     macroObjective: 'Retenção de clientes',
     title: 'Responder tickets pendentes',
+    category: 'Trabalho',
     subtasks: seedSubtasks(['Triar fila', 'Responder top 10']),
     deadline: agoHours(10),
     urgency: 'media',
@@ -151,6 +155,7 @@ const seedTasks: Task[] = [
     userId: 'mem-3',
     macroObjective: 'Retenção de clientes',
     title: 'Atualizar documentação da API',
+    category: 'Trabalho',
     subtasks: seedSubtasks(['Revisar endpoints', 'Publicar changelog']),
     deadline: agoHours(5),
     urgency: 'baixa',
@@ -164,6 +169,7 @@ const seedTasks: Task[] = [
     userId: 'admin-1',
     macroObjective: 'Lançamento Q3 do produto',
     title: 'Preparar apresentação para investidores',
+    category: 'Trabalho',
     subtasks: seedSubtasks(['Montar slides', 'Revisar métricas', 'Ensaiar pitch']),
     deadline: inDays(2),
     urgency: 'critica',
@@ -177,6 +183,7 @@ const seedTasks: Task[] = [
     userId: 'mem-1',
     macroObjective: 'Lançamento Q3 do produto',
     title: 'Revisar contrato com fornecedor',
+    category: 'Trabalho',
     subtasks: seedSubtasks(['Ler cláusulas', 'Marcar reunião']),
     deadline: inDays(0, 3),
     urgency: 'media',
@@ -190,6 +197,7 @@ const seedTasks: Task[] = [
     userId: 'mem-4',
     macroObjective: 'Retenção de clientes',
     title: 'Criar pesquisa de satisfação',
+    category: 'Trabalho',
     subtasks: seedSubtasks(['Definir perguntas', 'Configurar formulário']).map((s) => ({ ...s, done: true })),
     deadline: inDays(5),
     urgency: 'baixa',
@@ -204,6 +212,7 @@ const seedTasks: Task[] = [
     userId: 'mem-4',
     macroObjective: 'Meta pessoal: rotina de estudos',
     title: 'Terminar curso de inglês — módulo 3',
+    category: 'Estudos',
     subtasks: seedSubtasks(['Assistir aulas', 'Fazer exercícios', 'Fazer prova do módulo']),
     deadline: agoHours(20),
     urgency: 'critica',
@@ -217,6 +226,7 @@ const seedTasks: Task[] = [
     userId: 'mem-1',
     macroObjective: 'Meta pessoal: saúde',
     title: 'Treinar 4x nesta semana',
+    category: 'Saúde',
     subtasks: seedSubtasks(['Treino de pernas', 'Treino de costas', 'Corrida 5km']),
     deadline: agoHours(6),
     urgency: 'media',
@@ -230,6 +240,7 @@ const seedTasks: Task[] = [
     userId: 'admin-1',
     macroObjective: 'Meta pessoal: leitura',
     title: 'Ler 2 capítulos do livro da vez',
+    category: 'Estudos',
     subtasks: seedSubtasks(['Capítulo 5', 'Capítulo 6']),
     deadline: inDays(1),
     urgency: 'baixa',
@@ -332,7 +343,7 @@ export const useAppStore = create<State>()(
         const newUser: User = {
           id: uid('mem'),
           name,
-          email: `${name.toLowerCase().replace(/\s+/g, '.')}@failsync.com`,
+          email: `${name.toLowerCase().replace(/\s+/g, '.')}@flawless.com`,
           role: 'member',
           communityIds: [communityId],
           avatarSeed: name,
@@ -360,13 +371,14 @@ export const useAppStore = create<State>()(
         }))
       },
 
-      createTask: ({ communityId, userId, macroObjective, title, subtasks, deadline, urgency }) => {
+      createTask: ({ communityId, userId, macroObjective, title, category, subtasks, deadline, urgency }) => {
         const task: Task = {
           id: uid('task'),
           communityId,
           userId,
           macroObjective,
           title,
+          category,
           subtasks: seedSubtasks(subtasks),
           deadline,
           urgency,
@@ -440,7 +452,7 @@ export const useAppStore = create<State>()(
       },
     }),
     {
-      name: 'failsync-storage',
+      name: 'flawless-storage',
       version: 2,
       migrate: (persistedState) => {
         const state = persistedState as { communities?: Community[] } | undefined

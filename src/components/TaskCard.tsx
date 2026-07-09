@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, Clock, Target, Trash2, TriangleAlert } from 'lucide-react'
+import { CheckCircle2, Circle, Clock, Tag, Target, Trash2, TriangleAlert } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import type { Task } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
@@ -54,6 +54,9 @@ export default function TaskCard({
           <h3 className={`font-semibold text-white ${task.completed ? 'line-through decoration-zinc-600' : ''}`}>
             {task.title}
           </h3>
+          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-zinc-400 bg-white/5 border border-white/10 rounded px-1.5 py-0.5 mt-1.5">
+            <Tag size={9} /> {task.category}
+          </span>
           {showOwner && owner && <p className="text-xs text-zinc-500 mt-0.5">Responsável: {owner.name}</p>}
           {showCommunity && community && communityTypeCfg && (
             <p className={`flex items-center gap-1 text-[11px] mt-1 ${communityTypeCfg.color}`}>
