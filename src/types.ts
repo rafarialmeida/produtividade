@@ -79,6 +79,7 @@ export interface Notification {
   userId: string
   message: string
   type: 'penalty' | 'warning' | 'info'
+  taskId?: string
   createdAt: string
   read: boolean
 }

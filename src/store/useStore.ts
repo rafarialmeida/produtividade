@@ -116,6 +116,7 @@ function mapNotification(row: Record<string, unknown>): Notification {
     userId: row.user_id as string,
     message: row.message as string,
     type: row.type as Notification['type'],
+    taskId: (row.task_id as string | null) ?? undefined,
     createdAt: row.created_at as string,
     read: row.read as boolean,
   }
@@ -286,7 +287,7 @@ export const useAppStore = create<State>()((set, get) => ({
   },
 
   rescheduleTask: async (taskId, deadline) => {
-    await supabase.from('tasks').update({ deadline }).eq('id', taskId)
+    await supabase.from('tasks').update({ deadline, reminder_sent_at: null, expired: false }).eq('id', taskId)
     await get().refreshAll()
   },
 
@@ -319,6 +320,7 @@ export const useAppStore = create<State>()((set, get) => ({
           user_id: authUser.id,
           message: `Tarefa "${t.title}" expirou! Você perdeu ${pts} pt${pts > 1 ? 's' : ''} de negligência.`,
           type: 'penalty',
+          task_id: t.id,
         }
       }),
     )

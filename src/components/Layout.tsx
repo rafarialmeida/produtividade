@@ -4,6 +4,7 @@ import { LogOut, Skull, Sparkles, Users, ShieldCheck, Zap } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { useExpirationTicker } from '../hooks/useExpirationTicker'
 import NotificationToasts from './NotificationToasts'
+import PushToggle from './PushToggle'
 
 const NAV_ITEMS = [
   { to: '/day', label: 'Meu dia', icon: Sparkles },
@@ -68,6 +69,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 flex items-center justify-center text-xs font-semibold text-white">
                   {user.name.slice(0, 1).toUpperCase()}
                 </div>
+                <PushToggle userId={user.id} />
                 <button
                   onClick={async () => {
                     await signOut()

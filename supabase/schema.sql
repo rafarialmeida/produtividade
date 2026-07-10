@@ -47,6 +47,7 @@ create table if not exists public.tasks (
   completed boolean not null default false,
   completed_at timestamptz,
   expired boolean not null default false,
+  reminder_sent_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -65,6 +66,17 @@ create table if not exists public.notifications (
   message text not null,
   type text not null default 'penalty' check (type in ('penalty', 'warning', 'info')),
   read boolean not null default false,
+  task_id uuid references public.tasks (id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+-- Guarda as inscrições de notificação push (Web Push) de cada dispositivo/navegador.
+create table if not exists public.push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
   created_at timestamptz not null default now()
 );
 
@@ -73,6 +85,7 @@ create index if not exists tasks_community_id_idx on public.tasks (community_id)
 create index if not exists subtasks_task_id_idx on public.subtasks (task_id);
 create index if not exists notifications_user_id_idx on public.notifications (user_id);
 create index if not exists community_members_user_id_idx on public.community_members (user_id);
+create index if not exists push_subscriptions_user_id_idx on public.push_subscriptions (user_id);
 
 -- ============================================================================
 -- FUNÇÕES AUXILIARES (security definer -> usadas dentro das policies para
@@ -261,6 +274,7 @@ alter table public.community_members enable row level security;
 alter table public.tasks enable row level security;
 alter table public.subtasks enable row level security;
 alter table public.notifications enable row level security;
+alter table public.push_subscriptions enable row level security;
 
 -- profiles: qualquer pessoa autenticada pode ver nome/avatar de qualquer usuário
 -- (necessário para rankings e listagem de membros). Só o próprio dono edita seu perfil,
@@ -366,6 +380,20 @@ create policy "notifications_update_own" on public.notifications for update to a
 
 drop policy if exists "notifications_delete_own" on public.notifications;
 create policy "notifications_delete_own" on public.notifications for delete to authenticated
+  using (user_id = auth.uid());
+
+-- push_subscriptions: cada um só vê e mexe nas próprias inscrições. As Edge
+-- Functions que disparam os pushes usam a service role key, que ignora RLS.
+drop policy if exists "push_subscriptions_select_own" on public.push_subscriptions;
+create policy "push_subscriptions_select_own" on public.push_subscriptions for select to authenticated
+  using (user_id = auth.uid());
+
+drop policy if exists "push_subscriptions_insert_own" on public.push_subscriptions;
+create policy "push_subscriptions_insert_own" on public.push_subscriptions for insert to authenticated
+  with check (user_id = auth.uid());
+
+drop policy if exists "push_subscriptions_delete_own" on public.push_subscriptions;
+create policy "push_subscriptions_delete_own" on public.push_subscriptions for delete to authenticated
   using (user_id = auth.uid());
 
 -- ============================================================================

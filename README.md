@@ -4,7 +4,7 @@ Aplicativo de produtividade híbrido (pessoal/trabalho) com foco em execução e
 
 ## Stack
 
-React + TypeScript + Vite, Tailwind CSS v4, React Router, [Supabase](https://supabase.com) (Postgres + Auth, incluindo login por e-mail/senha e OAuth Google/Microsoft).
+React + TypeScript + Vite, Tailwind CSS v4, React Router, [Supabase](https://supabase.com) (Postgres + Auth, incluindo login por e-mail/senha e OAuth Google/Microsoft). PWA instalável (`vite-plugin-pwa`) com notificações Web Push.
 
 Contas, comunidades, tarefas e o ranking ficam num banco Postgres real (Supabase), com Row Level Security controlando quem vê o quê — não há mais dados de demonstração/seed.
 
@@ -67,14 +67,62 @@ where id = (select id from auth.users where email = 'voce@exemplo.com');
 - **Quatro status de tarefa**: Não iniciada, Em andamento, Concluída e Expirada, com botões para mover entre Não iniciada e Em andamento.
 - **Gamificação reversa — Muro da Procrastinação**: ranking invertido por pontos perdidos (Baixa -1, Média -3, Alta -5, Crítica -10) em cada comunidade, recalculado automaticamente quando uma tarefa expira, com notificação visual (toast) imediata.
 
-### Limitação conhecida: expiração de tarefas
+### Expiração de tarefas: cliente + servidor
 
-A checagem de "essa tarefa expirou" roda no navegador de cada usuário (a cada ~15s enquanto o app está aberto, e uma vez ao logar), e só atualiza as **próprias** tarefas de quem está com o app aberto naquele momento — não há um cron job no servidor. Isso significa que a tarefa de uma pessoa que não abre o app há dias só será marcada como expirada (e só vai contar no ranking) na próxima vez que ela logar. Para expiração 100% em tempo real independente de quem está online, seria necessário um Supabase Edge Function agendado (`pg_cron`), o que pode ser adicionado depois.
+Enquanto o app está aberto, o navegador checa localmente (a cada ~15s) as **próprias** tarefas vencidas e já marca como expiradas na hora. Além disso, se você configurar a Edge Function `push-sweep` (seção abaixo), o próprio servidor varre **todas** as tarefas de **todos** os usuários a cada 5 minutos via `pg_cron` — então uma tarefa expira e entra no ranking mesmo que a pessoa não abra o app. A Edge Function é opcional para o app funcionar, mas é obrigatória para as notificações push e para expiração 100% confiável independente de quem está online.
+
+## PWA instalável
+
+O app já é instalável (ícone na tela inicial / barra de endereço do navegador, abre em janela própria, funciona offline para os assets já visitados) sem nenhuma configuração extra — isso é gerado automaticamente no `npm run build` via `vite-plugin-pwa`. Não tem custo nenhum, tanto local quanto no Vercel.
+
+## Notificações Web Push
+
+Push notifications (fora do app, mesmo com o navegador fechado) também não têm custo — usam o padrão Web Push nativo do navegador com um par de chaves VAPID geradas por você, sem depender de nenhum serviço pago. Tem duas partes: o **cliente** (já pronto no código: o sininho no cabeçalho do app pede permissão e salva a inscrição) e o **servidor** (a Edge Function `push-sweep`, que você precisa implantar manualmente, já que não dá pra fazer isso pelo Git).
+
+### 1. Gerar as chaves VAPID
+
+Rode uma vez, localmente:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Isso gera uma `publicKey` e uma `privateKey`. Guarde as duas.
+
+### 2. Configurar o cliente
+
+Adicione a chave pública no `.env.local` (e no Vercel, ver seção de deploy):
+
+```
+VITE_VAPID_PUBLIC_KEY=<publicKey gerada acima>
+```
+
+### 3. Rodar as migrações novas do banco
+
+Se o seu banco já existia antes desta funcionalidade, rode no SQL Editor (nessa ordem) os arquivos que ainda não rodou em `supabase/migrations/`: `0002_push_notifications.sql` (cria `push_subscriptions`, `tasks.reminder_sent_at`, `notifications.task_id`). Projetos novos já recebem tudo isso rodando só o `supabase/schema.sql`.
+
+### 4. Implantar a Edge Function
+
+Requer a [Supabase CLI](https://supabase.com/docs/guides/cli) instalada e logada (`supabase login`, `supabase link --project-ref SEU_PROJECT_REF`).
+
+```bash
+supabase functions deploy push-sweep
+supabase secrets set VAPID_PUBLIC_KEY=<publicKey> VAPID_PRIVATE_KEY=<privateKey> VAPID_SUBJECT=mailto:seu-email@exemplo.com
+```
+
+(`SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` já existem automaticamente dentro da função — não precisa configurar.)
+
+### 5. Agendar a varredura periódica
+
+1. No dashboard, em **Database -> Extensions**, habilite `pg_cron` e `pg_net`.
+2. Abra `supabase/migrations/0003_schedule_push_sweep.sql`, troque `SEU_PROJECT_REF` e `SUA_SERVICE_ROLE_KEY` (Project Settings -> API -> service_role — **nunca** coloque essa chave no frontend) pelos valores reais, e rode o SQL resultante no SQL Editor.
+
+A partir daí, a cada 5 minutos o servidor expira tarefas vencidas de todo mundo e envia um push pra quem tiver prazo perto ou tarefa recém-expirada — mesmo com o app fechado.
 
 ## Deploy no Vercel
 
 O projeto é uma SPA estática gerada por `vite build` (saída em `dist/`) e já inclui um `vercel.json` com o rewrite necessário para as rotas do React Router.
 
 1. Importe este repositório em [vercel.com/new](https://vercel.com/new) — o preset **Vite** é detectado automaticamente (`npm run build`, output `dist`).
-2. Em **Settings -> Environment Variables**, adicione `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` com os mesmos valores do seu `.env.local`.
+2. Em **Settings -> Environment Variables**, adicione `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` e `VITE_VAPID_PUBLIC_KEY` com os mesmos valores do seu `.env.local`.
 3. Se for usar Google/Microsoft, adicione também a URL de produção (`https://seu-app.vercel.app`) nas **Redirect URLs** permitidas em Supabase -> Authentication -> URL Configuration.
