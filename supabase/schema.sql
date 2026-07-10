@@ -260,11 +260,11 @@ set search_path = public
 as $$
 declare
   _valid_pieces text[] := array[
-    'cat','dog','bird','fish','rabbit','turtle','bug','squirrel','snail','ghost',
-    'rocket','anchor','compass','dice-5','puzzle','feather','umbrella','panda','flower-2','tree-pine',
-    'crown','swords','shield-half','flame','gem'
+    'fox','owl','astronaut','dino','fish','rabbit','bear','cat','ghost','bird',
+    'turtle','squirrel','snail','octopus','panda','cloud','frog','ninja','robot','bee',
+    'dragon-king','phoenix','crystal-knight','griffin','rune-golem'
   ];
-  _exclusive_pieces text[] := array['crown','swords','shield-half','flame','gem'];
+  _exclusive_pieces text[] := array['dragon-king','phoenix','crystal-knight','griffin','rune-golem'];
   _valid_colors text[] := array[
     '#ef4444','#f97316','#f59e0b','#eab308','#84cc16','#22c55e','#10b981','#14b8a6','#06b6d4','#0ea5e9',
     '#3b82f6','#6366f1','#8b5cf6','#a855f7','#d946ef','#ec4899','#f43f5e','#78716c','#1e293b','#e2e8f0'

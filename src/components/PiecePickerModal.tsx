@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Canvas } from '@react-three/fiber'
 import { Check, Lock, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
-import { BOARD_COLORS, BOARD_PIECES } from '../utils/boardPieces'
+import { CHARACTERS, CHARACTER_MAP, BOARD_COLORS } from '../utils/boardPieces'
+import Character3D from './Character3D'
 
 export default function PiecePickerModal({
   communityId,
@@ -18,10 +20,14 @@ export default function PiecePickerModal({
   onClose: () => void
 }) {
   const setCommunityPiece = useAppStore((s) => s.setCommunityPiece)
-  const [pieceId, setPieceId] = useState(currentPieceId ?? BOARD_PIECES[0].id)
+  const [pieceId, setPieceId] = useState(currentPieceId ?? CHARACTERS[0].id)
   const [color, setColor] = useState(currentColor ?? BOARD_COLORS[0])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  const recipe = CHARACTER_MAP[pieceId] ?? CHARACTERS[0]
+  const regular = CHARACTERS.filter((c) => !c.exclusive)
+  const exclusive = CHARACTERS.filter((c) => c.exclusive)
 
   async function handleSave() {
     setError('')
@@ -34,45 +40,76 @@ export default function PiecePickerModal({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/70 backdrop-blur-sm">
-      <div className="glass-panel neon-border-green rounded-2xl w-full max-w-lg my-8">
+      <div className="glass-panel neon-border-green rounded-2xl w-full max-w-2xl my-8">
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
-          <h2 className="text-lg font-bold text-white light:text-zinc-900">Escolher peça</h2>
+          <h2 className="text-lg font-bold text-white light:text-zinc-900">Escolher personagem</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 light:hover:text-zinc-900 light:hover:bg-black/10">
             <X size={18} />
           </button>
         </div>
 
         <div className="px-6 py-5 flex flex-col gap-5">
+          <div className="grid sm:grid-cols-[220px_1fr] gap-5">
+            <div className="rounded-xl overflow-hidden border border-white/10 light:border-black/10" style={{ height: 220 }}>
+              <Canvas camera={{ position: [0, 1, 2.9], fov: 38 }}>
+                <color attach="background" args={['#0b0c12']} />
+                <ambientLight intensity={0.6} />
+                <directionalLight position={[3, 4, 3]} intensity={1.1} />
+                <group position={[0, -0.55, 0]}>
+                  <Character3D recipe={recipe} color={color} idle scale={1} />
+                </group>
+              </Canvas>
+            </div>
+
+            <div className="flex flex-col justify-center gap-1">
+              <p className="text-sm font-semibold text-white light:text-zinc-900">{recipe.label}</p>
+              <p className="text-[11px] text-zinc-500">
+                {recipe.exclusive ? 'Personagem exclusivo de administradores' : 'Personagem regular'}
+              </p>
+            </div>
+          </div>
+
           <div>
-            <p className="text-xs font-medium text-zinc-400 light:text-zinc-600 mb-2">Boneco</p>
-            <div className="grid grid-cols-5 gap-2">
-              {BOARD_PIECES.map((p) => {
-                const locked = p.exclusive && !isCommunityAdmin
-                const selected = pieceId === p.id
+            <p className="text-xs font-medium text-zinc-400 light:text-zinc-600 mb-2">Personagens</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 max-h-40 overflow-y-auto pr-1">
+              {regular.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setPieceId(c.id)}
+                  className={`text-left text-xs px-2.5 py-1.5 rounded-lg border transition-colors truncate ${
+                    pieceId === c.id
+                      ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
+                      : 'border-white/10 bg-white/[0.02] text-zinc-400 hover:border-white/25 light:border-black/10'
+                  }`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+
+            <p className="text-xs font-medium text-amber-400/80 mt-3 mb-2">Exclusivos de administradores</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+              {exclusive.map((c) => {
+                const locked = !isCommunityAdmin
+                const selected = pieceId === c.id
                 return (
                   <button
-                    key={p.id}
+                    key={c.id}
                     disabled={locked}
-                    onClick={() => setPieceId(p.id)}
-                    title={locked ? `${p.label} (exclusivo de admins)` : p.label}
-                    className={`relative aspect-square rounded-xl border flex items-center justify-center transition-colors ${
+                    onClick={() => setPieceId(c.id)}
+                    className={`relative flex items-center justify-between gap-1 text-left text-xs px-2.5 py-1.5 rounded-lg border ring-1 ring-amber-500/25 transition-colors truncate ${
                       selected
-                        ? 'border-emerald-500/60 bg-emerald-500/10'
-                        : 'border-white/10 bg-white/[0.03] light:border-black/10 light:bg-black/[0.02]'
-                    } ${locked ? 'opacity-40 cursor-not-allowed' : 'hover:border-white/25'} ${
-                      p.exclusive ? 'ring-1 ring-amber-500/30' : ''
-                    }`}
+                        ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
+                        : 'border-white/10 bg-white/[0.02] text-zinc-400 hover:border-white/25 light:border-black/10'
+                    } ${locked ? 'opacity-40 cursor-not-allowed' : ''}`}
                   >
-                    <p.icon size={18} style={{ color: selected ? color : undefined }} className={selected ? '' : 'text-zinc-400'} />
-                    {locked && <Lock size={10} className="absolute top-1 right-1 text-zinc-500" />}
-                    {selected && <Check size={10} className="absolute bottom-1 right-1 text-emerald-400" />}
+                    <span className="truncate">{c.label}</span>
+                    {locked && <Lock size={11} className="shrink-0" />}
+                    {selected && !locked && <Check size={11} className="text-emerald-400 shrink-0" />}
                   </button>
                 )
               })}
             </div>
-            <p className="text-[11px] text-zinc-500 mt-2">
-              Bonecos com borda dourada são exclusivos de administradores da comunidade.
-            </p>
           </div>
 
           <div>
@@ -95,7 +132,7 @@ export default function PiecePickerModal({
           {error && <p className="text-xs text-rose-400">{error}</p>}
 
           <button onClick={handleSave} disabled={saving} className="btn-primary disabled:opacity-50">
-            {saving ? 'Salvando...' : 'Salvar peça'}
+            {saving ? 'Salvando...' : 'Salvar personagem'}
           </button>
         </div>
       </div>

@@ -1,17 +1,18 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Plus, Trash2, UserPlus, Users } from 'lucide-react'
+import { ArrowLeft, Loader2, Plus, Trash2, UserPlus, Users } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import ProcrastinationWall from '../components/ProcrastinationWall'
 import TaskCard from '../components/TaskCard'
 import TaskForm from '../components/TaskForm'
 import InviteModal from '../components/InviteModal'
 import CommunityDashboard from '../components/CommunityDashboard'
-import CommunityBoard from '../components/CommunityBoard'
 import TaskHistoryModal from '../components/TaskHistoryModal'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
 import { SEVERITY_LABEL } from '../types'
+
+const CommunityBoard = lazy(() => import('../components/CommunityBoard'))
 
 export default function CommunityPage() {
   const { id } = useParams<{ id: string }>()
@@ -139,7 +140,11 @@ export default function CommunityPage() {
         <CommunityDashboard communityId={community.id} onViewHistory={setHistoryUserId} />
       )}
 
-      {activeTab === 'board' && showBoard && <CommunityBoard communityId={community.id} />}
+      {activeTab === 'board' && showBoard && (
+        <Suspense fallback={<div className="flex items-center justify-center py-16 text-zinc-500"><Loader2 size={20} className="animate-spin" /></div>}>
+          <CommunityBoard communityId={community.id} />
+        </Suspense>
+      )}
 
       {activeTab === 'tasks' && (
         <div>
