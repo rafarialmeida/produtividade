@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Clock, History, LayoutDashboard, TrendingDown, TrendingUp, Users } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { URGENCY_POINTS } from '../types'
 import { formatDeadline, formatRelative } from '../utils/date'
+import TaskDetailModal from './TaskDetailModal'
 
 interface MemberStat {
   userId: string
@@ -26,6 +27,7 @@ export default function CommunityDashboard({
   const community = useAppStore((s) => s.getCommunityById(communityId))
   const users = useAppStore((s) => s.users)
   const allTasks = useAppStore((s) => s.tasks)
+  const [detailTaskId, setDetailTaskId] = useState<string | null>(null)
 
   const communityTasks = useMemo(() => allTasks.filter((t) => t.communityId === communityId), [allTasks, communityId])
 
@@ -124,7 +126,11 @@ export default function CommunityDashboard({
             {upcoming.map((t) => {
               const owner = users.find((u) => u.id === t.userId)
               return (
-                <div key={t.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-xs">
+                <button
+                  key={t.id}
+                  onClick={() => setDetailTaskId(t.id)}
+                  className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-xs text-left hover:bg-white/5 light:hover:bg-black/5 transition-colors"
+                >
                   <div className="min-w-0">
                     <p className="text-zinc-200 light:text-zinc-800 truncate">{t.title}</p>
                     <p className="text-zinc-500">{owner?.name ?? 'Membro'}</p>
@@ -132,7 +138,7 @@ export default function CommunityDashboard({
                   <span className="text-zinc-500 shrink-0">
                     {formatDeadline(t.deadline)} ({formatRelative(t.deadline)})
                   </span>
-                </div>
+                </button>
               )
             })}
           </div>
@@ -178,6 +184,8 @@ export default function CommunityDashboard({
           </table>
         </div>
       </div>
+
+      {detailTaskId && <TaskDetailModal taskId={detailTaskId} onClose={() => setDetailTaskId(null)} />}
     </div>
   )
 }

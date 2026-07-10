@@ -174,7 +174,12 @@ export default function CommunityPage() {
       {showForm && <TaskForm communityId={community.id} userId={currentUserId} onClose={() => setShowForm(false)} />}
       {showInvite && <InviteModal communityId={community.id} onClose={() => setShowInvite(false)} />}
       {historyUserId && (
-        <TaskHistoryModal userId={historyUserId} communityId={community.id} onClose={() => setHistoryUserId(null)} />
+        <TaskHistoryModal
+          userId={historyUserId}
+          communityId={community.id}
+          isAdminView
+          onClose={() => setHistoryUserId(null)}
+        />
       )}
     </div>
   )
