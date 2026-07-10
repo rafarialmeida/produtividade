@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Check, Copy, RefreshCcw, UserPlus, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
+import ProfileModal from './ProfileModal'
 
 export default function InviteModal({ communityId, onClose }: { communityId: string; onClose: () => void }) {
   const community = useAppStore((s) => s.getCommunityById(communityId))
@@ -9,6 +10,7 @@ export default function InviteModal({ communityId, onClose }: { communityId: str
 
   const [copied, setCopied] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
+  const [openProfileId, setOpenProfileId] = useState<string | null>(null)
 
   if (!community) return null
 
@@ -70,22 +72,31 @@ export default function InviteModal({ communityId, onClose }: { communityId: str
             <p className="text-xs font-medium text-zinc-400 mb-2">Membros ({members.length})</p>
             <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto pr-1">
               {members.map((m) => (
-                <div key={m!.id} className="flex items-center gap-2.5 py-1.5">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 flex items-center justify-center text-[11px] font-semibold text-white">
-                    {m!.name.slice(0, 1).toUpperCase()}
-                  </div>
+                <button
+                  key={m!.id}
+                  onClick={() => setOpenProfileId(m!.id)}
+                  className="flex items-center gap-2.5 py-1.5 text-left rounded-lg hover:bg-white/5 transition-colors -mx-1.5 px-1.5"
+                >
+                  {m!.avatarUrl ? (
+                    <img src={m!.avatarUrl} alt={m!.name} className="w-7 h-7 shrink-0 rounded-full object-cover border border-white/10" />
+                  ) : (
+                    <div className="w-7 h-7 shrink-0 rounded-full bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 flex items-center justify-center text-[11px] font-semibold text-white">
+                      {m!.name.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
                   <p className="text-sm text-zinc-200 truncate">{m!.name}</p>
                   {m!.role === 'admin' && (
                     <span className="ml-auto text-[10px] text-amber-400 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded">
                       admin
                     </span>
                   )}
-                </div>
+                </button>
               ))}
             </div>
           </div>
         </div>
       </div>
+      {openProfileId && <ProfileModal userId={openProfileId} onClose={() => setOpenProfileId(null)} />}
     </div>
   )
 }

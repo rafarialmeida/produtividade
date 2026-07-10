@@ -18,6 +18,7 @@ create table if not exists public.profiles (
   notify_expired boolean not null default true,
   notify_completed boolean not null default true,
   notify_only_urgent boolean not null default false,
+  avatar_url text,
   created_at timestamptz not null default now()
 );
 
@@ -90,6 +91,27 @@ create index if not exists subtasks_task_id_idx on public.subtasks (task_id);
 create index if not exists notifications_user_id_idx on public.notifications (user_id);
 create index if not exists community_members_user_id_idx on public.community_members (user_id);
 create index if not exists push_subscriptions_user_id_idx on public.push_subscriptions (user_id);
+
+-- Bucket de Storage para as fotos de perfil, público para leitura.
+insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+drop policy if exists "avatar_public_read" on storage.objects;
+create policy "avatar_public_read" on storage.objects for select
+  using (bucket_id = 'avatars');
+
+drop policy if exists "avatar_insert_own" on storage.objects;
+create policy "avatar_insert_own" on storage.objects for insert to authenticated
+  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "avatar_update_own" on storage.objects;
+create policy "avatar_update_own" on storage.objects for update to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "avatar_delete_own" on storage.objects;
+create policy "avatar_delete_own" on storage.objects for delete to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- ============================================================================
 -- FUNÇÕES AUXILIARES (security definer -> usadas dentro das policies para
@@ -222,16 +244,29 @@ end;
 $$;
 
 -- Ranking agregado de toda a plataforma (Muro Global): calculado no servidor para
--- que ninguém precise enxergar as tarefas de comunidades das quais não participa —
--- só o total de pontos perdidos, tarefas expiradas e nº de comunidades de cada pessoa.
-create or replace function public.global_wall()
+-- que ninguém precise enxergar as tarefas de comunidades das quais não participa.
+-- Dois rankings em paralelo:
+--   - lost_points: pontos perdidos por urgência (Baixa -1/Média -3/Alta -5/Crítica -10),
+--     só pela tarefa em si, sem contar subtarefas — igual desde o início.
+--   - positive_points: 1 ponto por tarefa concluída + 1 ponto por subtarefa concluída,
+--     sem peso de urgência (toda tarefa vale igual).
+--   - xp: mesma contagem simples do positive_points, mas desconta quando uma tarefa
+--     expira (-1 pela tarefa, -1 por cada subtarefa que ficou sem marcar) — usado
+--     para o nível do usuário, que pode ficar negativo.
+create function public.global_wall()
 returns table (
   user_id uuid,
   name text,
   avatar_seed text,
+  avatar_url text,
   role text,
   lost_points bigint,
-  expired_count bigint,
+  tasks_expired bigint,
+  subtasks_missed bigint,
+  positive_points bigint,
+  xp bigint,
+  tasks_completed bigint,
+  subtasks_completed bigint,
   community_count bigint
 )
 language sql
@@ -239,13 +274,34 @@ security definer
 stable
 set search_path = public
 as $$
+  with subtask_agg as (
+    select
+      task_id,
+      count(*) as subtask_count,
+      count(*) filter (where not done) as not_done_count
+    from public.subtasks
+    group by task_id
+  ),
+  task_agg as (
+    select
+      t.id,
+      t.user_id,
+      t.urgency,
+      t.completed,
+      t.expired,
+      coalesce(sa.subtask_count, 0) as subtask_count,
+      coalesce(sa.not_done_count, 0) as not_done_count
+    from public.tasks t
+    left join subtask_agg sa on sa.task_id = t.id
+  )
   select
     p.id as user_id,
     p.name,
     p.avatar_seed,
+    p.avatar_url,
     p.role,
-    coalesce(sum(case when t.expired and not t.completed then
-      case t.urgency
+    coalesce(sum(case when ta.expired and not ta.completed then
+      case ta.urgency
         when 'baixa' then 1
         when 'media' then 3
         when 'alta' then 5
@@ -253,11 +309,46 @@ as $$
         else 0
       end
     else 0 end), 0) as lost_points,
-    count(distinct t.id) filter (where t.expired and not t.completed) as expired_count,
+    count(*) filter (where ta.expired and not ta.completed) as tasks_expired,
+    coalesce(sum(case when ta.expired and not ta.completed then ta.not_done_count else 0 end), 0) as subtasks_missed,
+    coalesce(sum(case when ta.completed then 1 + ta.subtask_count else 0 end), 0) as positive_points,
+    coalesce(sum(case
+      when ta.completed then 1 + ta.subtask_count
+      when ta.expired and not ta.completed then -(1 + ta.not_done_count)
+      else 0
+    end), 0) as xp,
+    count(*) filter (where ta.completed) as tasks_completed,
+    coalesce(sum(case when ta.completed then ta.subtask_count else 0 end), 0) as subtasks_completed,
     (select count(*) from public.community_members cm where cm.user_id = p.id) as community_count
   from public.profiles p
-  left join public.tasks t on t.user_id = p.id
-  group by p.id, p.name, p.avatar_seed, p.role;
+  left join task_agg ta on ta.user_id = p.id
+  group by p.id, p.name, p.avatar_seed, p.avatar_url, p.role;
+$$;
+
+-- Perfil público de um único usuário (visível a partir do Muro Global ou das
+-- comunidades) — mesmas estatísticas do ranking, nunca e-mail nem senha.
+create or replace function public.get_public_profile(_user_id uuid)
+returns table (
+  user_id uuid,
+  name text,
+  avatar_seed text,
+  avatar_url text,
+  role text,
+  lost_points bigint,
+  tasks_expired bigint,
+  subtasks_missed bigint,
+  positive_points bigint,
+  xp bigint,
+  tasks_completed bigint,
+  subtasks_completed bigint,
+  community_count bigint
+)
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select * from public.global_wall() where user_id = _user_id;
 $$;
 
 grant execute on function public.is_admin() to authenticated;
@@ -267,6 +358,7 @@ grant execute on function public.create_community(text, text, text) to authentic
 grant execute on function public.join_community_with_code(text) to authenticated;
 grant execute on function public.regenerate_invite_code(uuid) to authenticated;
 grant execute on function public.global_wall() to authenticated;
+grant execute on function public.get_public_profile(uuid) to authenticated;
 
 -- ============================================================================
 -- ROW LEVEL SECURITY
@@ -291,7 +383,8 @@ create policy "profiles_update_own" on public.profiles for update to authenticat
   using (id = auth.uid()) with check (id = auth.uid());
 
 revoke update on public.profiles from authenticated;
-grant update (name, avatar_seed, notify_reminder, notify_expired, notify_completed, notify_only_urgent) on public.profiles to authenticated;
+grant update (name, avatar_seed, avatar_url, notify_reminder, notify_expired, notify_completed, notify_only_urgent)
+  on public.profiles to authenticated;
 
 -- communities: visível para quem é membro (ou admin). Criar é livre para qualquer
 -- autenticado (via a função create_community). Editar/excluir só criador ou admin.

@@ -1,16 +1,51 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
-import type { AuthUser, Community, CommunityType, Notification, NotificationPreferences, Severity, SubTask, Task, User } from '../types'
+import type {
+  AuthUser,
+  Community,
+  CommunityType,
+  Notification,
+  NotificationPreferences,
+  PublicProfile,
+  Severity,
+  SubTask,
+  Task,
+  User,
+} from '../types'
 import { URGENCY_POINTS } from '../types'
 
 export interface GlobalWallEntry {
   userId: string
   name: string
   avatarSeed: string
+  avatarUrl?: string
   role: string
   lostPoints: number
-  expiredCount: number
+  tasksExpired: number
+  subtasksMissed: number
+  positivePoints: number
+  xp: number
+  tasksCompleted: number
+  subtasksCompleted: number
   communityCount: number
+}
+
+function mapProfileStatsRow(row: Record<string, unknown>): PublicProfile {
+  return {
+    userId: row.user_id as string,
+    name: row.name as string,
+    avatarSeed: row.avatar_seed as string,
+    avatarUrl: (row.avatar_url as string | null) ?? undefined,
+    role: row.role as User['role'],
+    lostPoints: Number(row.lost_points),
+    tasksExpired: Number(row.tasks_expired),
+    subtasksMissed: Number(row.subtasks_missed),
+    positivePoints: Number(row.positive_points),
+    xp: Number(row.xp),
+    tasksCompleted: Number(row.tasks_completed),
+    subtasksCompleted: Number(row.subtasks_completed),
+    communityCount: Number(row.community_count),
+  }
 }
 
 interface CreateTaskInput {
@@ -64,6 +99,11 @@ interface State {
 
   // global wall (calculado no servidor, não depende do cache local de tasks)
   fetchGlobalWall: () => Promise<GlobalWallEntry[]>
+  fetchPublicProfile: (userId: string) => Promise<PublicProfile | null>
+
+  // perfil
+  updatePassword: (newPassword: string) => Promise<string | null>
+  uploadAvatar: (file: File) => Promise<string | null>
 
   // selectors
   getUserById: (id: string) => User | undefined
@@ -200,6 +240,7 @@ export const useAppStore = create<State>()((set, get) => ({
       name: p.name,
       role: p.role,
       avatarSeed: p.avatar_seed,
+      avatarUrl: p.avatar_url ?? undefined,
       communityIds: communityIdsByUser.get(p.id) ?? [],
     }))
 
@@ -366,15 +407,54 @@ export const useAppStore = create<State>()((set, get) => ({
   fetchGlobalWall: async () => {
     const { data, error } = await supabase.rpc('global_wall')
     if (error || !data) return []
-    return (data as Record<string, unknown>[]).map((row) => ({
-      userId: row.user_id as string,
-      name: row.name as string,
-      avatarSeed: row.avatar_seed as string,
-      role: row.role as string,
-      lostPoints: Number(row.lost_points),
-      expiredCount: Number(row.expired_count),
-      communityCount: Number(row.community_count),
-    }))
+    return (data as Record<string, unknown>[]).map((row) => {
+      const stats = mapProfileStatsRow(row)
+      return {
+        userId: stats.userId,
+        name: stats.name,
+        avatarSeed: stats.avatarSeed,
+        avatarUrl: stats.avatarUrl,
+        role: stats.role,
+        lostPoints: stats.lostPoints,
+        tasksExpired: stats.tasksExpired,
+        subtasksMissed: stats.subtasksMissed,
+        positivePoints: stats.positivePoints,
+        xp: stats.xp,
+        tasksCompleted: stats.tasksCompleted,
+        subtasksCompleted: stats.subtasksCompleted,
+        communityCount: stats.communityCount,
+      }
+    })
+  },
+
+  fetchPublicProfile: async (userId) => {
+    const { data, error } = await supabase.rpc('get_public_profile', { _user_id: userId })
+    if (error || !data || (Array.isArray(data) && data.length === 0)) return null
+    const row = Array.isArray(data) ? data[0] : data
+    return mapProfileStatsRow(row as Record<string, unknown>)
+  },
+
+  updatePassword: async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    return error?.message ?? null
+  },
+
+  uploadAvatar: async (file) => {
+    const authUser = get().authUser
+    if (!authUser) return null
+    const ext = file.name.split('.').pop() ?? 'jpg'
+    const path = `${authUser.id}/avatar.${ext}`
+    const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+    if (uploadError) return null
+
+    const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(path)
+    const avatarUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`
+
+    const { error: updateError } = await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', authUser.id)
+    if (updateError) return null
+
+    set({ authUser: { ...authUser, avatarUrl } })
+    return avatarUrl
   },
 
   getUserById: (id) => get().users.find((u) => u.id === id),
@@ -394,6 +474,7 @@ async function loadAuthUser(userId: string, email: string) {
       name: profile.name,
       role: profile.role,
       avatarSeed: profile.avatar_seed,
+      avatarUrl: profile.avatar_url ?? undefined,
       notifyReminder: profile.notify_reminder,
       notifyExpired: profile.notify_expired,
       notifyCompleted: profile.notify_completed,

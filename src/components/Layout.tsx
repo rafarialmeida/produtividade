@@ -6,6 +6,7 @@ import { useExpirationTicker } from '../hooks/useExpirationTicker'
 import NotificationToasts from './NotificationToasts'
 import PushToggle from './PushToggle'
 import NotificationPreferencesModal from './NotificationPreferencesModal'
+import ProfileModal from './ProfileModal'
 
 const NAV_ITEMS = [
   { to: '/day', label: 'Meu dia', icon: Sparkles },
@@ -19,6 +20,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const user = useAppStore((s) => s.authUser)
   const signOut = useAppStore((s) => s.signOut)
   const [showPreferences, setShowPreferences] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -68,9 +70,17 @@ export default function Layout({ children }: { children: ReactNode }) {
                     {user.role === 'admin' ? 'Administrador' : 'Membro'}
                   </p>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 flex items-center justify-center text-xs font-semibold text-white">
-                  {user.name.slice(0, 1).toUpperCase()}
-                </div>
+                <button
+                  onClick={() => setShowProfile(true)}
+                  title="Meu perfil"
+                  className="w-8 h-8 shrink-0 rounded-full overflow-hidden bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 hover:border-purple-400/60 flex items-center justify-center text-xs font-semibold text-white transition-colors"
+                >
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                  ) : (
+                    user.name.slice(0, 1).toUpperCase()
+                  )}
+                </button>
                 <PushToggle userId={user.id} />
                 <button
                   onClick={() => setShowPreferences(true)}
@@ -96,6 +106,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       </header>
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">{children}</main>
       {showPreferences && <NotificationPreferencesModal onClose={() => setShowPreferences(false)} />}
+      {showProfile && user && <ProfileModal userId={user.id} onClose={() => setShowProfile(false)} />}
     </div>
   )
 }

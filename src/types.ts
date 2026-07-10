@@ -36,6 +36,7 @@ export interface User {
   role: Role
   communityIds: string[]
   avatarSeed: string
+  avatarUrl?: string
 }
 
 export interface AuthUser extends NotificationPreferences {
@@ -44,6 +45,23 @@ export interface AuthUser extends NotificationPreferences {
   name: string
   role: Role
   avatarSeed: string
+  avatarUrl?: string
+}
+
+export interface PublicProfile {
+  userId: string
+  name: string
+  avatarSeed: string
+  avatarUrl?: string
+  role: Role
+  lostPoints: number
+  tasksExpired: number
+  subtasksMissed: number
+  positivePoints: number
+  xp: number
+  tasksCompleted: number
+  subtasksCompleted: number
+  communityCount: number
 }
 
 export interface Community {
