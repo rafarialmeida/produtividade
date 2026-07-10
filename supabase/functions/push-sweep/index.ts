@@ -60,6 +60,9 @@ function addInterval(date: Date, recurrence: string): Date {
     case 'daily':
       next.setDate(next.getDate() + 1)
       break
+    case 'every_other_day':
+      next.setDate(next.getDate() + 2)
+      break
     case 'weekly':
       next.setDate(next.getDate() + 7)
       break

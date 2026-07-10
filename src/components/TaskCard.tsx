@@ -22,6 +22,7 @@ export default function TaskCard({
   const toggleSubtask = useAppStore((s) => s.toggleSubtask)
   const setTaskStarted = useAppStore((s) => s.setTaskStarted)
   const completeTask = useAppStore((s) => s.completeTask)
+  const reopenTask = useAppStore((s) => s.reopenTask)
   const deleteTask = useAppStore((s) => s.deleteTask)
   const owner = useAppStore((s) => s.getUserById(task.userId))
   const community = useAppStore((s) => (showCommunity ? s.getCommunityById(task.communityId) : undefined))
@@ -155,7 +156,7 @@ export default function TaskCard({
         <div className="flex items-center gap-1.5 text-xs">
           {task.completed ? (
             <span className="flex items-center gap-1 text-emerald-400">
-              <CheckCircle2 size={13} /> Concluída
+              <CheckCircle2 size={13} /> Concluída{task.completedAt && ` em ${formatDeadline(task.completedAt)}`}
             </span>
           ) : task.expired ? (
             <span className="flex items-center gap-1 text-rose-400 font-medium">
@@ -196,6 +197,16 @@ export default function TaskCard({
               Concluir
             </button>
           </div>
+        )}
+
+        {task.completed && isOwner && (
+          <button
+            onClick={() => reopenTask(task.id)}
+            title="Voltar para Em andamento"
+            className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg text-zinc-400 border border-white/10 hover:bg-white/5 hover:text-white transition-colors light:text-zinc-600 light:border-black/10 light:hover:bg-black/5 light:hover:text-zinc-900"
+          >
+            <RotateCcw size={12} /> Reabrir
+          </button>
         )}
       </div>
 

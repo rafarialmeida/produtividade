@@ -4,10 +4,11 @@ export type Severity = 'baixa' | 'media' | 'alta' | 'critica'
 
 export type CommunityType = 'trabalho' | 'competicao'
 
-export type Recurrence = 'daily' | 'weekly' | 'biweekly' | 'monthly'
+export type Recurrence = 'daily' | 'every_other_day' | 'weekly' | 'biweekly' | 'monthly'
 
 export const RECURRENCE_LABEL: Record<Recurrence, string> = {
   daily: 'Diariamente',
+  every_other_day: 'Dia sim, dia não',
   weekly: 'Semanalmente',
   biweekly: 'A cada 2 semanas',
   monthly: 'Mensalmente',

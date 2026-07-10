@@ -105,6 +105,7 @@ interface State {
   toggleSubtask: (taskId: string, subtaskId: string) => Promise<void>
   setTaskStarted: (taskId: string, started: boolean) => Promise<void>
   completeTask: (taskId: string) => Promise<void>
+  reopenTask: (taskId: string) => Promise<void>
   deleteTask: (taskId: string) => Promise<void>
   rescheduleTask: (taskId: string, deadline: string) => Promise<void>
   checkExpirations: () => Promise<void>
@@ -454,6 +455,11 @@ export const useAppStore = create<State>()((set, get) => ({
       }
     }
 
+    await get().refreshAll()
+  },
+
+  reopenTask: async (taskId) => {
+    await supabase.from('tasks').update({ completed: false, completed_at: null, started: true }).eq('id', taskId)
     await get().refreshAll()
   },
 
