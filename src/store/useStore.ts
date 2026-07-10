@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
-import type { AuthUser, Community, CommunityType, Notification, Severity, SubTask, Task, User } from '../types'
+import type { AuthUser, Community, CommunityType, Notification, NotificationPreferences, Severity, SubTask, Task, User } from '../types'
 import { URGENCY_POINTS } from '../types'
 
 export interface GlobalWallEntry {
@@ -60,6 +60,7 @@ interface State {
 
   // notifications
   markNotificationRead: (id: string) => Promise<void>
+  updateNotificationPreferences: (prefs: Partial<NotificationPreferences>) => Promise<void>
 
   // global wall (calculado no servidor, não depende do cache local de tasks)
   fetchGlobalWall: () => Promise<GlobalWallEntry[]>
@@ -277,7 +278,21 @@ export const useAppStore = create<State>()((set, get) => ({
   },
 
   completeTask: async (taskId) => {
+    const task = get().tasks.find((t) => t.id === taskId)
     await supabase.from('tasks').update({ completed: true, completed_at: new Date().toISOString() }).eq('id', taskId)
+
+    const authUser = get().authUser
+    if (authUser && task) {
+      await supabase.from('notifications').insert({
+        user_id: authUser.id,
+        task_id: taskId,
+        type: 'success',
+        message: `Parabéns! Você concluiu "${task.title}".`,
+      })
+      const fnName = import.meta.env.VITE_PUSH_FUNCTION_NAME || 'push-sweep'
+      supabase.functions.invoke(fnName, { body: { type: 'completed', taskId } }).catch(() => {})
+    }
+
     await get().refreshAll()
   },
 
@@ -333,6 +348,21 @@ export const useAppStore = create<State>()((set, get) => ({
     await supabase.from('notifications').update({ read: true }).eq('id', id)
   },
 
+  updateNotificationPreferences: async (prefs) => {
+    const authUser = get().authUser
+    if (!authUser) return
+    set({ authUser: { ...authUser, ...prefs } })
+    await supabase
+      .from('profiles')
+      .update({
+        ...(prefs.notifyReminder !== undefined && { notify_reminder: prefs.notifyReminder }),
+        ...(prefs.notifyExpired !== undefined && { notify_expired: prefs.notifyExpired }),
+        ...(prefs.notifyCompleted !== undefined && { notify_completed: prefs.notifyCompleted }),
+        ...(prefs.notifyOnlyUrgent !== undefined && { notify_only_urgent: prefs.notifyOnlyUrgent }),
+      })
+      .eq('id', authUser.id)
+  },
+
   fetchGlobalWall: async () => {
     const { data, error } = await supabase.rpc('global_wall')
     if (error || !data) return []
@@ -358,7 +388,17 @@ async function loadAuthUser(userId: string, email: string) {
     return
   }
   useAppStore.setState({
-    authUser: { id: profile.id, email, name: profile.name, role: profile.role, avatarSeed: profile.avatar_seed },
+    authUser: {
+      id: profile.id,
+      email,
+      name: profile.name,
+      role: profile.role,
+      avatarSeed: profile.avatar_seed,
+      notifyReminder: profile.notify_reminder,
+      notifyExpired: profile.notify_expired,
+      notifyCompleted: profile.notify_completed,
+      notifyOnlyUrgent: profile.notify_only_urgent,
+    },
     authLoading: false,
   })
   await useAppStore.getState().refreshAll()

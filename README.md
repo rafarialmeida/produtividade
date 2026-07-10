@@ -66,6 +66,7 @@ where id = (select id from auth.users where email = 'voce@exemplo.com');
 - **Regra rígida de criação de tarefas**: toda tarefa exige Objetivo Macro, Título, Categoria, checklist de subtarefas (Plano de Execução), Prazo e Nível de Urgência antes de liberar o botão Salvar.
 - **Quatro status de tarefa**: Não iniciada, Em andamento, Concluída e Expirada, com botões para mover entre Não iniciada e Em andamento.
 - **Gamificação reversa — Muro da Procrastinação**: ranking invertido por pontos perdidos (Baixa -1, Média -3, Alta -5, Crítica -10) em cada comunidade, recalculado automaticamente quando uma tarefa expira, com notificação visual (toast) imediata.
+- **Preferências de notificação**: cada pessoa escolhe (no ícone de engrenagem ao lado do sino) se quer receber push de prazo chegando perto, só para tarefas Alta/Crítica, de tarefa expirada e/ou de parabéns ao concluir uma tarefa.
 
 ### Expiração de tarefas: cliente + servidor
 
@@ -99,18 +100,32 @@ VITE_VAPID_PUBLIC_KEY=<publicKey gerada acima>
 
 ### 3. Rodar as migrações novas do banco
 
-Se o seu banco já existia antes desta funcionalidade, rode no SQL Editor (nessa ordem) os arquivos que ainda não rodou em `supabase/migrations/`: `0002_push_notifications.sql` (cria `push_subscriptions`, `tasks.reminder_sent_at`, `notifications.task_id`). Projetos novos já recebem tudo isso rodando só o `supabase/schema.sql`.
+Se o seu banco já existia antes desta funcionalidade, rode no SQL Editor (nessa ordem) os arquivos que ainda não rodou em `supabase/migrations/`:
+
+- `0002_push_notifications.sql` — cria `push_subscriptions`, `tasks.reminder_sent_at`, `notifications.task_id`.
+- `0004_notification_preferences.sql` — cria as colunas de preferência (`notify_reminder`, `notify_expired`, `notify_completed`, `notify_only_urgent`) em `profiles` e adiciona o tipo `success` às notificações (usado no aviso de tarefa concluída).
+
+Projetos novos já recebem tudo isso rodando só o `supabase/schema.sql`.
 
 ### 4. Implantar a Edge Function
 
-Requer a [Supabase CLI](https://supabase.com/docs/guides/cli) instalada e logada (`supabase login`, `supabase link --project-ref SEU_PROJECT_REF`).
+Duas formas, escolha uma:
+
+- **Painel do Supabase** (sem instalar nada): Edge Functions -> Create a new function, cole o conteúdo de [`supabase/functions/push-sweep/index.ts`](./supabase/functions/push-sweep/index.ts) e clique em Deploy. O Supabase pode dar um nome aleatório à função em vez do que você digitou — se isso acontecer, defina `VITE_PUSH_FUNCTION_NAME` (local e no Vercel) com o nome real que ele gerou, para o app saber qual função chamar ao parabenizar uma tarefa concluída.
+- **Supabase CLI**: requer [instalação](https://supabase.com/docs/guides/cli) e login (`supabase login`, `supabase link --project-ref SEU_PROJECT_REF`).
+  ```bash
+  supabase functions deploy push-sweep
+  ```
+
+Depois, configure as senhas que a função usa (painel: Edge Functions -> Secrets; ou CLI):
 
 ```bash
-supabase functions deploy push-sweep
 supabase secrets set VAPID_PUBLIC_KEY=<publicKey> VAPID_PRIVATE_KEY=<privateKey> VAPID_SUBJECT=mailto:seu-email@exemplo.com
 ```
 
-(`SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` já existem automaticamente dentro da função — não precisa configurar.)
+(`SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` já existem automaticamente dentro da função — não precisa configurar.)
+
+Sempre que o código de `supabase/functions/push-sweep/index.ts` mudar neste repositório (por exemplo, ao adicionar um novo tipo de notificação), repita este passo — cole o conteúdo atualizado e clique em Deploy de novo.
 
 ### 5. Agendar a varredura periódica
 

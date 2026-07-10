@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Clock, Info, PartyPopper } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import type { Notification } from '../types'
+
+const TOAST_CONFIG: Record<Notification['type'], { icon: typeof AlertTriangle; border: string; title: string; titleColor: string }> = {
+  penalty: { icon: AlertTriangle, border: 'border-rose-500/50', title: 'Penalidade aplicada', titleColor: 'text-rose-300' },
+  warning: { icon: Clock, border: 'border-amber-500/50', title: 'Prazo chegando', titleColor: 'text-amber-300' },
+  success: { icon: PartyPopper, border: 'border-emerald-500/50', title: 'Boa!', titleColor: 'text-emerald-300' },
+  info: { icon: Info, border: 'border-purple-500/50', title: 'Aviso', titleColor: 'text-purple-300' },
+}
 
 export default function NotificationToasts({ userId }: { userId: string }) {
   const notifications = useAppStore((s) => s.notifications)
@@ -28,18 +35,23 @@ export default function NotificationToasts({ userId }: { userId: string }) {
 
   return (
     <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 w-[min(360px,calc(100vw-2rem))]">
-      {visible.map((n) => (
-        <div
-          key={n.id}
-          className="animate-toast-in animate-pulse-glow glass-panel border border-rose-500/50 rounded-xl p-4 flex gap-3 items-start"
-        >
-          <AlertTriangle className="text-rose-400 shrink-0 mt-0.5" size={20} />
-          <div>
-            <p className="text-sm font-semibold text-rose-300">Penalidade aplicada</p>
-            <p className="text-sm text-zinc-300 mt-0.5">{n.message}</p>
+      {visible.map((n) => {
+        const cfg = TOAST_CONFIG[n.type]
+        return (
+          <div
+            key={n.id}
+            className={`animate-toast-in glass-panel border ${cfg.border} rounded-xl p-4 flex gap-3 items-start ${
+              n.type === 'penalty' ? 'animate-pulse-glow' : ''
+            }`}
+          >
+            <cfg.icon className={`${cfg.titleColor} shrink-0 mt-0.5`} size={20} />
+            <div>
+              <p className={`text-sm font-semibold ${cfg.titleColor}`}>{cfg.title}</p>
+              <p className="text-sm text-zinc-300 mt-0.5">{n.message}</p>
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

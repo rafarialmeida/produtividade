@@ -23,6 +23,13 @@ export const URGENCY_POINTS: Record<Severity, number> = {
   critica: 10,
 }
 
+export interface NotificationPreferences {
+  notifyReminder: boolean
+  notifyExpired: boolean
+  notifyCompleted: boolean
+  notifyOnlyUrgent: boolean
+}
+
 export interface User {
   id: string
   name: string
@@ -31,7 +38,7 @@ export interface User {
   avatarSeed: string
 }
 
-export interface AuthUser {
+export interface AuthUser extends NotificationPreferences {
   id: string
   email: string
   name: string
@@ -78,7 +85,7 @@ export interface Notification {
   id: string
   userId: string
   message: string
-  type: 'penalty' | 'warning' | 'info'
+  type: 'penalty' | 'warning' | 'info' | 'success'
   taskId?: string
   createdAt: string
   read: boolean

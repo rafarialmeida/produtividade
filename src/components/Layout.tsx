@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { LogOut, Skull, Sparkles, Users, ShieldCheck, Zap } from 'lucide-react'
+import { LogOut, Settings2, Skull, Sparkles, Users, ShieldCheck, Zap } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { useExpirationTicker } from '../hooks/useExpirationTicker'
 import NotificationToasts from './NotificationToasts'
 import PushToggle from './PushToggle'
+import NotificationPreferencesModal from './NotificationPreferencesModal'
 
 const NAV_ITEMS = [
   { to: '/day', label: 'Meu dia', icon: Sparkles },
@@ -17,6 +18,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const user = useAppStore((s) => s.authUser)
   const signOut = useAppStore((s) => s.signOut)
+  const [showPreferences, setShowPreferences] = useState(false)
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -71,6 +73,13 @@ export default function Layout({ children }: { children: ReactNode }) {
                 </div>
                 <PushToggle userId={user.id} />
                 <button
+                  onClick={() => setShowPreferences(true)}
+                  title="Preferências de notificação"
+                  className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <Settings2 size={16} />
+                </button>
+                <button
                   onClick={async () => {
                     await signOut()
                     navigate('/login')
@@ -86,6 +95,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         </div>
       </header>
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">{children}</main>
+      {showPreferences && <NotificationPreferencesModal onClose={() => setShowPreferences(false)} />}
     </div>
   )
 }

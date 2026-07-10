@@ -14,6 +14,10 @@ create table if not exists public.profiles (
   name text not null,
   role text not null default 'member' check (role in ('admin', 'member')),
   avatar_seed text not null,
+  notify_reminder boolean not null default true,
+  notify_expired boolean not null default true,
+  notify_completed boolean not null default true,
+  notify_only_urgent boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -64,7 +68,7 @@ create table if not exists public.notifications (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles (id) on delete cascade,
   message text not null,
-  type text not null default 'penalty' check (type in ('penalty', 'warning', 'info')),
+  type text not null default 'penalty' check (type in ('penalty', 'warning', 'info', 'success')),
   read boolean not null default false,
   task_id uuid references public.tasks (id) on delete set null,
   created_at timestamptz not null default now()
@@ -287,7 +291,7 @@ create policy "profiles_update_own" on public.profiles for update to authenticat
   using (id = auth.uid()) with check (id = auth.uid());
 
 revoke update on public.profiles from authenticated;
-grant update (name, avatar_seed) on public.profiles to authenticated;
+grant update (name, avatar_seed, notify_reminder, notify_expired, notify_completed, notify_only_urgent) on public.profiles to authenticated;
 
 -- communities: visível para quem é membro (ou admin). Criar é livre para qualquer
 -- autenticado (via a função create_community). Editar/excluir só criador ou admin.
