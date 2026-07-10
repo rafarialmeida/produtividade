@@ -1,4 +1,5 @@
-import { CalendarClock, CheckCircle2, Circle, Clock, Play, Repeat, RotateCcw, Tag, Target, Trash2, TriangleAlert, User } from 'lucide-react'
+import { useState } from 'react'
+import { CalendarClock, CheckCircle2, Circle, Clock, Pencil, Play, Repeat, RotateCcw, Tag, Target, Trash2, TriangleAlert, User } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import type { Task } from '../types'
 import { RECURRENCE_LABEL } from '../types'
@@ -6,6 +7,7 @@ import { URGENCY_CONFIG } from '../utils/urgency'
 import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
 import { getTaskStatus, TASK_STATUS_CONFIG } from '../utils/taskStatus'
 import { formatDeadline, formatRelative, isNearDeadline, isPastDeadline } from '../utils/date'
+import TaskForm from './TaskForm'
 
 export default function TaskCard({
   task,
@@ -28,6 +30,7 @@ export default function TaskCard({
   const isOwner = task.userId === currentUserId
   const taskStatus = getTaskStatus(task)
   const statusCfg = TASK_STATUS_CONFIG[taskStatus]
+  const [editing, setEditing] = useState(false)
 
   function handleDelete() {
     if (window.confirm(`Excluir a tarefa "${task.title}"? Essa ação não pode ser desfeita.`)) {
@@ -97,13 +100,22 @@ export default function TaskCard({
             {cfg.label}
           </span>
           {isOwner && (
-            <button
-              onClick={handleDelete}
-              title="Excluir tarefa"
-              className="p-1.5 rounded-lg text-zinc-600 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-            >
-              <Trash2 size={13} />
-            </button>
+            <>
+              <button
+                onClick={() => setEditing(true)}
+                title="Editar tarefa"
+                className="p-1.5 rounded-lg text-zinc-600 hover:text-purple-300 hover:bg-purple-500/10 transition-colors"
+              >
+                <Pencil size={13} />
+              </button>
+              <button
+                onClick={handleDelete}
+                title="Excluir tarefa"
+                className="p-1.5 rounded-lg text-zinc-600 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+              >
+                <Trash2 size={13} />
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -186,6 +198,10 @@ export default function TaskCard({
           </div>
         )}
       </div>
+
+      {editing && (
+        <TaskForm task={task} communityId={task.communityId} userId={task.userId} onClose={() => setEditing(false)} />
+      )}
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { CalendarClock, CheckCircle2, Layers, ListChecks, Plus, Repeat, Tag, Target, Trash2, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
-import type { Recurrence, Severity } from '../types'
+import type { Recurrence, Severity, Task } from '../types'
 import { RECURRENCE_LABEL } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { CATEGORY_PRESETS } from '../utils/category'
@@ -11,15 +11,19 @@ import { useTheme } from '../hooks/useTheme'
 export default function TaskForm({
   communityId: fixedCommunityId,
   userId,
+  task,
   onClose,
 }: {
   communityId?: string
   userId: string
+  task?: Task
   onClose: () => void
 }) {
+  const isEditing = Boolean(task)
   const { theme } = useTheme()
   const optionStyle = theme === 'light' ? { backgroundColor: '#fff', color: '#18181b' } : { backgroundColor: '#0d0e14', color: '#fff' }
   const createTask = useAppStore((s) => s.createTask)
+  const updateTask = useAppStore((s) => s.updateTask)
   const allCommunities = useAppStore((s) => s.communities)
   const user = useAppStore((s) => s.getUserById(userId))
   const myCommunities = useMemo(
@@ -27,7 +31,7 @@ export default function TaskForm({
     [allCommunities, user],
   )
 
-  const [selectedCommunityId, setSelectedCommunityId] = useState(fixedCommunityId ?? '')
+  const [selectedCommunityId, setSelectedCommunityId] = useState(fixedCommunityId ?? task?.communityId ?? '')
   const communityId = fixedCommunityId ?? selectedCommunityId
   const community = useAppStore((s) => (communityId ? s.getCommunityById(communityId) : undefined))
 
@@ -36,18 +40,22 @@ export default function TaskForm({
 
   const macroSuggestions = Array.from(new Set(communityTasks.map((t) => t.macroObjective))).filter(Boolean)
   const usedCategories = Array.from(new Set(allTasks.map((t) => t.category))).filter(Boolean)
-  const availableCategories = Array.from(new Set([...CATEGORY_PRESETS, ...usedCategories]))
+  const availableCategories = Array.from(new Set([...CATEGORY_PRESETS, ...usedCategories, ...(task ? [task.category] : [])]))
 
-  const [macroObjective, setMacroObjective] = useState('')
-  const [title, setTitle] = useState('')
-  const [category, setCategory] = useState(CATEGORY_PRESETS[0])
+  const [macroObjective, setMacroObjective] = useState(task?.macroObjective ?? '')
+  const [title, setTitle] = useState(task?.title ?? '')
+  const [category, setCategory] = useState(task?.category ?? CATEGORY_PRESETS[0])
   const [categories, setCategories] = useState(availableCategories)
   const [addingCategory, setAddingCategory] = useState(false)
   const [newCategory, setNewCategory] = useState('')
-  const [subtasks, setSubtasks] = useState<{ text: string; dueDate: string }[]>([{ text: '', dueDate: '' }])
-  const [deadline, setDeadline] = useState('')
-  const [urgency, setUrgency] = useState<Severity>('media')
-  const [recurrence, setRecurrence] = useState<Recurrence | null>(null)
+  const [subtasks, setSubtasks] = useState<{ id?: string; text: string; dueDate: string }[]>(
+    task && task.subtasks.length > 0
+      ? task.subtasks.map((s) => ({ id: s.id, text: s.text, dueDate: s.dueDate ? toDatetimeLocalValue(new Date(s.dueDate)) : '' }))
+      : [{ text: '', dueDate: '' }],
+  )
+  const [deadline, setDeadline] = useState(task ? toDatetimeLocalValue(new Date(task.deadline)) : '')
+  const [urgency, setUrgency] = useState<Severity>(task?.urgency ?? 'media')
+  const [recurrence, setRecurrence] = useState<Recurrence | null>(task?.recurrence ?? null)
   const [submitting, setSubmitting] = useState(false)
 
   const minDeadline = toDatetimeLocalValue(new Date(Date.now() + 5 * 60000))
@@ -96,20 +104,25 @@ export default function TaskForm({
     if (!isValid || submitting) return
     setSubmitting(true)
     try {
-      await createTask({
+      const commonFields = {
         communityId: communityId || undefined,
-        userId,
         macroObjective: macroObjective.trim(),
         title: title.trim(),
         category: category.trim(),
         subtasks: cleanSubtasks.map((s) => ({
+          id: s.id,
           text: s.text,
           dueDate: s.dueDate ? new Date(s.dueDate).toISOString() : undefined,
         })),
         deadline: new Date(deadline).toISOString(),
         urgency,
         recurrence: recurrence ?? undefined,
-      })
+      }
+      if (task) {
+        await updateTask(task.id, commonFields)
+      } else {
+        await createTask({ ...commonFields, userId })
+      }
       onClose()
     } finally {
       setSubmitting(false)
@@ -121,7 +134,7 @@ export default function TaskForm({
       <div className="glass-panel neon-border-purple rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-white light:text-zinc-900">Nova Tarefa</h2>
+            <h2 className="text-lg font-bold text-white light:text-zinc-900">{isEditing ? 'Editar Tarefa' : 'Nova Tarefa'}</h2>
             <p className="text-xs text-zinc-500 mt-0.5">
               {fixedCommunityId ? community?.name : 'em grupo ou só sua — o planejamento continua obrigatório'}
             </p>
@@ -366,7 +379,7 @@ export default function TaskForm({
           </div>
 
           <button type="submit" disabled={!isValid || submitting} className="btn-secondary mt-1 shrink-0">
-            <CheckCircle2 size={16} /> {submitting ? 'Salvando…' : 'Salvar Tarefa'}
+            <CheckCircle2 size={16} /> {submitting ? 'Salvando…' : isEditing ? 'Salvar Alterações' : 'Salvar Tarefa'}
           </button>
           {!isValid && (
             <p className="text-[11px] text-center text-zinc-600 -mt-2">

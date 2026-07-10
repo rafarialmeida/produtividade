@@ -62,6 +62,17 @@ interface CreateTaskInput {
   recurrence?: Recurrence
 }
 
+interface UpdateTaskInput {
+  communityId?: string
+  macroObjective: string
+  title: string
+  category: string
+  subtasks: { id?: string; text: string; dueDate?: string }[]
+  deadline: string
+  urgency: Severity
+  recurrence?: Recurrence
+}
+
 interface State {
   authUser: AuthUser | null
   authLoading: boolean
@@ -90,6 +101,7 @@ interface State {
 
   // task actions
   createTask: (input: CreateTaskInput) => Promise<void>
+  updateTask: (taskId: string, input: UpdateTaskInput) => Promise<void>
   toggleSubtask: (taskId: string, subtaskId: string) => Promise<void>
   setTaskStarted: (taskId: string, started: boolean) => Promise<void>
   completeTask: (taskId: string) => Promise<void>
@@ -350,6 +362,45 @@ export const useAppStore = create<State>()((set, get) => ({
         })),
       )
     }
+    await get().refreshAll()
+  },
+
+  updateTask: async (taskId, { communityId, macroObjective, title, category, subtasks, deadline, urgency, recurrence }) => {
+    await supabase
+      .from('tasks')
+      .update({
+        community_id: communityId ?? null,
+        macro_objective: macroObjective,
+        title,
+        category,
+        deadline,
+        urgency,
+        recurrence: recurrence ?? null,
+        expired: false,
+        reminder_sent_at: null,
+      })
+      .eq('id', taskId)
+
+    const cleanSubtasks = subtasks.filter((s) => s.text.trim().length > 0)
+    const keepIds = cleanSubtasks.filter((s) => s.id).map((s) => s.id!)
+
+    const { data: existing } = await supabase.from('subtasks').select('id').eq('task_id', taskId)
+    const toDelete = (existing ?? []).map((s) => s.id).filter((id) => !keepIds.includes(id))
+    if (toDelete.length > 0) {
+      await supabase.from('subtasks').delete().in('id', toDelete)
+    }
+
+    await Promise.all(
+      cleanSubtasks.map((s, i) => {
+        const text = s.text.trim()
+        const dueDate = s.dueDate ?? null
+        if (s.id) {
+          return supabase.from('subtasks').update({ text, due_date: dueDate, position: i }).eq('id', s.id)
+        }
+        return supabase.from('subtasks').insert({ task_id: taskId, text, due_date: dueDate, position: i })
+      }),
+    )
+
     await get().refreshAll()
   },
 
