@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Check, Copy, RefreshCcw, UserPlus, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import ProfileModal from './ProfileModal'
@@ -31,7 +32,7 @@ export default function InviteModal({ communityId, onClose }: { communityId: str
     }
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/70 backdrop-blur-sm">
       <div className="glass-panel neon-border-green rounded-2xl w-full max-w-md my-8">
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
@@ -97,6 +98,7 @@ export default function InviteModal({ communityId, onClose }: { communityId: str
         </div>
       </div>
       {openProfileId && <ProfileModal userId={openProfileId} onClose={() => setOpenProfileId(null)} />}
-    </div>
+    </div>,
+    document.body,
   )
 }

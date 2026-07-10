@@ -100,8 +100,8 @@ interface State {
   deleteCommunity: (communityId: string) => Promise<void>
 
   // task actions
-  createTask: (input: CreateTaskInput) => Promise<void>
-  updateTask: (taskId: string, input: UpdateTaskInput) => Promise<void>
+  createTask: (input: CreateTaskInput) => Promise<string | null>
+  updateTask: (taskId: string, input: UpdateTaskInput) => Promise<string | null>
   toggleSubtask: (taskId: string, subtaskId: string) => Promise<void>
   setTaskStarted: (taskId: string, started: boolean) => Promise<void>
   completeTask: (taskId: string) => Promise<void>
@@ -349,11 +349,12 @@ export const useAppStore = create<State>()((set, get) => ({
       })
       .select()
       .single()
-    if (error || !task) return
+    if (error) return error.message
+    if (!task) return 'Não foi possível criar a tarefa.'
 
     const cleanSubtasks = subtasks.filter((s) => s.text.trim().length > 0)
     if (cleanSubtasks.length > 0) {
-      await supabase.from('subtasks').insert(
+      const { error: subtaskError } = await supabase.from('subtasks').insert(
         cleanSubtasks.map((s, i) => ({
           task_id: task.id,
           text: s.text.trim(),
@@ -361,12 +362,14 @@ export const useAppStore = create<State>()((set, get) => ({
           due_date: s.dueDate ?? null,
         })),
       )
+      if (subtaskError) return subtaskError.message
     }
     await get().refreshAll()
+    return null
   },
 
   updateTask: async (taskId, { communityId, macroObjective, title, category, subtasks, deadline, urgency, recurrence }) => {
-    await supabase
+    const { error: taskError } = await supabase
       .from('tasks')
       .update({
         community_id: communityId ?? null,
@@ -380,6 +383,7 @@ export const useAppStore = create<State>()((set, get) => ({
         reminder_sent_at: null,
       })
       .eq('id', taskId)
+    if (taskError) return taskError.message
 
     const cleanSubtasks = subtasks.filter((s) => s.text.trim().length > 0)
     const keepIds = cleanSubtasks.filter((s) => s.id).map((s) => s.id!)
@@ -390,7 +394,7 @@ export const useAppStore = create<State>()((set, get) => ({
       await supabase.from('subtasks').delete().in('id', toDelete)
     }
 
-    await Promise.all(
+    const results = await Promise.all(
       cleanSubtasks.map((s, i) => {
         const text = s.text.trim()
         const dueDate = s.dueDate ?? null
@@ -400,8 +404,11 @@ export const useAppStore = create<State>()((set, get) => ({
         return supabase.from('subtasks').insert({ task_id: taskId, text, due_date: dueDate, position: i })
       }),
     )
+    const subtaskError = results.find((r) => r.error)?.error
+    if (subtaskError) return subtaskError.message
 
     await get().refreshAll()
+    return null
   },
 
   toggleSubtask: async (taskId, subtaskId) => {

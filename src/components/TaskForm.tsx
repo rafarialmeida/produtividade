@@ -1,12 +1,32 @@
 import { useMemo, useState } from 'react'
-import { CalendarClock, CheckCircle2, Layers, ListChecks, Plus, Repeat, Tag, Target, Trash2, X } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { CalendarClock, CheckCircle2, ChevronDown, Layers, ListChecks, Plus, Repeat, Tag, Target, Trash2, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import type { Recurrence, Severity, Task } from '../types'
-import { RECURRENCE_LABEL } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { CATEGORY_PRESETS } from '../utils/category'
 import { toDatetimeLocalValue } from '../utils/date'
 import { useTheme } from '../hooks/useTheme'
+
+const RECURRENCE_KEYS: Recurrence[] = ['daily', 'weekly', 'biweekly', 'monthly']
+
+function weekdayName(date: Date): string {
+  return date.toLocaleDateString('pt-BR', { weekday: 'long' })
+}
+
+function recurrenceLabel(key: Recurrence, deadlineValue: string): string {
+  const date = deadlineValue ? new Date(deadlineValue) : null
+  switch (key) {
+    case 'daily':
+      return 'Diariamente'
+    case 'weekly':
+      return date ? `Semanalmente (toda ${weekdayName(date)})` : 'Semanalmente'
+    case 'biweekly':
+      return date ? `A cada 2 semanas (${weekdayName(date)})` : 'A cada 2 semanas'
+    case 'monthly':
+      return date ? `Mensalmente (todo dia ${date.getDate()})` : 'Mensalmente'
+  }
+}
 
 export default function TaskForm({
   communityId: fixedCommunityId,
@@ -56,7 +76,9 @@ export default function TaskForm({
   const [deadline, setDeadline] = useState(task ? toDatetimeLocalValue(new Date(task.deadline)) : '')
   const [urgency, setUrgency] = useState<Severity>(task?.urgency ?? 'media')
   const [recurrence, setRecurrence] = useState<Recurrence | null>(task?.recurrence ?? null)
+  const [showRecurrenceMenu, setShowRecurrenceMenu] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   const minDeadline = toDatetimeLocalValue(new Date(Date.now() + 5 * 60000))
   const cleanSubtasks = subtasks.map((s) => ({ ...s, text: s.text.trim() })).filter((s) => s.text.length > 0)
@@ -103,6 +125,7 @@ export default function TaskForm({
     e.preventDefault()
     if (!isValid || submitting) return
     setSubmitting(true)
+    setSubmitError('')
     try {
       const commonFields = {
         communityId: communityId || undefined,
@@ -118,10 +141,10 @@ export default function TaskForm({
         urgency,
         recurrence: recurrence ?? undefined,
       }
-      if (task) {
-        await updateTask(task.id, commonFields)
-      } else {
-        await createTask({ ...commonFields, userId })
+      const error = task ? await updateTask(task.id, commonFields) : await createTask({ ...commonFields, userId })
+      if (error) {
+        setSubmitError(error)
+        return
       }
       onClose()
     } finally {
@@ -129,7 +152,7 @@ export default function TaskForm({
     }
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
       <div className="glass-panel neon-border-purple rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
@@ -319,34 +342,53 @@ export default function TaskForm({
             <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
               <Repeat size={13} className="text-purple-400" /> Recorrência (opcional)
             </label>
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={() => setRecurrence(null)}
-                className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
-                  recurrence === null
-                    ? 'bg-purple-500/15 border-purple-500/40 text-purple-200'
-                    : 'border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/5 light:border-black/10 light:bg-black/[0.02] light:text-zinc-600 light:hover:bg-black/5'
-                }`}
-              >
-                Não repete
-              </button>
-              {(Object.keys(RECURRENCE_LABEL) as Recurrence[]).map((key) => (
+            <button
+              type="button"
+              onClick={() => setShowRecurrenceMenu((v) => !v)}
+              className="w-full flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/5 px-3.5 py-2.5 text-sm transition-colors light:border-black/10 light:bg-black/[0.02] light:hover:bg-black/5"
+            >
+              <span className="flex items-center gap-2 text-zinc-200 light:text-zinc-800">
+                <CalendarClock size={15} className="text-purple-400 shrink-0" />
+                {recurrence ? recurrenceLabel(recurrence, deadline) : 'Não repete'}
+              </span>
+              <ChevronDown size={15} className={`text-zinc-500 shrink-0 transition-transform ${showRecurrenceMenu ? 'rotate-180' : ''}`} />
+            </button>
+            {showRecurrenceMenu && (
+              <div className="mt-1.5 rounded-xl border border-white/10 bg-[#14151f] overflow-hidden light:border-black/10 light:bg-white">
                 <button
                   type="button"
-                  key={key}
-                  onClick={() => setRecurrence(key)}
-                  className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
-                    recurrence === key
-                      ? 'bg-purple-500/15 border-purple-500/40 text-purple-200'
-                      : 'border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/5 light:border-black/10 light:bg-black/[0.02] light:text-zinc-600 light:hover:bg-black/5'
+                  onClick={() => {
+                    setRecurrence(null)
+                    setShowRecurrenceMenu(false)
+                  }}
+                  className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors ${
+                    recurrence === null
+                      ? 'bg-purple-500/15 text-purple-200'
+                      : 'text-zinc-300 hover:bg-white/5 light:text-zinc-700 light:hover:bg-black/5'
                   }`}
                 >
-                  {RECURRENCE_LABEL[key]}
+                  Não repete
                 </button>
-              ))}
-            </div>
-            {recurrence && (
+                {RECURRENCE_KEYS.map((key) => (
+                  <button
+                    type="button"
+                    key={key}
+                    onClick={() => {
+                      setRecurrence(key)
+                      setShowRecurrenceMenu(false)
+                    }}
+                    className={`w-full text-left px-3.5 py-2.5 text-sm border-t border-white/5 transition-colors light:border-black/5 ${
+                      recurrence === key
+                        ? 'bg-purple-500/15 text-purple-200'
+                        : 'text-zinc-300 hover:bg-white/5 light:text-zinc-700 light:hover:bg-black/5'
+                    }`}
+                  >
+                    {recurrenceLabel(key, deadline)}
+                  </button>
+                ))}
+              </div>
+            )}
+            {recurrence && !showRecurrenceMenu && (
               <p className="text-[11px] text-zinc-500 mt-1.5">
                 Ao concluir (ou expirar), uma nova ocorrência é criada automaticamente com o próximo prazo.
               </p>
@@ -381,6 +423,9 @@ export default function TaskForm({
           <button type="submit" disabled={!isValid || submitting} className="btn-secondary mt-1 shrink-0">
             <CheckCircle2 size={16} /> {submitting ? 'Salvando…' : isEditing ? 'Salvar Alterações' : 'Salvar Tarefa'}
           </button>
+          {submitError && (
+            <p className="text-[11px] text-center text-rose-400 -mt-2">Erro ao salvar: {submitError}</p>
+          )}
           {!isValid && (
             <p className="text-[11px] text-center text-zinc-600 -mt-2">
               Preencha comunidade, objetivo, título, categoria, ao menos uma subtarefa e um prazo futuro para liberar o salvamento.
@@ -388,6 +433,7 @@ export default function TaskForm({
           )}
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { BellRing, CheckCircle2, Clock, Settings2, TriangleAlert, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 
@@ -28,7 +29,7 @@ export default function NotificationPreferencesModal({ onClose }: { onClose: () 
 
   if (!authUser) return null
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/70 backdrop-blur-sm">
       <div className="glass-panel neon-border-purple rounded-2xl w-full max-w-md my-8">
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
@@ -107,6 +108,7 @@ export default function NotificationPreferencesModal({ onClose }: { onClose: () 
           </p>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

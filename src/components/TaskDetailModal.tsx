@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import TaskCard from './TaskCard'
 import { useAppStore } from '../store/useStore'
@@ -12,7 +13,7 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: string; o
 
   if (!task) return null
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
       <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-end mb-2">
@@ -22,6 +23,7 @@ export default function TaskDetailModal({ taskId, onClose }: { taskId: string; o
         </div>
         <TaskCard task={task} showOwner showCommunity />
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
