@@ -55,11 +55,11 @@ export default function TaskCard({
             <Target size={11} />
             <span className="truncate">{task.macroObjective}</span>
           </div>
-          <h3 className={`font-semibold text-white ${task.completed ? 'line-through decoration-zinc-600' : ''}`}>
+          <h3 className={`font-semibold text-white light:text-zinc-900 ${task.completed ? 'line-through decoration-zinc-600' : ''}`}>
             {task.title}
           </h3>
           <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-zinc-400 bg-white/5 border border-white/10 rounded px-1.5 py-0.5">
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-zinc-400 bg-white/5 border border-white/10 rounded px-1.5 py-0.5 light:text-zinc-600 light:bg-black/[0.03] light:border-black/10">
               <Tag size={9} /> {task.category}
             </span>
             {(taskStatus === 'nao_iniciada' || taskStatus === 'em_andamento') && (
@@ -115,7 +115,7 @@ export default function TaskCard({
               ) : (
                 <Circle size={15} className="text-zinc-600 shrink-0 group-hover:text-zinc-400" />
               )}
-              <span className={`text-sm ${st.done ? 'text-zinc-500 line-through' : 'text-zinc-300'}`}>{st.text}</span>
+              <span className={`text-sm ${st.done ? 'text-zinc-500 line-through' : 'text-zinc-300 light:text-zinc-700'}`}>{st.text}</span>
               {st.dueDate && !st.done && (
                 <span
                   className={`flex items-center gap-1 text-[10px] shrink-0 ${
@@ -161,7 +161,7 @@ export default function TaskCard({
               <button
                 onClick={() => setTaskStarted(task.id, false)}
                 title="Mover para Não iniciada"
-                className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg text-zinc-400 border border-white/10 hover:bg-white/5 transition-colors"
+                className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg text-zinc-400 border border-white/10 hover:bg-white/5 transition-colors light:text-zinc-600 light:border-black/10 light:hover:bg-black/5"
               >
                 <RotateCcw size={12} /> Não iniciada
               </button>

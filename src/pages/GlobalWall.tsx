@@ -32,7 +32,7 @@ export default function GlobalWall() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2.5">
+        <h1 className="text-2xl font-bold text-white light:text-zinc-900 flex items-center gap-2.5">
           <Globe2 className="text-purple-400" size={22} /> Muro Global
         </h1>
         <p className="text-zinc-500 text-sm mt-1">Ranking de toda a plataforma — clique em alguém para ver o perfil</p>
@@ -42,7 +42,9 @@ export default function GlobalWall() {
         <button
           onClick={() => setTab('positive')}
           className={`flex items-center gap-1.5 text-sm px-3.5 py-1.5 rounded-lg transition-colors ${
-            tab === 'positive' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'text-zinc-500 hover:text-zinc-300'
+            tab === 'positive'
+              ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+              : 'text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700'
           }`}
         >
           <Trophy size={14} /> Ranking de execução
@@ -50,7 +52,9 @@ export default function GlobalWall() {
         <button
           onClick={() => setTab('negative')}
           className={`flex items-center gap-1.5 text-sm px-3.5 py-1.5 rounded-lg transition-colors ${
-            tab === 'negative' ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30' : 'text-zinc-500 hover:text-zinc-300'
+            tab === 'negative'
+              ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+              : 'text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700'
           }`}
         >
           <Flame size={14} /> Muro da Procrastinação
@@ -83,7 +87,7 @@ export default function GlobalWall() {
                         ? positive
                           ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                           : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                        : 'bg-white/5 text-zinc-400 border border-white/10'
+                        : 'bg-white/5 text-zinc-400 border border-white/10 light:bg-black/[0.03] light:text-zinc-600 light:border-black/10'
                     }`}
                   >
                     {isLeader ? (positive ? <Trophy size={15} /> : <Flame size={15} />) : i + 1}
@@ -99,7 +103,7 @@ export default function GlobalWall() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-white truncate">{entry.name}</p>
+                      <p className="text-sm font-medium text-white light:text-zinc-900 truncate">{entry.name}</p>
                       {entry.role === 'admin' && <Crown size={12} className="text-amber-400 shrink-0" />}
                       <span className="text-[11px] text-zinc-600">
                         · {entry.communityCount} comunidade{entry.communityCount !== 1 ? 's' : ''}
@@ -118,7 +122,7 @@ export default function GlobalWall() {
                   <div className="text-right shrink-0">
                     <p
                       className={`text-lg font-bold tabular-nums ${
-                        isLeader ? (positive ? 'text-emerald-400' : 'text-rose-400') : 'text-white'
+                        isLeader ? (positive ? 'text-emerald-400' : 'text-rose-400') : 'text-white light:text-zinc-900'
                       }`}
                     >
                       {positive ? '+' : '-'}

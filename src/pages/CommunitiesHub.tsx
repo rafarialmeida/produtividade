@@ -57,7 +57,7 @@ export default function CommunitiesHub() {
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Comunidades</h1>
+          <h1 className="text-2xl font-bold text-white light:text-zinc-900">Comunidades</h1>
           <p className="text-zinc-500 text-sm mt-1">Times de trabalho e racha de produtividade com amigos</p>
         </div>
         <button onClick={() => setShowCreate(true)} className="btn-primary !w-auto px-4">
@@ -67,7 +67,7 @@ export default function CommunitiesHub() {
 
       <form onSubmit={handleJoin} className="glass-panel rounded-2xl p-5 flex flex-col sm:flex-row sm:items-end gap-3">
         <div className="flex-1">
-          <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 mb-1.5">
+          <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
             <KeyRound size={13} /> Entrar em uma comunidade com código de convite
           </label>
           <input
@@ -110,7 +110,7 @@ export default function CommunitiesHub() {
                     <typeCfg.icon size={16} className={typeCfg.color} />
                   </div>
                   <div className="min-w-0">
-                    <p className="font-semibold text-white truncate">{c.name}</p>
+                    <p className="font-semibold text-white light:text-zinc-900 truncate">{c.name}</p>
                     <p className="text-[11px] text-zinc-500 flex items-center gap-1 mt-0.5">
                       <Users size={11} /> {members.length} membros
                     </p>
@@ -150,13 +150,13 @@ export default function CommunitiesHub() {
                   <div
                     key={m!.id}
                     title={m!.name}
-                    className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600/50 to-emerald-500/50 border-2 border-[#0d0e14] flex items-center justify-center text-[10px] font-semibold text-white"
+                    className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600/50 to-emerald-500/50 border-2 border-[#0d0e14] light:border-white flex items-center justify-center text-[10px] font-semibold text-white"
                   >
                     {m!.name.slice(0, 1).toUpperCase()}
                   </div>
                 ))}
                 {members.length > 8 && (
-                  <div className="w-7 h-7 rounded-full bg-white/10 border-2 border-[#0d0e14] flex items-center justify-center text-[10px] font-semibold text-zinc-300">
+                  <div className="w-7 h-7 rounded-full bg-white/10 border-2 border-[#0d0e14] light:border-white light:bg-black/10 flex items-center justify-center text-[10px] font-semibold text-zinc-300 light:text-zinc-600">
                     +{members.length - 8}
                   </div>
                 )}
@@ -176,7 +176,7 @@ export default function CommunitiesHub() {
 
         {myCommunities.length === 0 && (
           <div className="sm:col-span-2 glass-panel rounded-2xl p-10 text-center">
-            <p className="text-zinc-400 text-sm">Você ainda não faz parte de nenhuma comunidade.</p>
+            <p className="text-zinc-400 light:text-zinc-600 text-sm">Você ainda não faz parte de nenhuma comunidade.</p>
             <button onClick={() => setShowCreate(true)} className="btn-primary !w-auto px-4 mx-auto mt-4">
               <Plus size={15} /> Criar a primeira
             </button>

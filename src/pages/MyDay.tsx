@@ -37,7 +37,7 @@ export default function MyDay() {
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Olá, {user.name.split(' ')[0]} 👋</h1>
+          <h1 className="text-2xl font-bold text-white light:text-zinc-900">Olá, {user.name.split(' ')[0]} 👋</h1>
           <p className="text-zinc-500 text-sm mt-1">Seu painel pessoal de execução, todas as comunidades reunidas</p>
         </div>
         <button onClick={() => setShowForm(true)} className="btn-secondary !w-auto px-4">
@@ -62,7 +62,7 @@ export default function MyDay() {
               <Users size={16} className="text-purple-300" />
             </div>
             <div>
-              <p className="text-sm font-medium text-white">Minhas comunidades</p>
+              <p className="text-sm font-medium text-white light:text-zinc-900">Minhas comunidades</p>
               <p className="text-xs text-zinc-500">{communities.length} comunidade{communities.length !== 1 ? 's' : ''}</p>
             </div>
           </div>
@@ -76,7 +76,7 @@ export default function MyDay() {
               <Globe2 size={16} className="text-rose-300" />
             </div>
             <div>
-              <p className="text-sm font-medium text-white">Muro Global</p>
+              <p className="text-sm font-medium text-white light:text-zinc-900">Muro Global</p>
               <p className="text-xs text-zinc-500">Ranking de negligência de toda a plataforma</p>
             </div>
           </div>
@@ -136,7 +136,7 @@ export default function MyDay() {
 function Section({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
-      <h2 className="flex items-center gap-1.5 text-sm font-semibold text-zinc-300 mb-3">
+      <h2 className="flex items-center gap-1.5 text-sm font-semibold text-zinc-300 light:text-zinc-700 mb-3">
         {icon} {title}
       </h2>
       <div className="grid sm:grid-cols-2 gap-3">{children}</div>
@@ -147,7 +147,7 @@ function Section({ title, icon, children }: { title: string; icon?: React.ReactN
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="sm:col-span-2 glass-panel rounded-2xl p-8 text-center">
-      <p className="text-zinc-400 text-sm">Nenhuma tarefa ativa. Planeje sua próxima execução.</p>
+      <p className="text-zinc-400 light:text-zinc-600 text-sm">Nenhuma tarefa ativa. Planeje sua próxima execução.</p>
       <button onClick={onCreate} className="btn-secondary !w-auto px-4 mx-auto mt-4">
         <Plus size={15} /> Criar tarefa
       </button>

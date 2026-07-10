@@ -34,9 +34,9 @@ export default function NotificationPreferencesModal({ onClose }: { onClose: () 
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
           <div className="flex items-center gap-2.5">
             <Settings2 size={18} className="text-purple-300" />
-            <h2 className="text-lg font-bold text-white">Preferências de notificação</h2>
+            <h2 className="text-lg font-bold text-white light:text-zinc-900">Preferências de notificação</h2>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 light:hover:text-zinc-900 light:hover:bg-black/10">
             <X size={18} />
           </button>
         </div>
@@ -50,7 +50,7 @@ export default function NotificationPreferencesModal({ onClose }: { onClose: () 
             <div className="flex gap-2.5">
               <Clock size={16} className="text-amber-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-white">Prazo chegando perto</p>
+                <p className="text-sm font-medium text-white light:text-zinc-900">Prazo chegando perto</p>
                 <p className="text-xs text-zinc-500">Aviso quando faltam poucas horas para o prazo.</p>
               </div>
             </div>
@@ -63,7 +63,7 @@ export default function NotificationPreferencesModal({ onClose }: { onClose: () 
           <div className="flex items-start justify-between gap-3 pl-6 -mt-2">
             <div className="flex gap-2.5">
               <div>
-                <p className="text-sm font-medium text-white">Só urgência Alta ou Crítica</p>
+                <p className="text-sm font-medium text-white light:text-zinc-900">Só urgência Alta ou Crítica</p>
                 <p className="text-xs text-zinc-500">Ignora avisos de prazo para tarefas Baixa/Média.</p>
               </div>
             </div>
@@ -78,7 +78,7 @@ export default function NotificationPreferencesModal({ onClose }: { onClose: () 
             <div className="flex gap-2.5">
               <TriangleAlert size={16} className="text-rose-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-white">Tarefa expirada</p>
+                <p className="text-sm font-medium text-white light:text-zinc-900">Tarefa expirada</p>
                 <p className="text-xs text-zinc-500">Aviso quando você perder pontos por não cumprir um prazo.</p>
               </div>
             </div>
@@ -92,7 +92,7 @@ export default function NotificationPreferencesModal({ onClose }: { onClose: () 
             <div className="flex gap-2.5">
               <CheckCircle2 size={16} className="text-emerald-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-white">Tarefa concluída</p>
+                <p className="text-sm font-medium text-white light:text-zinc-900">Tarefa concluída</p>
                 <p className="text-xs text-zinc-500">Um parabéns quando você fechar uma tarefa.</p>
               </div>
             </div>

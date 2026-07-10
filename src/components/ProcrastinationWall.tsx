@@ -27,11 +27,11 @@ export default function ProcrastinationWall({ communityId }: { communityId: stri
 
   return (
     <div className="glass-panel neon-border-purple rounded-2xl overflow-hidden">
-      <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between">
+      <div className="px-6 py-5 border-b border-white/5 light:border-black/5 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <Skull className="text-purple-400" size={20} />
           <div>
-            <h2 className="font-bold text-white text-lg">O Muro da Procrastinação</h2>
+            <h2 className="font-bold text-white light:text-zinc-900 text-lg">O Muro da Procrastinação</h2>
             <p className="text-xs text-zinc-500">Ranking invertido — quem mais negligenciou lidera o topo</p>
           </div>
         </div>
@@ -47,7 +47,7 @@ export default function ProcrastinationWall({ communityId }: { communityId: stri
                 className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-bold text-sm ${
                   isLeader
                     ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                    : 'bg-white/5 text-zinc-400 border border-white/10'
+                    : 'bg-white/5 text-zinc-400 border border-white/10 light:bg-black/[0.03] light:text-zinc-600 light:border-black/10'
                 }`}
               >
                 {isLeader ? <Flame size={15} /> : i + 1}
@@ -59,7 +59,7 @@ export default function ProcrastinationWall({ communityId }: { communityId: stri
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-white truncate">{entry.user.name}</p>
+                  <p className="text-sm font-medium text-white light:text-zinc-900 truncate">{entry.user.name}</p>
                   {entry.user.role === 'admin' && <Crown size={12} className="text-amber-400 shrink-0" />}
                 </div>
                 <div className="mt-1.5 h-1.5 rounded-full bg-white/5 overflow-hidden">
@@ -71,7 +71,7 @@ export default function ProcrastinationWall({ communityId }: { communityId: stri
               </div>
 
               <div className="text-right shrink-0">
-                <p className={`text-lg font-bold tabular-nums ${isLeader ? 'text-rose-400' : 'text-white'}`}>
+                <p className={`text-lg font-bold tabular-nums ${isLeader ? 'text-rose-400' : 'text-white light:text-zinc-900'}`}>
                   -{entry.lostPoints}
                 </p>
                 <p className="text-[11px] text-zinc-500">

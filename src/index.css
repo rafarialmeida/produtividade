@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant light (&:where(.light, .light *));
+
 @theme {
   --font-display: "Space Grotesk", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
@@ -23,6 +25,10 @@ html {
   color-scheme: dark;
 }
 
+html.light {
+  color-scheme: light;
+}
+
 body {
   margin: 0;
   background: var(--color-void);
@@ -33,6 +39,14 @@ body {
   color: #e6e6f0;
   font-family: var(--font-display);
   -webkit-font-smoothing: antialiased;
+}
+
+html.light body {
+  background: #f7f7fb;
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(168, 85, 247, 0.1), transparent 45%),
+    radial-gradient(circle at 85% 20%, rgba(31, 207, 122, 0.08), transparent 40%);
+  color: #1c1c28;
 }
 
 #root {
@@ -58,10 +72,23 @@ body {
   background: #35364d;
 }
 
+html.light ::-webkit-scrollbar-thumb {
+  background: #d6d5e2;
+}
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #c0bfd1;
+}
+
 .glass-panel {
   background: linear-gradient(180deg, rgba(20, 21, 31, 0.9), rgba(13, 14, 20, 0.85));
   border: 1px solid var(--color-border);
   backdrop-filter: blur(12px);
+}
+
+html.light .glass-panel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(250, 250, 253, 0.92));
+  border: 1px solid #e3e2ec;
+  box-shadow: 0 1px 3px rgba(20, 20, 40, 0.06);
 }
 
 .neon-text-purple {
@@ -82,6 +109,16 @@ body {
 .neon-border-green {
   border-color: rgba(57, 255, 157, 0.5);
   box-shadow: 0 0 0 1px rgba(57, 255, 157, 0.15), 0 0 24px rgba(57, 255, 157, 0.12);
+}
+
+html.light .neon-border-purple {
+  border-color: rgba(147, 51, 234, 0.35);
+  box-shadow: 0 0 0 1px rgba(147, 51, 234, 0.08);
+}
+
+html.light .neon-border-green {
+  border-color: rgba(16, 163, 90, 0.35);
+  box-shadow: 0 0 0 1px rgba(16, 163, 90, 0.08);
 }
 
 @keyframes toast-in {
@@ -108,7 +145,8 @@ body {
 
 @layer components {
   .input {
-    @apply w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none transition-colors focus:border-purple-400/60 focus:bg-white/[0.07];
+    @apply w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none transition-colors focus:border-purple-400/60 focus:bg-white/[0.07]
+      light:bg-black/[0.03] light:border-black/10 light:text-zinc-900 light:placeholder:text-zinc-400 light:focus:border-purple-500/50 light:focus:bg-black/[0.05];
   }
 
   .btn-primary {
@@ -120,6 +158,7 @@ body {
   }
 
   .btn-ghost {
-    @apply flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-zinc-200 text-sm font-medium px-4 py-2 transition-colors;
+    @apply flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-zinc-200 text-sm font-medium px-4 py-2 transition-colors
+      light:border-black/10 light:bg-black/[0.03] light:hover:bg-black/[0.06] light:text-zinc-700;
   }
 }

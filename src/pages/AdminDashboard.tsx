@@ -29,7 +29,7 @@ export default function AdminDashboard() {
             <ShieldCheck size={18} className="text-purple-300" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
+            <h1 className="text-2xl font-bold text-white light:text-zinc-900">Admin Dashboard</h1>
             <p className="text-zinc-500 text-sm mt-0.5">Progresso geral e gestão de comunidades</p>
           </div>
         </div>
@@ -46,7 +46,7 @@ export default function AdminDashboard() {
       </div>
 
       <div>
-        <h2 className="text-sm font-semibold text-zinc-300 mb-3">Comunidades</h2>
+        <h2 className="text-sm font-semibold text-zinc-300 light:text-zinc-700 mb-3">Comunidades</h2>
         <div className="grid sm:grid-cols-2 gap-3">
           {communities.map((c) => {
             const cfg = URGENCY_CONFIG[c.severity]
@@ -67,7 +67,7 @@ export default function AdminDashboard() {
                       <typeCfg.icon size={16} className={typeCfg.color} />
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold text-white truncate">{c.name}</p>
+                      <p className="font-semibold text-white light:text-zinc-900 truncate">{c.name}</p>
                       <p className="text-[11px] text-zinc-500 flex items-center gap-1 mt-0.5">
                         <Users size={11} /> {members.length} membros
                       </p>
@@ -95,13 +95,13 @@ export default function AdminDashboard() {
                     <div
                       key={m!.id}
                       title={m!.name}
-                      className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600/50 to-emerald-500/50 border-2 border-[#0d0e14] flex items-center justify-center text-[10px] font-semibold text-white"
+                      className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600/50 to-emerald-500/50 border-2 border-[#0d0e14] light:border-white flex items-center justify-center text-[10px] font-semibold text-white"
                     >
                       {m!.name.slice(0, 1).toUpperCase()}
                     </div>
                   ))}
                   {members.length > 6 && (
-                    <div className="w-7 h-7 rounded-full bg-white/10 border-2 border-[#0d0e14] flex items-center justify-center text-[10px] font-semibold text-zinc-300">
+                    <div className="w-7 h-7 rounded-full bg-white/10 border-2 border-[#0d0e14] light:border-white light:bg-black/10 flex items-center justify-center text-[10px] font-semibold text-zinc-300 light:text-zinc-600">
                       +{members.length - 6}
                     </div>
                   )}

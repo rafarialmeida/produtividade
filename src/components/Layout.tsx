@@ -1,8 +1,9 @@
 import { useState, type ReactNode } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { LogOut, Settings2, Skull, Sparkles, Star, Users, ShieldCheck, Zap } from 'lucide-react'
+import { LogOut, Moon, Settings2, Skull, Sparkles, Star, Sun, Users, ShieldCheck, Zap } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { useExpirationTicker } from '../hooks/useExpirationTicker'
+import { useTheme } from '../hooks/useTheme'
 import { getLevelInfo } from '../utils/level'
 import NotificationToasts from './NotificationToasts'
 import PushToggle from './PushToggle'
@@ -24,17 +25,18 @@ export default function Layout({ children }: { children: ReactNode }) {
   const [showPreferences, setShowPreferences] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
   const levelInfo = myStats ? getLevelInfo(myStats.xp) : null
+  const { theme, toggleTheme } = useTheme()
 
   return (
     <div className="min-h-screen flex flex-col">
       {user && <NotificationToasts userId={user.id} />}
-      <header className="border-b border-white/5 sticky top-0 z-40 backdrop-blur-md bg-black/30">
+      <header className="border-b border-white/5 light:border-black/10 sticky top-0 z-40 backdrop-blur-md bg-black/30 light:bg-white/70">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           <Link to="/day" className="flex items-center gap-2 group shrink-0">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-emerald-400 flex items-center justify-center shadow-[0_0_16px_rgba(168,85,247,0.5)]">
               <Zap size={16} className="text-black" strokeWidth={2.5} />
             </div>
-            <span className="font-bold tracking-tight text-lg text-white hidden sm:inline">Flawless</span>
+            <span className="font-bold tracking-tight text-lg text-white light:text-zinc-900 hidden sm:inline">Flawless</span>
           </Link>
 
           {user && (
@@ -46,7 +48,9 @@ export default function Layout({ children }: { children: ReactNode }) {
                     to={item.to}
                     className={({ isActive }) =>
                       `flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
-                        isActive ? 'bg-white/10 text-white' : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                        isActive
+                          ? 'bg-white/10 text-white light:bg-black/[0.06] light:text-zinc-900'
+                          : 'text-zinc-400 hover:text-white hover:bg-white/5 light:text-zinc-500 light:hover:text-zinc-900 light:hover:bg-black/[0.04]'
                       }`
                     }
                   >
@@ -58,7 +62,9 @@ export default function Layout({ children }: { children: ReactNode }) {
                     to="/admin"
                     className={({ isActive }) =>
                       `flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
-                        isActive ? 'bg-white/10 text-white' : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                        isActive
+                          ? 'bg-white/10 text-white light:bg-black/[0.06] light:text-zinc-900'
+                          : 'text-zinc-400 hover:text-white hover:bg-white/5 light:text-zinc-500 light:hover:text-zinc-900 light:hover:bg-black/[0.04]'
                       }`
                     }
                   >
@@ -66,23 +72,23 @@ export default function Layout({ children }: { children: ReactNode }) {
                   </NavLink>
                 )}
               </nav>
-              <div className="flex items-center gap-2 pl-3 border-l border-white/10 shrink-0">
+              <div className="flex items-center gap-2 pl-3 border-l border-white/10 light:border-black/10 shrink-0">
                 {levelInfo && (
                   <button
                     onClick={() => setShowProfile(true)}
                     title="Ver perfil"
                     className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border transition-colors ${
                       levelInfo.level >= 1
-                        ? 'border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
-                        : 'border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20'
+                        ? 'border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 light:text-purple-600'
+                        : 'border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 light:text-rose-600'
                     }`}
                   >
                     <Star size={11} /> Nv {levelInfo.level}
-                    <span className="hidden sm:inline text-zinc-400 font-normal">· {levelInfo.xp} XP</span>
+                    <span className="hidden sm:inline text-zinc-400 light:text-zinc-500 font-normal">· {levelInfo.xp} XP</span>
                   </button>
                 )}
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm font-medium text-white leading-tight">{user.name}</p>
+                  <p className="text-sm font-medium text-white light:text-zinc-900 leading-tight">{user.name}</p>
                   <p className="text-[11px] text-zinc-500 leading-tight">
                     {user.role === 'admin' ? 'Administrador' : 'Membro'}
                   </p>
@@ -90,7 +96,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                 <button
                   onClick={() => setShowProfile(true)}
                   title="Meu perfil"
-                  className="w-8 h-8 shrink-0 rounded-full overflow-hidden bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 hover:border-purple-400/60 flex items-center justify-center text-xs font-semibold text-white transition-colors"
+                  className="w-8 h-8 shrink-0 rounded-full overflow-hidden bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 light:border-black/10 hover:border-purple-400/60 flex items-center justify-center text-xs font-semibold text-white transition-colors"
                 >
                   {user.avatarUrl ? (
                     <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
@@ -102,7 +108,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                 <button
                   onClick={() => setShowPreferences(true)}
                   title="Preferências de notificação"
-                  className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-colors"
+                  className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 light:hover:text-zinc-900 light:hover:bg-black/5 transition-colors"
                 >
                   <Settings2 size={16} />
                 </button>
@@ -119,6 +125,14 @@ export default function Layout({ children }: { children: ReactNode }) {
               </div>
             </>
           )}
+
+          <button
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+            className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 light:hover:text-zinc-900 light:hover:bg-black/5 transition-colors shrink-0"
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
         </div>
       </header>
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">{children}</main>

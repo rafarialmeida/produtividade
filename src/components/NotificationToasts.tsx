@@ -47,7 +47,7 @@ export default function NotificationToasts({ userId }: { userId: string }) {
             <cfg.icon className={`${cfg.titleColor} shrink-0 mt-0.5`} size={20} />
             <div>
               <p className={`text-sm font-semibold ${cfg.titleColor}`}>{cfg.title}</p>
-              <p className="text-sm text-zinc-300 mt-0.5">{n.message}</p>
+              <p className="text-sm text-zinc-300 light:text-zinc-700 mt-0.5">{n.message}</p>
             </div>
           </div>
         )

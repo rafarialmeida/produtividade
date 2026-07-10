@@ -5,6 +5,7 @@ import type { Severity } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { CATEGORY_PRESETS } from '../utils/category'
 import { toDatetimeLocalValue } from '../utils/date'
+import { useTheme } from '../hooks/useTheme'
 
 export default function TaskForm({
   communityId: fixedCommunityId,
@@ -15,6 +16,8 @@ export default function TaskForm({
   userId: string
   onClose: () => void
 }) {
+  const { theme } = useTheme()
+  const optionStyle = theme === 'light' ? { backgroundColor: '#fff', color: '#18181b' } : { backgroundColor: '#0d0e14', color: '#fff' }
   const createTask = useAppStore((s) => s.createTask)
   const allCommunities = useAppStore((s) => s.communities)
   const user = useAppStore((s) => s.getUserById(userId))
@@ -115,12 +118,12 @@ export default function TaskForm({
       <div className="glass-panel neon-border-purple rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-white">Nova Tarefa</h2>
+            <h2 className="text-lg font-bold text-white light:text-zinc-900">Nova Tarefa</h2>
             <p className="text-xs text-zinc-500 mt-0.5">
               {fixedCommunityId ? community?.name : 'em grupo ou só sua — o planejamento continua obrigatório'}
             </p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 light:hover:text-zinc-900 light:hover:bg-black/10">
             <X size={18} />
           </button>
         </div>
@@ -128,7 +131,7 @@ export default function TaskForm({
         <form onSubmit={handleSubmit} className="px-6 py-4 flex flex-col gap-4 overflow-y-auto">
           {!fixedCommunityId && (
             <div>
-              <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 mb-1.5">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
                 <Layers size={13} className="text-purple-400" /> Comunidade (opcional)
               </label>
               <select
@@ -136,11 +139,11 @@ export default function TaskForm({
                 onChange={(e) => setSelectedCommunityId(e.target.value)}
                 className="input"
               >
-                <option value="" style={{ backgroundColor: '#0d0e14', color: '#fff' }}>
+                <option value="" style={optionStyle}>
                   Nenhuma — tarefa só minha
                 </option>
                 {myCommunities.map((c) => (
-                  <option key={c.id} value={c.id} style={{ backgroundColor: '#0d0e14', color: '#fff' }}>
+                  <option key={c.id} value={c.id} style={optionStyle}>
                     {c.name}
                   </option>
                 ))}
@@ -149,7 +152,7 @@ export default function TaskForm({
           )}
 
           <div>
-            <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 mb-1.5">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
               <Target size={13} className="text-purple-400" /> Objetivo Macro — o "porquê"
             </label>
             <input
@@ -167,7 +170,7 @@ export default function TaskForm({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-zinc-400 mb-1.5 block">A Tarefa — o "o quê"</label>
+            <label className="text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5 block">A Tarefa — o "o quê"</label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -177,7 +180,7 @@ export default function TaskForm({
           </div>
 
           <div>
-            <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 mb-1.5">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
               <Tag size={13} className="text-purple-400" /> Categoria
             </label>
             <div className="flex flex-wrap gap-1.5">
@@ -191,7 +194,7 @@ export default function TaskForm({
                     className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
                       active
                         ? 'bg-purple-500/15 border-purple-500/40 text-purple-200'
-                        : 'border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/5'
+                        : 'border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/5 light:border-black/10 light:bg-black/[0.02] light:text-zinc-600 light:hover:bg-black/5'
                     }`}
                   >
                     {c}
@@ -215,13 +218,13 @@ export default function TaskForm({
                   }}
                   onBlur={confirmNewCategory}
                   placeholder="Nova categoria"
-                  className="text-xs px-2.5 py-1.5 rounded-lg border border-purple-500/40 bg-white/5 text-white outline-none w-32"
+                  className="text-xs px-2.5 py-1.5 rounded-lg border border-purple-500/40 bg-white/5 text-white outline-none w-32 light:bg-black/5 light:text-zinc-900"
                 />
               ) : (
                 <button
                   type="button"
                   onClick={() => setAddingCategory(true)}
-                  className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-dashed border-white/15 text-zinc-500 hover:text-purple-300 hover:border-purple-500/40 transition-colors"
+                  className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-dashed border-white/15 text-zinc-500 hover:text-purple-300 hover:border-purple-500/40 transition-colors light:border-black/15"
                 >
                   <Plus size={12} /> Nova
                 </button>
@@ -230,12 +233,12 @@ export default function TaskForm({
           </div>
 
           <div>
-            <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 mb-1.5">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
               <ListChecks size={13} className="text-emerald-400" /> Plano de Execução — o "como" (checklist obrigatório, prazo por item é opcional)
             </label>
             <div className="flex flex-col gap-2">
               {subtasks.map((s, i) => (
-                <div key={i} className="rounded-xl border border-white/5 bg-white/[0.02] p-2 flex flex-col gap-1.5">
+                <div key={i} className="rounded-xl border border-white/5 bg-white/[0.02] p-2 flex flex-col gap-1.5 light:border-black/5 light:bg-black/[0.015]">
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-zinc-600 w-4">{i + 1}.</span>
                     <input
@@ -286,7 +289,7 @@ export default function TaskForm({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-zinc-400 mb-1.5 block">Prazo — data e hora limite</label>
+            <label className="text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5 block">Prazo — data e hora limite</label>
             <input
               type="datetime-local"
               value={deadline}
@@ -297,7 +300,7 @@ export default function TaskForm({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-zinc-400 mb-2 block">Nível de Urgência</label>
+            <label className="text-xs font-medium text-zinc-400 light:text-zinc-600 mb-2 block">Nível de Urgência</label>
             <div className="grid grid-cols-2 gap-2">
               {(Object.keys(URGENCY_CONFIG) as Severity[]).map((key) => {
                 const cfg = URGENCY_CONFIG[key]
@@ -308,10 +311,12 @@ export default function TaskForm({
                     key={key}
                     onClick={() => setUrgency(key)}
                     className={`rounded-xl border px-3 py-2 text-left transition-all ${
-                      active ? `${cfg.bg} ${cfg.border}` : 'border-white/10 bg-white/[0.03] hover:bg-white/5'
+                      active
+                        ? `${cfg.bg} ${cfg.border}`
+                        : 'border-white/10 bg-white/[0.03] hover:bg-white/5 light:border-black/10 light:bg-black/[0.02] light:hover:bg-black/5'
                     }`}
                   >
-                    <p className={`text-sm font-semibold ${active ? cfg.color : 'text-zinc-300'}`}>{cfg.label}</p>
+                    <p className={`text-sm font-semibold ${active ? cfg.color : 'text-zinc-300 light:text-zinc-700'}`}>{cfg.label}</p>
                     <p className="text-[11px] text-zinc-500">perde {cfg.points} pt{cfg.points > 1 ? 's' : ''} se expirar</p>
                   </button>
                 )

@@ -44,12 +44,14 @@ function SupabaseSetupNotice() {
       <div className="glass-panel rounded-2xl p-6 max-w-md w-full flex flex-col gap-3">
         <div className="flex items-center gap-2.5 text-amber-300">
           <AlertTriangle size={20} />
-          <h1 className="text-lg font-bold text-white">Configuração do Supabase pendente</h1>
+          <h1 className="text-lg font-bold text-white light:text-zinc-900">Configuração do Supabase pendente</h1>
         </div>
-        <p className="text-sm text-zinc-400">
-          Defina <code className="text-zinc-200">VITE_SUPABASE_URL</code> e{' '}
-          <code className="text-zinc-200">VITE_SUPABASE_ANON_KEY</code> (veja <code className="text-zinc-200">.env.example</code>)
-          e rode <code className="text-zinc-200">supabase/schema.sql</code> no seu projeto Supabase antes de usar o app.
+        <p className="text-sm text-zinc-400 light:text-zinc-600">
+          Defina <code className="text-zinc-200 light:text-zinc-800">VITE_SUPABASE_URL</code> e{' '}
+          <code className="text-zinc-200 light:text-zinc-800">VITE_SUPABASE_ANON_KEY</code> (veja{' '}
+          <code className="text-zinc-200 light:text-zinc-800">.env.example</code>)
+          e rode <code className="text-zinc-200 light:text-zinc-800">supabase/schema.sql</code> no seu projeto Supabase antes de usar o
+          app.
         </p>
       </div>
     </div>

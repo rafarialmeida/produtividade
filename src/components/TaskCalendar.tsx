@@ -89,37 +89,37 @@ export default function TaskCalendar({ tasks }: { tasks: Task[] }) {
 
   return (
     <div className="glass-panel rounded-2xl overflow-hidden">
-      <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between">
+      <div className="px-6 py-5 border-b border-white/5 light:border-black/5 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <CalendarDays className="text-purple-400" size={20} />
           <div>
-            <h2 className="font-bold text-white text-lg capitalize">{monthLabel}</h2>
+            <h2 className="font-bold text-white light:text-zinc-900 text-lg capitalize">{monthLabel}</h2>
             <p className="text-xs text-zinc-500">Clique numa tarefa para ver os detalhes, ou arraste para outro dia</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setCursor(new Date(today.getFullYear(), today.getMonth(), 1))}
-            className="text-xs font-medium px-2.5 py-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+            className="text-xs font-medium px-2.5 py-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors light:text-zinc-600 light:hover:text-zinc-900 light:hover:bg-black/5"
           >
             Hoje
           </button>
           <button
             onClick={() => setCursor((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1))}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors light:text-zinc-600 light:hover:text-zinc-900 light:hover:bg-black/5"
           >
             <ChevronLeft size={16} />
           </button>
           <button
             onClick={() => setCursor((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1))}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors light:text-zinc-600 light:hover:text-zinc-900 light:hover:bg-black/5"
           >
             <ChevronRight size={16} />
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 border-b border-white/5">
+      <div className="grid grid-cols-7 border-b border-white/5 light:border-black/5">
         {WEEKDAYS.map((w) => (
           <div key={w} className="text-center text-[11px] font-medium text-zinc-500 py-2">
             {w}
@@ -145,7 +145,7 @@ export default function TaskCalendar({ tasks }: { tasks: Task[] }) {
               }}
               onDragLeave={() => setDragOverKey((k) => (k === cellKey ? null : k))}
               onDrop={(e) => handleDrop(e, cell.date)}
-              className={`min-h-[92px] p-1.5 border-b border-r border-white/5 [&:nth-child(7n)]:border-r-0 flex flex-col gap-1 transition-colors ${
+              className={`min-h-[92px] p-1.5 border-b border-r border-white/5 light:border-black/5 [&:nth-child(7n)]:border-r-0 flex flex-col gap-1 transition-colors ${
                 cell.inMonth ? '' : 'opacity-30'
               } ${isDragOver ? 'bg-purple-500/10' : ''}`}
             >

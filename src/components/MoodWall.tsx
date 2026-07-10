@@ -45,7 +45,7 @@ export default function MoodWall({ tasks }: { tasks: Task[] }) {
 
   return (
     <div>
-      <h2 className="text-sm font-semibold text-zinc-300 mb-3">O Mural do Humor</h2>
+      <h2 className="text-sm font-semibold text-zinc-300 light:text-zinc-700 mb-3">O Mural do Humor</h2>
       <div className="grid sm:grid-cols-3 gap-3">
         {ZONES.map((zone) => {
           const zoneTasks = active
@@ -54,7 +54,7 @@ export default function MoodWall({ tasks }: { tasks: Task[] }) {
 
           return (
             <div key={zone.key} className={`glass-panel rounded-2xl border ${zone.border} ${zone.bg} overflow-hidden`}>
-              <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2">
+              <div className="px-4 py-3 border-b border-white/5 light:border-black/5 flex items-center gap-2">
                 <span className="text-lg leading-none">{zone.emoji}</span>
                 <div className="min-w-0">
                   <p className={`text-sm font-semibold ${zone.color}`}>{zone.title}</p>
@@ -70,8 +70,8 @@ export default function MoodWall({ tasks }: { tasks: Task[] }) {
                   zoneTasks.map((t) => {
                     const cfg = URGENCY_CONFIG[t.urgency]
                     return (
-                      <div key={t.id} className="rounded-xl bg-white/[0.03] border border-white/5 px-3 py-2">
-                        <p className="text-xs font-medium text-white truncate">{t.title}</p>
+                      <div key={t.id} className="rounded-xl bg-white/[0.03] border border-white/5 px-3 py-2 light:bg-black/[0.02] light:border-black/5">
+                        <p className="text-xs font-medium text-white light:text-zinc-900 truncate">{t.title}</p>
                         <div className="flex items-center justify-between gap-2 mt-1">
                           <span className={`text-[10px] px-1.5 py-0.5 rounded border ${cfg.bg} ${cfg.border} ${cfg.color}`}>
                             {cfg.label}

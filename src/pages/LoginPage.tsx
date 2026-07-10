@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Loader2, Lock, LogIn, Mail, User, UserPlus, Zap } from 'lucide-react'
+import { Loader2, Lock, LogIn, Mail, Moon, Sun, User, UserPlus, Zap } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
+import { useTheme } from '../hooks/useTheme'
 
 type Mode = 'login' | 'signup'
 
@@ -20,6 +21,7 @@ export default function LoginPage() {
   const [confirmationMessage, setConfirmationMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<'google' | 'microsoft' | null>(null)
+  const { theme, toggleTheme } = useTheme()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -63,13 +65,20 @@ export default function LoginPage() {
   if (authUser) return <Navigate to="/day" replace />
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10">
+    <div className="min-h-screen flex items-center justify-center px-4 py-10 relative">
+      <button
+        onClick={toggleTheme}
+        title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+        className="absolute top-4 right-4 p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 light:hover:text-zinc-900 light:hover:bg-black/5 transition-colors"
+      >
+        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+      </button>
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-emerald-400 flex items-center justify-center shadow-[0_0_32px_rgba(168,85,247,0.55)] mb-4">
             <Zap size={26} className="text-black" strokeWidth={2.5} />
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Flawless</h1>
+          <h1 className="text-2xl font-bold text-white light:text-zinc-900 tracking-tight">Flawless</h1>
           <p className="text-zinc-500 text-sm mt-1 text-center">
             Execução estratégica. Sem desculpas. <span className="text-emerald-400">Sem procrastinação.</span>
           </p>
@@ -90,7 +99,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => handleOAuth('google')}
               disabled={oauthLoading !== null}
-              className="flex items-center justify-center gap-2.5 rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] text-sm font-medium text-white py-2.5 transition-colors disabled:opacity-50"
+              className="flex items-center justify-center gap-2.5 rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] text-sm font-medium text-white py-2.5 transition-colors disabled:opacity-50 light:border-black/15 light:bg-black/[0.02] light:hover:bg-black/[0.05] light:text-zinc-900"
             >
               {oauthLoading === 'google' ? <Loader2 size={16} className="animate-spin" /> : <GoogleIcon />}
               Continuar com Google
@@ -99,7 +108,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => handleOAuth('microsoft')}
               disabled={oauthLoading !== null}
-              className="flex items-center justify-center gap-2.5 rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] text-sm font-medium text-white py-2.5 transition-colors disabled:opacity-50"
+              className="flex items-center justify-center gap-2.5 rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] text-sm font-medium text-white py-2.5 transition-colors disabled:opacity-50 light:border-black/15 light:bg-black/[0.02] light:hover:bg-black/[0.05] light:text-zinc-900"
             >
               {oauthLoading === 'microsoft' ? <Loader2 size={16} className="animate-spin" /> : <MicrosoftIcon />}
               Continuar com Microsoft
@@ -107,22 +116,22 @@ export default function LoginPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-white/10" />
+            <div className="h-px flex-1 bg-white/10 light:bg-black/10" />
             <span className="text-[11px] text-zinc-600">ou</span>
-            <div className="h-px flex-1 bg-white/10" />
+            <div className="h-px flex-1 bg-white/10 light:bg-black/10" />
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {mode === 'signup' && (
               <div>
-                <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 mb-1.5">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
                   <User size={13} /> Nome
                 </label>
                 <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome completo" className="input" />
               </div>
             )}
             <div>
-              <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 mb-1.5">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
                 <Mail size={13} /> E-mail
               </label>
               <input
@@ -134,7 +143,7 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 mb-1.5">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
                 <Lock size={13} /> Senha
               </label>
               <input
@@ -172,7 +181,9 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
     <button
       onClick={onClick}
       className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-medium py-2 rounded-xl transition-all ${
-        active ? 'bg-white/10 text-white shadow-inner' : 'text-zinc-500 hover:text-zinc-300'
+        active
+          ? 'bg-white/10 text-white shadow-inner light:bg-black/[0.06] light:text-zinc-900'
+          : 'text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700'
       }`}
     >
       {children}

@@ -26,7 +26,7 @@ export default function CommunityPage() {
   if (!community) {
     return (
       <div className="text-center py-20">
-        <p className="text-zinc-400">Comunidade não encontrada.</p>
+        <p className="text-zinc-400 light:text-zinc-600">Comunidade não encontrada.</p>
         <Link to="/day" className="text-purple-300 text-sm mt-2 inline-block">
           Voltar ao meu dia
         </Link>
@@ -59,7 +59,7 @@ export default function CommunityPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <Link to="/day" className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 mb-3">
+        <Link to="/day" className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700 mb-3">
           <ArrowLeft size={13} /> Voltar
         </Link>
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -68,7 +68,7 @@ export default function CommunityPage() {
               <typeCfg.icon size={18} className={typeCfg.color} />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">{community.name}</h1>
+              <h1 className="text-xl font-bold text-white light:text-zinc-900">{community.name}</h1>
               <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-zinc-500">
                 <Users size={12} /> {community.memberIds.length} membros
                 <span className={`px-1.5 py-0.5 rounded border ${typeCfg.bg} ${typeCfg.border} ${typeCfg.color} font-medium`}>
@@ -93,7 +93,7 @@ export default function CommunityPage() {
               <button
                 onClick={handleDeleteCommunity}
                 title="Excluir comunidade"
-                className="p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-rose-500/10 hover:border-rose-500/30 text-zinc-500 hover:text-rose-400 transition-colors"
+                className="p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-rose-500/10 hover:border-rose-500/30 text-zinc-500 hover:text-rose-400 transition-colors light:border-black/10 light:bg-black/[0.03]"
               >
                 <Trash2 size={15} />
               </button>
@@ -106,14 +106,16 @@ export default function CommunityPage() {
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-zinc-300">Tarefas da comunidade</h2>
+          <h2 className="text-sm font-semibold text-zinc-300 light:text-zinc-700">Tarefas da comunidade</h2>
           <div className="flex gap-1">
             {(['all', 'active', 'expired', 'completed'] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
                 className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${
-                  filter === f ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-zinc-300'
+                  filter === f
+                    ? 'bg-white/10 text-white light:bg-black/[0.06] light:text-zinc-900'
+                    : 'text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700'
                 }`}
               >
                 {{ all: 'Todas', active: 'Ativas', expired: 'Expiradas', completed: 'Concluídas' }[f]}

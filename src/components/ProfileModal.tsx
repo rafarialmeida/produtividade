@@ -104,8 +104,8 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/70 backdrop-blur-sm">
       <div className="glass-panel neon-border-purple rounded-2xl w-full max-w-md my-8">
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
-          <h2 className="text-lg font-bold text-white">Perfil</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10">
+          <h2 className="text-lg font-bold text-white light:text-zinc-900">Perfil</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 light:hover:text-zinc-900 light:hover:bg-black/10">
             <X size={18} />
           </button>
         </div>
@@ -124,7 +124,7 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
                     title="Trocar foto"
-                    className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-purple-600 hover:bg-purple-500 border-2 border-[#0d0e14] flex items-center justify-center text-white disabled:opacity-60"
+                    className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-purple-600 hover:bg-purple-500 border-2 border-[#0d0e14] light:border-white flex items-center justify-center text-white disabled:opacity-60"
                   >
                     {uploading ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
                   </button>
@@ -135,7 +135,7 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <p className="font-semibold text-white truncate">{profile.name}</p>
+                  <p className="font-semibold text-white light:text-zinc-900 truncate">{profile.name}</p>
                   {profile.role === 'admin' && <Crown size={13} className="text-amber-400 shrink-0" />}
                 </div>
                 <p className="text-xs text-zinc-500 mt-0.5">
@@ -157,7 +157,7 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
 
             {isOwn && (
               <form onSubmit={handlePasswordSubmit} className="border-t border-white/5 pt-5 flex flex-col gap-3">
-                <p className="flex items-center gap-1.5 text-xs font-medium text-zinc-400">
+                <p className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600">
                   <Lock size={12} /> Trocar senha
                 </p>
                 <input
@@ -198,7 +198,7 @@ function LevelCard({ xp }: { xp: number }) {
         <p className={`flex items-center gap-1.5 text-sm font-bold ${positive ? 'text-purple-300' : 'text-rose-400'}`}>
           <Star size={14} /> Nível {info.level}
         </p>
-        <p className="text-xs text-zinc-400 tabular-nums">{xp} XP</p>
+        <p className="text-xs text-zinc-400 light:text-zinc-600 tabular-nums">{xp} XP</p>
       </div>
       <div className="mt-2.5 h-1.5 rounded-full bg-white/5 overflow-hidden">
         <div
@@ -230,7 +230,7 @@ function StatBox({
 }) {
   const colors = { emerald: 'text-emerald-300', rose: 'text-rose-400', purple: 'text-purple-300' }
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 light:border-black/10 light:bg-black/[0.02]">
       <p className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${colors[color]}`}>
         <Icon size={14} />
         {prefix}
