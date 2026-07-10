@@ -7,6 +7,7 @@ import TaskCard from '../components/TaskCard'
 import TaskForm from '../components/TaskForm'
 import InviteModal from '../components/InviteModal'
 import CommunityDashboard from '../components/CommunityDashboard'
+import CommunityBoard from '../components/CommunityBoard'
 import TaskHistoryModal from '../components/TaskHistoryModal'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
@@ -25,6 +26,7 @@ export default function CommunityPage() {
   const [showInvite, setShowInvite] = useState(false)
   const [filter, setFilter] = useState<'all' | 'active' | 'expired' | 'completed'>('all')
   const [historyUserId, setHistoryUserId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'tasks' | 'dashboard' | 'board'>('tasks')
 
   if (!community) {
     return (
@@ -43,6 +45,12 @@ export default function CommunityPage() {
   const canDelete = currentUser?.role === 'admin' || community.creatorId === currentUserId
   const isCommunityAdmin = currentUser?.role === 'admin' || community.adminIds.includes(currentUserId)
   const showDashboard = community.type === 'trabalho' && isCommunityAdmin
+  const showBoard = community.type === 'trabalho'
+  const tabs = [
+    { key: 'tasks' as const, label: 'Tarefas' },
+    ...(showDashboard ? [{ key: 'dashboard' as const, label: 'Dashboard' }] : []),
+    ...(showBoard ? [{ key: 'board' as const, label: 'Tabuleiro' }] : []),
+  ]
 
   async function handleDeleteCommunity() {
     if (!community) return
@@ -109,35 +117,59 @@ export default function CommunityPage() {
 
       <ProcrastinationWall communityId={community.id} />
 
-      {showDashboard && <CommunityDashboard communityId={community.id} onViewHistory={setHistoryUserId} />}
+      {tabs.length > 1 && (
+        <div className="flex gap-1 border-b border-white/5 light:border-black/10">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              className={`text-sm px-3 py-2 -mb-px border-b-2 transition-colors ${
+                activeTab === t.key
+                  ? 'border-purple-400 text-white light:text-zinc-900'
+                  : 'border-transparent text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-zinc-300 light:text-zinc-700">Tarefas da comunidade</h2>
-          <div className="flex gap-1">
-            {(['all', 'active', 'expired', 'completed'] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${
-                  filter === f
-                    ? 'bg-white/10 text-white light:bg-black/[0.06] light:text-zinc-900'
-                    : 'text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700'
-                }`}
-              >
-                {{ all: 'Todas', active: 'Ativas', expired: 'Expiradas', completed: 'Concluídas' }[f]}
-              </button>
-            ))}
+      {activeTab === 'dashboard' && showDashboard && (
+        <CommunityDashboard communityId={community.id} onViewHistory={setHistoryUserId} />
+      )}
+
+      {activeTab === 'board' && showBoard && <CommunityBoard communityId={community.id} />}
+
+      {activeTab === 'tasks' && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-zinc-300 light:text-zinc-700">Tarefas da comunidade</h2>
+            <div className="flex gap-1">
+              {(['all', 'active', 'expired', 'completed'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${
+                    filter === f
+                      ? 'bg-white/10 text-white light:bg-black/[0.06] light:text-zinc-900'
+                      : 'text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700'
+                  }`}
+                >
+                  {{ all: 'Todas', active: 'Ativas', expired: 'Expiradas', completed: 'Concluídas' }[f]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {filtered.length === 0 ? (
+              <p className="sm:col-span-2 text-center text-sm text-zinc-500 py-10">Nenhuma tarefa nesse filtro.</p>
+            ) : (
+              filtered.map((t) => <TaskCard key={t.id} task={t} showOwner />)
+            )}
           </div>
         </div>
-        <div className="grid sm:grid-cols-2 gap-3">
-          {filtered.length === 0 ? (
-            <p className="sm:col-span-2 text-center text-sm text-zinc-500 py-10">Nenhuma tarefa nesse filtro.</p>
-          ) : (
-            filtered.map((t) => <TaskCard key={t.id} task={t} showOwner />)
-          )}
-        </div>
-      </div>
+      )}
 
       {showForm && <TaskForm communityId={community.id} userId={currentUserId} onClose={() => setShowForm(false)} />}
       {showInvite && <InviteModal communityId={community.id} onClose={() => setShowInvite(false)} />}

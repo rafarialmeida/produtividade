@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type {
   AuthUser,
   Community,
+  CommunityPiece,
   CommunityType,
   Notification,
   NotificationPreferences,
@@ -99,6 +100,7 @@ interface State {
   regenerateInviteCode: (communityId: string) => Promise<void>
   deleteCommunity: (communityId: string) => Promise<void>
   setCommunityAdmin: (communityId: string, userId: string, isAdmin: boolean) => Promise<string | null>
+  setCommunityPiece: (communityId: string, pieceId: string, color: string) => Promise<string | null>
 
   // task actions
   createTask: (input: CreateTaskInput) => Promise<string | null>
@@ -157,7 +159,12 @@ function mapTask(row: Record<string, unknown>): Task {
   }
 }
 
-function mapCommunity(row: Record<string, unknown>, memberIds: string[], adminIds: string[]): Community {
+function mapCommunity(
+  row: Record<string, unknown>,
+  memberIds: string[],
+  adminIds: string[],
+  pieces: Record<string, CommunityPiece>,
+): Community {
   return {
     id: row.id as string,
     name: row.name as string,
@@ -166,6 +173,7 @@ function mapCommunity(row: Record<string, unknown>, memberIds: string[], adminId
     inviteCode: row.invite_code as string,
     memberIds,
     adminIds,
+    pieces,
     creatorId: row.creator_id as string,
     createdAt: row.created_at as string,
   }
@@ -288,6 +296,7 @@ export const useAppStore = create<State>()((set, get) => ({
     const memberIdsByCommunity = new Map<string, string[]>()
     const adminIdsByCommunity = new Map<string, string[]>()
     const communityIdsByUser = new Map<string, string[]>()
+    const piecesByCommunity = new Map<string, Record<string, CommunityPiece>>()
     for (const m of members) {
       const a = memberIdsByCommunity.get(m.community_id) ?? []
       a.push(m.user_id)
@@ -297,6 +306,12 @@ export const useAppStore = create<State>()((set, get) => ({
         const admins = adminIdsByCommunity.get(m.community_id) ?? []
         admins.push(m.user_id)
         adminIdsByCommunity.set(m.community_id, admins)
+      }
+
+      if (m.piece_id && m.piece_color) {
+        const pieces = piecesByCommunity.get(m.community_id) ?? {}
+        pieces[m.user_id] = { pieceId: m.piece_id, color: m.piece_color }
+        piecesByCommunity.set(m.community_id, pieces)
       }
 
       const b = communityIdsByUser.get(m.user_id) ?? []
@@ -314,7 +329,12 @@ export const useAppStore = create<State>()((set, get) => ({
     }))
 
     const communities = (communitiesRes.data ?? []).map((c) =>
-      mapCommunity(c, memberIdsByCommunity.get(c.id) ?? [], adminIdsByCommunity.get(c.id) ?? []),
+      mapCommunity(
+        c,
+        memberIdsByCommunity.get(c.id) ?? [],
+        adminIdsByCommunity.get(c.id) ?? [],
+        piecesByCommunity.get(c.id) ?? {},
+      ),
     )
     const tasks = (tasksRes.data ?? []).map(mapTask)
     const notifications = (notificationsRes.data ?? []).map(mapNotification)
@@ -351,6 +371,17 @@ export const useAppStore = create<State>()((set, get) => ({
       _community_id: communityId,
       _user_id: userId,
       _is_admin: isAdmin,
+    })
+    if (error) return error.message
+    await get().refreshAll()
+    return null
+  },
+
+  setCommunityPiece: async (communityId, pieceId, color) => {
+    const { error } = await supabase.rpc('set_community_piece', {
+      _community_id: communityId,
+      _piece_id: pieceId,
+      _color: color,
     })
     if (error) return error.message
     await get().refreshAll()

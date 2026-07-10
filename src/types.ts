@@ -74,6 +74,11 @@ export interface PublicProfile {
   communityCount: number
 }
 
+export interface CommunityPiece {
+  pieceId: string
+  color: string
+}
+
 export interface Community {
   id: string
   name: string
@@ -82,6 +87,7 @@ export interface Community {
   inviteCode: string
   memberIds: string[]
   adminIds: string[]
+  pieces: Record<string, CommunityPiece>
   creatorId: string
   createdAt: string
 }
