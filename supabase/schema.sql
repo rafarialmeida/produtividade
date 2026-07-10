@@ -53,6 +53,7 @@ create table if not exists public.tasks (
   completed_at timestamptz,
   expired boolean not null default false,
   reminder_sent_at timestamptz,
+  recurrence text check (recurrence in ('daily', 'weekly', 'biweekly', 'monthly')),
   created_at timestamptz not null default now()
 );
 

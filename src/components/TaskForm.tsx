@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { CalendarClock, CheckCircle2, Layers, ListChecks, Plus, Tag, Target, Trash2, X } from 'lucide-react'
+import { CalendarClock, CheckCircle2, Layers, ListChecks, Plus, Repeat, Tag, Target, Trash2, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
-import type { Severity } from '../types'
+import type { Recurrence, Severity } from '../types'
+import { RECURRENCE_LABEL } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { CATEGORY_PRESETS } from '../utils/category'
 import { toDatetimeLocalValue } from '../utils/date'
@@ -46,6 +47,7 @@ export default function TaskForm({
   const [subtasks, setSubtasks] = useState<{ text: string; dueDate: string }[]>([{ text: '', dueDate: '' }])
   const [deadline, setDeadline] = useState('')
   const [urgency, setUrgency] = useState<Severity>('media')
+  const [recurrence, setRecurrence] = useState<Recurrence | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const minDeadline = toDatetimeLocalValue(new Date(Date.now() + 5 * 60000))
@@ -106,6 +108,7 @@ export default function TaskForm({
         })),
         deadline: new Date(deadline).toISOString(),
         urgency,
+        recurrence: recurrence ?? undefined,
       })
       onClose()
     } finally {
@@ -297,6 +300,44 @@ export default function TaskForm({
               onChange={(e) => setDeadline(e.target.value)}
               className="input"
             />
+          </div>
+
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
+              <Repeat size={13} className="text-purple-400" /> Recorrência (opcional)
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setRecurrence(null)}
+                className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
+                  recurrence === null
+                    ? 'bg-purple-500/15 border-purple-500/40 text-purple-200'
+                    : 'border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/5 light:border-black/10 light:bg-black/[0.02] light:text-zinc-600 light:hover:bg-black/5'
+                }`}
+              >
+                Não repete
+              </button>
+              {(Object.keys(RECURRENCE_LABEL) as Recurrence[]).map((key) => (
+                <button
+                  type="button"
+                  key={key}
+                  onClick={() => setRecurrence(key)}
+                  className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
+                    recurrence === key
+                      ? 'bg-purple-500/15 border-purple-500/40 text-purple-200'
+                      : 'border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/5 light:border-black/10 light:bg-black/[0.02] light:text-zinc-600 light:hover:bg-black/5'
+                  }`}
+                >
+                  {RECURRENCE_LABEL[key]}
+                </button>
+              ))}
+            </div>
+            {recurrence && (
+              <p className="text-[11px] text-zinc-500 mt-1.5">
+                Ao concluir (ou expirar), uma nova ocorrência é criada automaticamente com o próximo prazo.
+              </p>
+            )}
           </div>
 
           <div>

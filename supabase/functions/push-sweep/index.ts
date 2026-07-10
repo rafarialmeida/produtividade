@@ -36,13 +36,76 @@ interface NotifyPrefs {
   notify_only_urgent: boolean
 }
 
+interface SubtaskRow {
+  text: string
+}
+
 interface TaskRow {
   id: string
   title: string
   urgency: string
   user_id: string
   deadline: string
+  community_id: string | null
+  macro_objective: string
+  category: string
+  recurrence: string | null
+  subtasks: SubtaskRow[] | null
   profiles: NotifyPrefs | null
+}
+
+function addInterval(date: Date, recurrence: string): Date {
+  const next = new Date(date)
+  switch (recurrence) {
+    case 'daily':
+      next.setDate(next.getDate() + 1)
+      break
+    case 'weekly':
+      next.setDate(next.getDate() + 7)
+      break
+    case 'biweekly':
+      next.setDate(next.getDate() + 14)
+      break
+    case 'monthly':
+      next.setMonth(next.getMonth() + 1)
+      break
+  }
+  return next
+}
+
+function nextRecurrenceDate(originalDeadline: Date, recurrence: string, from = new Date()): Date {
+  let next = addInterval(originalDeadline, recurrence)
+  while (next.getTime() <= from.getTime()) {
+    next = addInterval(next, recurrence)
+  }
+  return next
+}
+
+async function spawnNextOccurrence(task: TaskRow) {
+  if (!task.recurrence) return
+  const nextDeadline = nextRecurrenceDate(new Date(task.deadline), task.recurrence)
+  const { data: newTask, error } = await supabase
+    .from('tasks')
+    .insert({
+      community_id: task.community_id,
+      user_id: task.user_id,
+      macro_objective: task.macro_objective,
+      title: task.title,
+      category: task.category,
+      deadline: nextDeadline.toISOString(),
+      urgency: task.urgency,
+      recurrence: task.recurrence,
+    })
+    .select()
+    .single()
+  if (error || !newTask) return
+
+  const subtasks = task.subtasks ?? []
+  if (subtasks.length > 0) {
+    await supabase.from('subtasks').insert(
+      subtasks.map((s, i) => ({ task_id: newTask.id, text: s.text, position: i })),
+    )
+  }
 }
 
 async function sendPushToUser(userId: string, payload: { title: string; body: string; url: string; tag: string }) {
@@ -98,7 +161,9 @@ async function handleSweep(): Promise<Response> {
   // 1) Expira tarefas vencidas (de todo mundo, não só de quem está online).
   const { data: toExpire } = await supabase
     .from('tasks')
-    .select('id, title, urgency, user_id, deadline, profiles(notify_expired)')
+    .select(
+      'id, title, urgency, user_id, deadline, community_id, macro_objective, category, recurrence, subtasks(text), profiles(notify_expired)',
+    )
     .eq('completed', false)
     .eq('expired', false)
     .lt('deadline', nowIso)
@@ -136,6 +201,8 @@ async function handleSweep(): Promise<Response> {
           })
         }),
     )
+
+    await Promise.all(expired.filter((t) => t.recurrence).map((t) => spawnNextOccurrence(t)))
   }
 
   // 2) Avisa sobre prazos próximos (uma vez só por tarefa, controlado por reminder_sent_at).

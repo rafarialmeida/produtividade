@@ -4,6 +4,15 @@ export type Severity = 'baixa' | 'media' | 'alta' | 'critica'
 
 export type CommunityType = 'trabalho' | 'competicao'
 
+export type Recurrence = 'daily' | 'weekly' | 'biweekly' | 'monthly'
+
+export const RECURRENCE_LABEL: Record<Recurrence, string> = {
+  daily: 'Diariamente',
+  weekly: 'Semanalmente',
+  biweekly: 'A cada 2 semanas',
+  monthly: 'Mensalmente',
+}
+
 export const SEVERITY_LABEL: Record<Severity, string> = {
   baixa: 'Baixa',
   media: 'Média',
@@ -96,6 +105,7 @@ export interface Task {
   completed: boolean
   completedAt?: string
   expired: boolean
+  recurrence?: Recurrence
   createdAt: string
 }
 

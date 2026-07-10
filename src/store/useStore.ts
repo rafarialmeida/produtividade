@@ -7,12 +7,14 @@ import type {
   Notification,
   NotificationPreferences,
   PublicProfile,
+  Recurrence,
   Severity,
   SubTask,
   Task,
   User,
 } from '../types'
 import { URGENCY_POINTS } from '../types'
+import { nextRecurrenceDate } from '../utils/recurrence'
 
 export interface GlobalWallEntry {
   userId: string
@@ -57,6 +59,7 @@ interface CreateTaskInput {
   subtasks: { text: string; dueDate?: string }[]
   deadline: string
   urgency: Severity
+  recurrence?: Recurrence
 }
 
 interface State {
@@ -135,6 +138,7 @@ function mapTask(row: Record<string, unknown>): Task {
     completed: row.completed as boolean,
     completedAt: (row.completed_at as string | null) ?? undefined,
     expired: row.expired as boolean,
+    recurrence: (row.recurrence as Recurrence | null) ?? undefined,
     createdAt: row.created_at as string,
   }
 }
@@ -161,6 +165,45 @@ function mapNotification(row: Record<string, unknown>): Notification {
     taskId: (row.task_id as string | null) ?? undefined,
     createdAt: row.created_at as string,
     read: row.read as boolean,
+  }
+}
+
+async function spawnNextOccurrence(task: {
+  communityId?: string
+  userId: string
+  macroObjective: string
+  title: string
+  category: string
+  deadline: string
+  urgency: Severity
+  recurrence: Recurrence
+  subtasks: SubTask[]
+}) {
+  const nextDeadline = nextRecurrenceDate(new Date(task.deadline), task.recurrence)
+  const { data: newTask, error } = await supabase
+    .from('tasks')
+    .insert({
+      community_id: task.communityId ?? null,
+      user_id: task.userId,
+      macro_objective: task.macroObjective,
+      title: task.title,
+      category: task.category,
+      deadline: nextDeadline.toISOString(),
+      urgency: task.urgency,
+      recurrence: task.recurrence,
+    })
+    .select()
+    .single()
+  if (error || !newTask) return
+
+  if (task.subtasks.length > 0) {
+    await supabase.from('subtasks').insert(
+      task.subtasks.map((s, i) => ({
+        task_id: newTask.id,
+        text: s.text,
+        position: i,
+      })),
+    )
   }
 }
 
@@ -279,7 +322,7 @@ export const useAppStore = create<State>()((set, get) => ({
     await get().refreshAll()
   },
 
-  createTask: async ({ communityId, userId, macroObjective, title, category, subtasks, deadline, urgency }) => {
+  createTask: async ({ communityId, userId, macroObjective, title, category, subtasks, deadline, urgency, recurrence }) => {
     const { data: task, error } = await supabase
       .from('tasks')
       .insert({
@@ -290,6 +333,7 @@ export const useAppStore = create<State>()((set, get) => ({
         category,
         deadline,
         urgency,
+        recurrence: recurrence ?? null,
       })
       .select()
       .single()
@@ -336,6 +380,20 @@ export const useAppStore = create<State>()((set, get) => ({
       })
       const fnName = import.meta.env.VITE_PUSH_FUNCTION_NAME || 'push-sweep'
       supabase.functions.invoke(fnName, { body: { type: 'completed', taskId } }).catch(() => {})
+
+      if (task.recurrence) {
+        await spawnNextOccurrence({
+          communityId: task.communityId,
+          userId: task.userId,
+          macroObjective: task.macroObjective,
+          title: task.title,
+          category: task.category,
+          deadline: task.deadline,
+          urgency: task.urgency,
+          recurrence: task.recurrence,
+          subtasks: task.subtasks,
+        })
+      }
     }
 
     await get().refreshAll()
@@ -357,7 +415,7 @@ export const useAppStore = create<State>()((set, get) => ({
     const nowIso = new Date().toISOString()
     const { data: toExpire } = await supabase
       .from('tasks')
-      .select('id, title, urgency')
+      .select('id, title, urgency, community_id, macro_objective, category, deadline, recurrence, subtasks(*)')
       .eq('user_id', authUser.id)
       .eq('completed', false)
       .eq('expired', false)
@@ -383,6 +441,24 @@ export const useAppStore = create<State>()((set, get) => ({
           task_id: t.id,
         }
       }),
+    )
+
+    await Promise.all(
+      toExpire
+        .filter((t) => t.recurrence)
+        .map((t) =>
+          spawnNextOccurrence({
+            communityId: t.community_id ?? undefined,
+            userId: authUser.id,
+            macroObjective: t.macro_objective,
+            title: t.title,
+            category: t.category,
+            deadline: t.deadline,
+            urgency: t.urgency as Severity,
+            recurrence: t.recurrence as Recurrence,
+            subtasks: (t.subtasks ?? []).map(mapSubtask),
+          }),
+        ),
     )
 
     await get().refreshAll()

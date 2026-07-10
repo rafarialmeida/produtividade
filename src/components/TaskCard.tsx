@@ -1,6 +1,7 @@
-import { CalendarClock, CheckCircle2, Circle, Clock, Play, RotateCcw, Tag, Target, Trash2, TriangleAlert, User } from 'lucide-react'
+import { CalendarClock, CheckCircle2, Circle, Clock, Play, Repeat, RotateCcw, Tag, Target, Trash2, TriangleAlert, User } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import type { Task } from '../types'
+import { RECURRENCE_LABEL } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
 import { getTaskStatus, TASK_STATUS_CONFIG } from '../utils/taskStatus'
@@ -62,6 +63,14 @@ export default function TaskCard({
             <span className="inline-flex items-center gap-1 text-[10px] font-medium text-zinc-400 bg-white/5 border border-white/10 rounded px-1.5 py-0.5 light:text-zinc-600 light:bg-black/[0.03] light:border-black/10">
               <Tag size={9} /> {task.category}
             </span>
+            {task.recurrence && (
+              <span
+                title="Tarefa recorrente"
+                className="inline-flex items-center gap-1 text-[10px] font-medium text-purple-300 bg-purple-500/10 border border-purple-500/30 rounded px-1.5 py-0.5"
+              >
+                <Repeat size={9} /> {RECURRENCE_LABEL[task.recurrence]}
+              </span>
+            )}
             {(taskStatus === 'nao_iniciada' || taskStatus === 'em_andamento') && (
               <span className={`text-[10px] font-medium rounded px-1.5 py-0.5 border ${statusCfg.bg} ${statusCfg.border} ${statusCfg.color}`}>
                 {statusCfg.label}
