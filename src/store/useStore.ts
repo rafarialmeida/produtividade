@@ -68,6 +68,7 @@ interface State {
   communities: Community[]
   tasks: Task[]
   notifications: Notification[]
+  myStats: PublicProfile | null
 
   // auth
   signUp: (name: string, email: string, password: string) => Promise<{ error: string | null; needsConfirmation: boolean }>
@@ -172,6 +173,7 @@ export const useAppStore = create<State>()((set, get) => ({
   communities: [],
   tasks: [],
   notifications: [],
+  myStats: null,
 
   signUp: async (name, email, password) => {
     const { data, error } = await supabase.auth.signUp({
@@ -207,10 +209,11 @@ export const useAppStore = create<State>()((set, get) => ({
   },
 
   refreshAll: async () => {
-    if (!get().authUser) return
+    const authUser = get().authUser
+    if (!authUser) return
     set({ dataLoading: true })
 
-    const [profilesRes, communitiesRes, membersRes, tasksRes, notificationsRes] = await Promise.all([
+    const [profilesRes, communitiesRes, membersRes, tasksRes, notificationsRes, myStats] = await Promise.all([
       supabase.from('profiles').select('*'),
       supabase.from('communities').select('*'),
       supabase.from('community_members').select('*'),
@@ -220,6 +223,7 @@ export const useAppStore = create<State>()((set, get) => ({
         .order('created_at', { ascending: false })
         .order('position', { foreignTable: 'subtasks', ascending: true }),
       supabase.from('notifications').select('*').order('created_at', { ascending: false }),
+      get().fetchPublicProfile(authUser.id),
     ])
 
     const members = membersRes.data ?? []
@@ -248,7 +252,7 @@ export const useAppStore = create<State>()((set, get) => ({
     const tasks = (tasksRes.data ?? []).map(mapTask)
     const notifications = (notificationsRes.data ?? []).map(mapNotification)
 
-    set({ users, communities, tasks, notifications, dataLoading: false })
+    set({ users, communities, tasks, notifications, myStats, dataLoading: false })
   },
 
   createCommunity: async (name, severity, type) => {

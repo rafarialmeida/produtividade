@@ -1,8 +1,9 @@
 import { useState, type ReactNode } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { LogOut, Settings2, Skull, Sparkles, Users, ShieldCheck, Zap } from 'lucide-react'
+import { LogOut, Settings2, Skull, Sparkles, Star, Users, ShieldCheck, Zap } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { useExpirationTicker } from '../hooks/useExpirationTicker'
+import { getLevelInfo } from '../utils/level'
 import NotificationToasts from './NotificationToasts'
 import PushToggle from './PushToggle'
 import NotificationPreferencesModal from './NotificationPreferencesModal'
@@ -18,9 +19,11 @@ export default function Layout({ children }: { children: ReactNode }) {
   useExpirationTicker()
   const navigate = useNavigate()
   const user = useAppStore((s) => s.authUser)
+  const myStats = useAppStore((s) => s.myStats)
   const signOut = useAppStore((s) => s.signOut)
   const [showPreferences, setShowPreferences] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
+  const levelInfo = myStats ? getLevelInfo(myStats.xp) : null
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -64,6 +67,20 @@ export default function Layout({ children }: { children: ReactNode }) {
                 )}
               </nav>
               <div className="flex items-center gap-2 pl-3 border-l border-white/10 shrink-0">
+                {levelInfo && (
+                  <button
+                    onClick={() => setShowProfile(true)}
+                    title="Ver perfil"
+                    className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border transition-colors ${
+                      levelInfo.level >= 1
+                        ? 'border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
+                        : 'border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20'
+                    }`}
+                  >
+                    <Star size={11} /> Nv {levelInfo.level}
+                    <span className="hidden sm:inline text-zinc-400 font-normal">· {levelInfo.xp} XP</span>
+                  </button>
+                )}
                 <div className="text-right hidden sm:block">
                   <p className="text-sm font-medium text-white leading-tight">{user.name}</p>
                   <p className="text-[11px] text-zinc-500 leading-tight">
