@@ -81,6 +81,7 @@ export interface Community {
   severity: Severity
   inviteCode: string
   memberIds: string[]
+  adminIds: string[]
   creatorId: string
   createdAt: string
 }

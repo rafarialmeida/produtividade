@@ -4,6 +4,7 @@ import {
   Camera,
   CheckCircle2,
   Crown,
+  History,
   Lock,
   Loader2,
   Star,
@@ -15,6 +16,7 @@ import {
 import { useAppStore } from '../store/useStore'
 import type { PublicProfile } from '../types'
 import { getLevelInfo } from '../utils/level'
+import TaskHistoryModal from './TaskHistoryModal'
 
 function Avatar({ profile, size = 80 }: { profile: PublicProfile; size?: number }) {
   if (profile.avatarUrl) {
@@ -53,6 +55,7 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordMsg, setPasswordMsg] = useState<{ text: string; ok: boolean } | null>(null)
   const [savingPassword, setSavingPassword] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -157,6 +160,15 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
             </div>
 
             {isOwn && (
+              <button
+                onClick={() => setShowHistory(true)}
+                className="btn-ghost !w-auto self-start px-4 flex items-center gap-2"
+              >
+                <History size={14} /> Ver histórico
+              </button>
+            )}
+
+            {isOwn && (
               <form onSubmit={handlePasswordSubmit} className="border-t border-white/5 pt-5 flex flex-col gap-3">
                 <p className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600">
                   <Lock size={12} /> Trocar senha
@@ -186,6 +198,7 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
           </div>
         )}
       </div>
+      {showHistory && <TaskHistoryModal userId={userId} onClose={() => setShowHistory(false)} />}
     </div>,
     document.body,
   )

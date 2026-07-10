@@ -98,6 +98,7 @@ interface State {
   joinCommunityWithCode: (code: string) => Promise<{ error: string | null; communityName: string | null }>
   regenerateInviteCode: (communityId: string) => Promise<void>
   deleteCommunity: (communityId: string) => Promise<void>
+  setCommunityAdmin: (communityId: string, userId: string, isAdmin: boolean) => Promise<string | null>
 
   // task actions
   createTask: (input: CreateTaskInput) => Promise<string | null>
@@ -156,7 +157,7 @@ function mapTask(row: Record<string, unknown>): Task {
   }
 }
 
-function mapCommunity(row: Record<string, unknown>, memberIds: string[]): Community {
+function mapCommunity(row: Record<string, unknown>, memberIds: string[], adminIds: string[]): Community {
   return {
     id: row.id as string,
     name: row.name as string,
@@ -164,6 +165,7 @@ function mapCommunity(row: Record<string, unknown>, memberIds: string[]): Commun
     severity: row.severity as Severity,
     inviteCode: row.invite_code as string,
     memberIds,
+    adminIds,
     creatorId: row.creator_id as string,
     createdAt: row.created_at as string,
   }
@@ -284,11 +286,18 @@ export const useAppStore = create<State>()((set, get) => ({
 
     const members = membersRes.data ?? []
     const memberIdsByCommunity = new Map<string, string[]>()
+    const adminIdsByCommunity = new Map<string, string[]>()
     const communityIdsByUser = new Map<string, string[]>()
     for (const m of members) {
       const a = memberIdsByCommunity.get(m.community_id) ?? []
       a.push(m.user_id)
       memberIdsByCommunity.set(m.community_id, a)
+
+      if (m.role === 'admin') {
+        const admins = adminIdsByCommunity.get(m.community_id) ?? []
+        admins.push(m.user_id)
+        adminIdsByCommunity.set(m.community_id, admins)
+      }
 
       const b = communityIdsByUser.get(m.user_id) ?? []
       b.push(m.community_id)
@@ -304,7 +313,9 @@ export const useAppStore = create<State>()((set, get) => ({
       communityIds: communityIdsByUser.get(p.id) ?? [],
     }))
 
-    const communities = (communitiesRes.data ?? []).map((c) => mapCommunity(c, memberIdsByCommunity.get(c.id) ?? []))
+    const communities = (communitiesRes.data ?? []).map((c) =>
+      mapCommunity(c, memberIdsByCommunity.get(c.id) ?? [], adminIdsByCommunity.get(c.id) ?? []),
+    )
     const tasks = (tasksRes.data ?? []).map(mapTask)
     const notifications = (notificationsRes.data ?? []).map(mapNotification)
 
@@ -333,6 +344,17 @@ export const useAppStore = create<State>()((set, get) => ({
   deleteCommunity: async (communityId) => {
     await supabase.from('communities').delete().eq('id', communityId)
     await get().refreshAll()
+  },
+
+  setCommunityAdmin: async (communityId, userId, isAdmin) => {
+    const { error } = await supabase.rpc('set_community_admin', {
+      _community_id: communityId,
+      _user_id: userId,
+      _is_admin: isAdmin,
+    })
+    if (error) return error.message
+    await get().refreshAll()
+    return null
   },
 
   createTask: async ({ communityId, userId, macroObjective, title, category, subtasks, deadline, urgency, recurrence }) => {

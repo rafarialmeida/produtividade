@@ -1,21 +1,39 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, Copy, RefreshCcw, UserPlus, X } from 'lucide-react'
+import { Check, Copy, Crown, RefreshCcw, ShieldMinus, ShieldPlus, UserPlus, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import ProfileModal from './ProfileModal'
 
 export default function InviteModal({ communityId, onClose }: { communityId: string; onClose: () => void }) {
+  const authUser = useAppStore((s) => s.authUser)
   const community = useAppStore((s) => s.getCommunityById(communityId))
   const users = useAppStore((s) => s.users)
   const regenerateInviteCode = useAppStore((s) => s.regenerateInviteCode)
+  const setCommunityAdmin = useAppStore((s) => s.setCommunityAdmin)
 
   const [copied, setCopied] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
   const [openProfileId, setOpenProfileId] = useState<string | null>(null)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [roleError, setRoleError] = useState('')
 
   if (!community) return null
 
   const members = community.memberIds.map((id) => users.find((u) => u.id === id)).filter(Boolean)
+  const canManageRoles = Boolean(
+    authUser && (authUser.role === 'admin' || community.adminIds.includes(authUser.id)),
+  )
+
+  async function handleToggleAdmin(memberId: string, makeAdmin: boolean) {
+    setRoleError('')
+    setTogglingId(memberId)
+    try {
+      const error = await setCommunityAdmin(communityId, memberId, makeAdmin)
+      if (error) setRoleError(error === 'LAST_ADMIN' ? 'Precisa ter pelo menos um admin na comunidade.' : error)
+    } finally {
+      setTogglingId(null)
+    }
+  }
 
   function handleCopy() {
     navigator.clipboard?.writeText(community!.inviteCode).catch(() => {})
@@ -71,28 +89,44 @@ export default function InviteModal({ communityId, onClose }: { communityId: str
 
           <div className="border-t border-white/5 pt-5">
             <p className="text-xs font-medium text-zinc-400 light:text-zinc-600 mb-2">Membros ({members.length})</p>
+            {roleError && <p className="text-[11px] text-rose-400 mb-2">{roleError}</p>}
             <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto pr-1">
-              {members.map((m) => (
-                <button
-                  key={m!.id}
-                  onClick={() => setOpenProfileId(m!.id)}
-                  className="flex items-center gap-2.5 py-1.5 text-left rounded-lg hover:bg-white/5 light:hover:bg-black/5 transition-colors -mx-1.5 px-1.5"
-                >
-                  {m!.avatarUrl ? (
-                    <img src={m!.avatarUrl} alt={m!.name} className="w-7 h-7 shrink-0 rounded-full object-cover border border-white/10" />
-                  ) : (
-                    <div className="w-7 h-7 shrink-0 rounded-full bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 flex items-center justify-center text-[11px] font-semibold text-white">
-                      {m!.name.slice(0, 1).toUpperCase()}
-                    </div>
-                  )}
-                  <p className="text-sm text-zinc-200 light:text-zinc-800 truncate">{m!.name}</p>
-                  {m!.role === 'admin' && (
-                    <span className="ml-auto text-[10px] text-amber-400 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded">
-                      admin
-                    </span>
-                  )}
-                </button>
-              ))}
+              {members.map((m) => {
+                const isCommunityAdmin = community.adminIds.includes(m!.id)
+                return (
+                  <div
+                    key={m!.id}
+                    className="flex items-center gap-2.5 py-1.5 rounded-lg hover:bg-white/5 light:hover:bg-black/5 transition-colors -mx-1.5 px-1.5"
+                  >
+                    <button onClick={() => setOpenProfileId(m!.id)} className="flex items-center gap-2.5 text-left flex-1 min-w-0">
+                      {m!.avatarUrl ? (
+                        <img src={m!.avatarUrl} alt={m!.name} className="w-7 h-7 shrink-0 rounded-full object-cover border border-white/10" />
+                      ) : (
+                        <div className="w-7 h-7 shrink-0 rounded-full bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 flex items-center justify-center text-[11px] font-semibold text-white">
+                          {m!.name.slice(0, 1).toUpperCase()}
+                        </div>
+                      )}
+                      <p className="text-sm text-zinc-200 light:text-zinc-800 truncate">{m!.name}</p>
+                      {m!.role === 'admin' && <Crown size={12} className="text-amber-400 shrink-0" />}
+                      {isCommunityAdmin && (
+                        <span className="text-[10px] text-purple-300 border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 rounded shrink-0">
+                          admin da comunidade
+                        </span>
+                      )}
+                    </button>
+                    {canManageRoles && (
+                      <button
+                        onClick={() => handleToggleAdmin(m!.id, !isCommunityAdmin)}
+                        disabled={togglingId === m!.id}
+                        title={isCommunityAdmin ? 'Remover admin da comunidade' : 'Tornar admin da comunidade'}
+                        className="p-1.5 rounded-lg text-zinc-500 hover:text-purple-300 hover:bg-purple-500/10 transition-colors disabled:opacity-40 shrink-0"
+                      >
+                        {isCommunityAdmin ? <ShieldMinus size={14} /> : <ShieldPlus size={14} />}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>

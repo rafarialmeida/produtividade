@@ -35,6 +35,7 @@ create table if not exists public.communities (
 create table if not exists public.community_members (
   community_id uuid not null references public.communities (id) on delete cascade,
   user_id uuid not null references public.profiles (id) on delete cascade,
+  role text not null default 'member' check (role in ('admin', 'member')),
   joined_at timestamptz not null default now(),
   primary key (community_id, user_id)
 );
@@ -155,6 +156,19 @@ as $$
   );
 $$;
 
+create or replace function public.is_community_admin(_community_id uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.community_members
+    where community_id = _community_id and user_id = auth.uid() and role = 'admin'
+  );
+$$;
+
 -- Cria o profile automaticamente quando alguém se cadastra (e-mail/senha ou OAuth).
 create or replace function public.handle_new_user()
 returns trigger
@@ -195,10 +209,41 @@ begin
   values (_name, _type, _severity, _code, auth.uid())
   returning * into _community;
 
-  insert into public.community_members (community_id, user_id)
-  values (_community.id, auth.uid());
+  insert into public.community_members (community_id, user_id, role)
+  values (_community.id, auth.uid(), 'admin');
 
   return _community;
+end;
+$$;
+
+-- Promove ou rebaixa um membro a admin da comunidade (só quem já é admin dela,
+-- ou admin da plataforma, pode chamar). Impede remover o último admin restante.
+create or replace function public.set_community_admin(_community_id uuid, _user_id uuid, _is_admin boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not (public.is_community_admin(_community_id) or public.is_admin()) then
+    raise exception 'NOT_ALLOWED';
+  end if;
+
+  if not exists (select 1 from public.community_members where community_id = _community_id and user_id = _user_id) then
+    raise exception 'NOT_A_MEMBER';
+  end if;
+
+  if not _is_admin then
+    if (select count(*) from public.community_members where community_id = _community_id and role = 'admin') <= 1
+       and exists (select 1 from public.community_members where community_id = _community_id and user_id = _user_id and role = 'admin')
+    then
+      raise exception 'LAST_ADMIN';
+    end if;
+  end if;
+
+  update public.community_members
+  set role = case when _is_admin then 'admin' else 'member' end
+  where community_id = _community_id and user_id = _user_id;
 end;
 $$;
 
@@ -355,7 +400,9 @@ $$;
 grant execute on function public.is_admin() to authenticated;
 grant execute on function public.is_community_member(uuid) to authenticated;
 grant execute on function public.is_community_creator(uuid) to authenticated;
+grant execute on function public.is_community_admin(uuid) to authenticated;
 grant execute on function public.create_community(text, text, text) to authenticated;
+grant execute on function public.set_community_admin(uuid, uuid, boolean) to authenticated;
 grant execute on function public.join_community_with_code(text) to authenticated;
 grant execute on function public.regenerate_invite_code(uuid) to authenticated;
 grant execute on function public.global_wall() to authenticated;

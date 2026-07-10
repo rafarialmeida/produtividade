@@ -6,6 +6,8 @@ import ProcrastinationWall from '../components/ProcrastinationWall'
 import TaskCard from '../components/TaskCard'
 import TaskForm from '../components/TaskForm'
 import InviteModal from '../components/InviteModal'
+import CommunityDashboard from '../components/CommunityDashboard'
+import TaskHistoryModal from '../components/TaskHistoryModal'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
 import { SEVERITY_LABEL } from '../types'
@@ -22,6 +24,7 @@ export default function CommunityPage() {
   const [showForm, setShowForm] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
   const [filter, setFilter] = useState<'all' | 'active' | 'expired' | 'completed'>('all')
+  const [historyUserId, setHistoryUserId] = useState<string | null>(null)
 
   if (!community) {
     return (
@@ -38,6 +41,8 @@ export default function CommunityPage() {
   const typeCfg = COMMUNITY_TYPE_CONFIG[community.type]
   const canInvite = currentUser?.role === 'admin' || community.memberIds.includes(currentUserId)
   const canDelete = currentUser?.role === 'admin' || community.creatorId === currentUserId
+  const isCommunityAdmin = currentUser?.role === 'admin' || community.adminIds.includes(currentUserId)
+  const showDashboard = community.type === 'trabalho' && isCommunityAdmin
 
   async function handleDeleteCommunity() {
     if (!community) return
@@ -104,6 +109,8 @@ export default function CommunityPage() {
 
       <ProcrastinationWall communityId={community.id} />
 
+      {showDashboard && <CommunityDashboard communityId={community.id} onViewHistory={setHistoryUserId} />}
+
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-zinc-300 light:text-zinc-700">Tarefas da comunidade</h2>
@@ -134,6 +141,9 @@ export default function CommunityPage() {
 
       {showForm && <TaskForm communityId={community.id} userId={currentUserId} onClose={() => setShowForm(false)} />}
       {showInvite && <InviteModal communityId={community.id} onClose={() => setShowInvite(false)} />}
+      {historyUserId && (
+        <TaskHistoryModal userId={historyUserId} communityId={community.id} onClose={() => setHistoryUserId(null)} />
+      )}
     </div>
   )
 }
