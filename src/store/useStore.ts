@@ -116,6 +116,7 @@ interface State {
   macroObjectives: MacroObjective[]
   notifications: Notification[]
   myStats: PublicProfile | null
+  onlineUserIds: Set<string>
 
   // auth
   signUp: (name: string, email: string, password: string) => Promise<{ error: string | null; needsConfirmation: boolean }>
@@ -123,6 +124,7 @@ interface State {
   signInWithGoogle: () => Promise<void>
   signInWithMicrosoft: () => Promise<void>
   signOut: () => Promise<void>
+  setOnlineUserIds: (ids: Set<string>) => void
 
   refreshAll: () => Promise<void>
 
@@ -305,6 +307,9 @@ export const useAppStore = create<State>()((set, get) => ({
   macroObjectives: [],
   notifications: [],
   myStats: null,
+  onlineUserIds: new Set(),
+
+  setOnlineUserIds: (ids) => set({ onlineUserIds: ids }),
 
   signUp: async (name, email, password) => {
     const { data, error } = await supabase.auth.signUp({
@@ -891,6 +896,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
       tasks: [],
       macroObjectives: [],
       notifications: [],
+      onlineUserIds: new Set(),
     })
   }
 })

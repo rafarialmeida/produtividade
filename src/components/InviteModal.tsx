@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, Copy, Crown, RefreshCcw, ShieldMinus, ShieldPlus, UserPlus, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
+import OnlineDot from './OnlineDot'
 import ProfileModal from './ProfileModal'
 
 export default function InviteModal({ communityId, onClose }: { communityId: string; onClose: () => void }) {
   const authUser = useAppStore((s) => s.authUser)
   const community = useAppStore((s) => s.getCommunityById(communityId))
   const users = useAppStore((s) => s.users)
+  const onlineUserIds = useAppStore((s) => s.onlineUserIds)
   const regenerateInviteCode = useAppStore((s) => s.regenerateInviteCode)
   const setCommunityAdmin = useAppStore((s) => s.setCommunityAdmin)
 
@@ -99,13 +101,16 @@ export default function InviteModal({ communityId, onClose }: { communityId: str
                     className="flex items-center gap-2.5 py-1.5 rounded-lg hover:bg-white/5 light:hover:bg-black/5 transition-colors -mx-1.5 px-1.5"
                   >
                     <button onClick={() => setOpenProfileId(m!.id)} className="flex items-center gap-2.5 text-left flex-1 min-w-0">
-                      {m!.avatarUrl ? (
-                        <img src={m!.avatarUrl} alt={m!.name} className="w-7 h-7 shrink-0 rounded-full object-cover border border-white/10" />
-                      ) : (
-                        <div className="w-7 h-7 shrink-0 rounded-full bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 flex items-center justify-center text-[11px] font-semibold text-white">
-                          {m!.name.slice(0, 1).toUpperCase()}
-                        </div>
-                      )}
+                      <div className="relative shrink-0">
+                        {m!.avatarUrl ? (
+                          <img src={m!.avatarUrl} alt={m!.name} className="w-7 h-7 rounded-full object-cover border border-white/10" />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 flex items-center justify-center text-[11px] font-semibold text-white">
+                            {m!.name.slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                        <OnlineDot online={onlineUserIds.has(m!.id)} className="absolute -bottom-0.5 -right-0.5 border border-zinc-900 light:border-white" />
+                      </div>
                       <p className="text-sm text-zinc-200 light:text-zinc-800 truncate">{m!.name}</p>
                       {m!.role === 'admin' && <Crown size={12} className="text-amber-400 shrink-0" />}
                       {isCommunityAdmin && (

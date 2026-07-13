@@ -7,6 +7,7 @@ import { formatDeadline, formatDurationHours, formatRelative } from '../utils/da
 import { getTaskStatus, TASK_STATUS_CONFIG, type TaskStatus } from '../utils/taskStatus'
 import TaskDetailModal from './TaskDetailModal'
 import MemberHoursModal from './MemberHoursModal'
+import OnlineDot from './OnlineDot'
 import TaskListModal from './TaskListModal'
 
 const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000
@@ -41,6 +42,7 @@ export default function CommunityDashboard({
   const community = useAppStore((s) => s.getCommunityById(communityId))
   const users = useAppStore((s) => s.users)
   const allTasks = useAppStore((s) => s.tasks)
+  const onlineUserIds = useAppStore((s) => s.onlineUserIds)
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null)
   const [taskFilter, setTaskFilter] = useState<'all' | TaskStatus>('all')
   const [showAllCompleted, setShowAllCompleted] = useState(false)
@@ -276,7 +278,12 @@ export default function CommunityDashboard({
             <tbody>
               {stats.map((s) => (
                 <tr key={s.userId} className="border-b border-white/5 last:border-0">
-                  <td className="px-4 py-2.5 text-zinc-200 light:text-zinc-800 whitespace-nowrap">{s.name}</td>
+                  <td className="px-4 py-2.5 text-zinc-200 light:text-zinc-800 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1.5">
+                      <OnlineDot online={onlineUserIds.has(s.userId)} />
+                      {s.name}
+                    </span>
+                  </td>
                   <td className="px-3 py-2.5 text-right text-sky-300 tabular-nums">{s.inProgress}</td>
                   <td className="px-3 py-2.5 text-right text-zinc-400 light:text-zinc-600 tabular-nums">{s.notStarted}</td>
                   <td className="px-3 py-2.5 text-right text-emerald-400 tabular-nums">{s.completed}</td>

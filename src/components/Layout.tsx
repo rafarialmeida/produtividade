@@ -3,9 +3,11 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { Briefcase, LogOut, Moon, Settings2, Skull, Sparkles, Star, Sun, Users, ShieldCheck, Zap } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { useExpirationTicker } from '../hooks/useExpirationTicker'
+import { usePresence } from '../hooks/usePresence'
 import { useTheme } from '../hooks/useTheme'
 import { getLevelInfo } from '../utils/level'
 import NotificationToasts from './NotificationToasts'
+import OnlineDot from './OnlineDot'
 import PushToggle from './PushToggle'
 import NotificationPreferencesModal from './NotificationPreferencesModal'
 import ProfileModal from './ProfileModal'
@@ -18,9 +20,11 @@ const NAV_ITEMS = [
 
 export default function Layout({ children }: { children: ReactNode }) {
   useExpirationTicker()
+  usePresence()
   const navigate = useNavigate()
   const user = useAppStore((s) => s.authUser)
   const myStats = useAppStore((s) => s.myStats)
+  const onlineUserIds = useAppStore((s) => s.onlineUserIds)
   const signOut = useAppStore((s) => s.signOut)
   const [showPreferences, setShowPreferences] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
@@ -101,17 +105,20 @@ export default function Layout({ children }: { children: ReactNode }) {
                     {user.role === 'admin' ? 'Administrador' : 'Membro'}
                   </p>
                 </div>
-                <button
-                  onClick={() => setShowProfile(true)}
-                  title="Meu perfil"
-                  className="w-8 h-8 shrink-0 rounded-full overflow-hidden bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 light:border-black/10 hover:border-purple-400/60 flex items-center justify-center text-xs font-semibold text-white transition-colors"
-                >
-                  {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
-                  ) : (
-                    user.name.slice(0, 1).toUpperCase()
-                  )}
-                </button>
+                <div className="relative shrink-0">
+                  <button
+                    onClick={() => setShowProfile(true)}
+                    title="Meu perfil"
+                    className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 light:border-black/10 hover:border-purple-400/60 flex items-center justify-center text-xs font-semibold text-white transition-colors"
+                  >
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      user.name.slice(0, 1).toUpperCase()
+                    )}
+                  </button>
+                  <OnlineDot online={onlineUserIds.has(user.id)} className="absolute -bottom-0.5 -right-0.5 border border-black/50 light:border-white/70" />
+                </div>
                 <PushToggle userId={user.id} />
                 <button
                   onClick={() => setShowPreferences(true)}
