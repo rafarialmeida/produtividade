@@ -5,6 +5,8 @@ import type {
   Community,
   CommunityPiece,
   CommunityType,
+  Complexity,
+  MacroObjective,
   Notification,
   NotificationPreferences,
   PublicProfile,
@@ -54,24 +56,31 @@ function mapProfileStatsRow(row: Record<string, unknown>): PublicProfile {
 interface CreateTaskInput {
   communityId?: string
   userId: string
-  macroObjective: string
+  macroObjectiveId: string
   title: string
   category: string
   subtasks: { text: string; dueDate?: string }[]
   deadline: string
   urgency: Severity
+  complexity: Complexity
   recurrence?: Recurrence
 }
 
 interface UpdateTaskInput {
   communityId?: string
-  macroObjective: string
+  macroObjectiveId: string
   title: string
   category: string
   subtasks: { id?: string; text: string; dueDate?: string }[]
   deadline: string
   urgency: Severity
+  complexity: Complexity
   recurrence?: Recurrence
+}
+
+interface CompleteTaskMinutes {
+  subtasks?: Record<string, number>
+  direct?: number
 }
 
 interface State {
@@ -82,6 +91,7 @@ interface State {
   users: User[]
   communities: Community[]
   tasks: Task[]
+  macroObjectives: MacroObjective[]
   notifications: Notification[]
   myStats: PublicProfile | null
 
@@ -102,16 +112,21 @@ interface State {
   setCommunityAdmin: (communityId: string, userId: string, isAdmin: boolean) => Promise<string | null>
   setCommunityPiece: (communityId: string, pieceId: string, color: string) => Promise<string | null>
 
+  // objetivo macro
+  createMacroObjective: (title: string, communityId?: string) => Promise<string | null>
+
   // task actions
   createTask: (input: CreateTaskInput) => Promise<string | null>
   updateTask: (taskId: string, input: UpdateTaskInput) => Promise<string | null>
   toggleSubtask: (taskId: string, subtaskId: string) => Promise<void>
   setTaskStarted: (taskId: string, started: boolean) => Promise<void>
-  completeTask: (taskId: string) => Promise<void>
+  completeTask: (taskId: string, minutes?: CompleteTaskMinutes) => Promise<void>
   reopenTask: (taskId: string) => Promise<void>
   deleteTask: (taskId: string) => Promise<void>
   rescheduleTask: (taskId: string, deadline: string) => Promise<void>
   checkExpirations: () => Promise<void>
+  assignTask: (taskId: string, assigneeId: string) => Promise<string | null>
+  assignSubtask: (subtaskId: string, assigneeId: string | null) => Promise<string | null>
 
   // notifications
   markNotificationRead: (id: string) => Promise<void>
@@ -136,25 +151,42 @@ function mapSubtask(row: Record<string, unknown>): SubTask {
     text: row.text as string,
     done: row.done as boolean,
     dueDate: (row.due_date as string | null) ?? undefined,
+    assigneeId: (row.assignee_id as string | null) ?? undefined,
+    minutesSpent: (row.minutes_spent as number | null) ?? undefined,
   }
 }
 
 function mapTask(row: Record<string, unknown>): Task {
+  const macroObjective = row.macro_objectives as Record<string, unknown> | null
   return {
     id: row.id as string,
     communityId: (row.community_id as string | null) ?? undefined,
     userId: row.user_id as string,
-    macroObjective: row.macro_objective as string,
+    macroObjectiveId: row.macro_objective_id as string,
+    macroObjective: (macroObjective?.title as string | undefined) ?? '',
     title: row.title as string,
     category: row.category as string,
     subtasks: ((row.subtasks as Record<string, unknown>[] | null) ?? []).map(mapSubtask),
     deadline: row.deadline as string,
     urgency: row.urgency as Severity,
+    complexity: (row.complexity as Complexity | null) ?? 'media',
     started: row.started as boolean,
+    startedAt: (row.started_at as string | null) ?? undefined,
     completed: row.completed as boolean,
     completedAt: (row.completed_at as string | null) ?? undefined,
+    minutesSpent: (row.minutes_spent as number | null) ?? undefined,
     expired: row.expired as boolean,
     recurrence: (row.recurrence as Recurrence | null) ?? undefined,
+    createdAt: row.created_at as string,
+  }
+}
+
+function mapMacroObjective(row: Record<string, unknown>): MacroObjective {
+  return {
+    id: row.id as string,
+    communityId: (row.community_id as string | null) ?? undefined,
+    userId: row.user_id as string,
+    title: row.title as string,
     createdAt: row.created_at as string,
   }
 }
@@ -194,11 +226,12 @@ function mapNotification(row: Record<string, unknown>): Notification {
 async function spawnNextOccurrence(task: {
   communityId?: string
   userId: string
-  macroObjective: string
+  macroObjectiveId: string
   title: string
   category: string
   deadline: string
   urgency: Severity
+  complexity: Complexity
   recurrence: Recurrence
   subtasks: SubTask[]
 }) {
@@ -208,11 +241,12 @@ async function spawnNextOccurrence(task: {
     .insert({
       community_id: task.communityId ?? null,
       user_id: task.userId,
-      macro_objective: task.macroObjective,
+      macro_objective_id: task.macroObjectiveId,
       title: task.title,
       category: task.category,
       deadline: nextDeadline.toISOString(),
       urgency: task.urgency,
+      complexity: task.complexity,
       recurrence: task.recurrence,
     })
     .select()
@@ -238,6 +272,7 @@ export const useAppStore = create<State>()((set, get) => ({
   users: [],
   communities: [],
   tasks: [],
+  macroObjectives: [],
   notifications: [],
   myStats: null,
 
@@ -279,15 +314,16 @@ export const useAppStore = create<State>()((set, get) => ({
     if (!authUser) return
     set({ dataLoading: true })
 
-    const [profilesRes, communitiesRes, membersRes, tasksRes, notificationsRes, myStats] = await Promise.all([
+    const [profilesRes, communitiesRes, membersRes, tasksRes, macroObjectivesRes, notificationsRes, myStats] = await Promise.all([
       supabase.from('profiles').select('*'),
       supabase.from('communities').select('*'),
       supabase.from('community_members').select('*'),
       supabase
         .from('tasks')
-        .select('*, subtasks(*)')
+        .select('*, subtasks(*), macro_objectives(title)')
         .order('created_at', { ascending: false })
         .order('position', { foreignTable: 'subtasks', ascending: true }),
+      supabase.from('macro_objectives').select('*').order('created_at', { ascending: false }),
       supabase.from('notifications').select('*').order('created_at', { ascending: false }),
       get().fetchPublicProfile(authUser.id),
     ])
@@ -337,9 +373,10 @@ export const useAppStore = create<State>()((set, get) => ({
       ),
     )
     const tasks = (tasksRes.data ?? []).map(mapTask)
+    const macroObjectives = (macroObjectivesRes.data ?? []).map(mapMacroObjective)
     const notifications = (notificationsRes.data ?? []).map(mapNotification)
 
-    set({ users, communities, tasks, notifications, myStats, dataLoading: false })
+    set({ users, communities, tasks, macroObjectives, notifications, myStats, dataLoading: false })
   },
 
   createCommunity: async (name, severity, type) => {
@@ -388,17 +425,31 @@ export const useAppStore = create<State>()((set, get) => ({
     return null
   },
 
-  createTask: async ({ communityId, userId, macroObjective, title, category, subtasks, deadline, urgency, recurrence }) => {
+  createMacroObjective: async (title, communityId) => {
+    const authUser = get().authUser
+    if (!authUser) return null
+    const { data, error } = await supabase
+      .from('macro_objectives')
+      .insert({ title: title.trim(), community_id: communityId ?? null, user_id: authUser.id })
+      .select()
+      .single()
+    if (error || !data) return null
+    await get().refreshAll()
+    return data.id as string
+  },
+
+  createTask: async ({ communityId, userId, macroObjectiveId, title, category, subtasks, deadline, urgency, complexity, recurrence }) => {
     const { data: task, error } = await supabase
       .from('tasks')
       .insert({
         community_id: communityId ?? null,
         user_id: userId,
-        macro_objective: macroObjective,
+        macro_objective_id: macroObjectiveId,
         title,
         category,
         deadline,
         urgency,
+        complexity,
         recurrence: recurrence ?? null,
       })
       .select()
@@ -422,16 +473,17 @@ export const useAppStore = create<State>()((set, get) => ({
     return null
   },
 
-  updateTask: async (taskId, { communityId, macroObjective, title, category, subtasks, deadline, urgency, recurrence }) => {
+  updateTask: async (taskId, { communityId, macroObjectiveId, title, category, subtasks, deadline, urgency, complexity, recurrence }) => {
     const { error: taskError } = await supabase
       .from('tasks')
       .update({
         community_id: communityId ?? null,
-        macro_objective: macroObjective,
+        macro_objective_id: macroObjectiveId,
         title,
         category,
         deadline,
         urgency,
+        complexity,
         recurrence: recurrence ?? null,
         expired: false,
         reminder_sent_at: null,
@@ -474,13 +526,36 @@ export const useAppStore = create<State>()((set, get) => ({
   },
 
   setTaskStarted: async (taskId, started) => {
-    await supabase.from('tasks').update({ started }).eq('id', taskId)
+    const task = get().tasks.find((t) => t.id === taskId)
+    await supabase
+      .from('tasks')
+      .update({ started, ...(started && !task?.startedAt && { started_at: new Date().toISOString() }) })
+      .eq('id', taskId)
     await get().refreshAll()
   },
 
-  completeTask: async (taskId) => {
+  completeTask: async (taskId, minutes) => {
     const task = get().tasks.find((t) => t.id === taskId)
-    await supabase.from('tasks').update({ completed: true, completed_at: new Date().toISOString() }).eq('id', taskId)
+
+    if (minutes?.subtasks) {
+      await Promise.all(
+        Object.entries(minutes.subtasks).map(([subtaskId, mins]) =>
+          supabase.from('subtasks').update({ minutes_spent: mins }).eq('id', subtaskId),
+        ),
+      )
+    }
+    const totalMinutes = minutes?.subtasks
+      ? Object.values(minutes.subtasks).reduce((sum, m) => sum + m, 0)
+      : minutes?.direct
+
+    await supabase
+      .from('tasks')
+      .update({
+        completed: true,
+        completed_at: new Date().toISOString(),
+        ...(totalMinutes !== undefined && { minutes_spent: totalMinutes }),
+      })
+      .eq('id', taskId)
 
     const authUser = get().authUser
     if (authUser && task) {
@@ -497,11 +572,12 @@ export const useAppStore = create<State>()((set, get) => ({
         await spawnNextOccurrence({
           communityId: task.communityId,
           userId: task.userId,
-          macroObjective: task.macroObjective,
+          macroObjectiveId: task.macroObjectiveId,
           title: task.title,
           category: task.category,
           deadline: task.deadline,
           urgency: task.urgency,
+          complexity: task.complexity,
           recurrence: task.recurrence,
           subtasks: task.subtasks,
         })
@@ -512,13 +588,36 @@ export const useAppStore = create<State>()((set, get) => ({
   },
 
   reopenTask: async (taskId) => {
-    await supabase.from('tasks').update({ completed: false, completed_at: null, started: true }).eq('id', taskId)
+    const task = get().tasks.find((t) => t.id === taskId)
+    await supabase
+      .from('tasks')
+      .update({
+        completed: false,
+        completed_at: null,
+        started: true,
+        ...(!task?.startedAt && { started_at: new Date().toISOString() }),
+      })
+      .eq('id', taskId)
     await get().refreshAll()
   },
 
   deleteTask: async (taskId) => {
     await supabase.from('tasks').delete().eq('id', taskId)
     await get().refreshAll()
+  },
+
+  assignTask: async (taskId, assigneeId) => {
+    const { error } = await supabase.rpc('assign_task', { _task_id: taskId, _assignee_id: assigneeId })
+    if (error) return error.message
+    await get().refreshAll()
+    return null
+  },
+
+  assignSubtask: async (subtaskId, assigneeId) => {
+    const { error } = await supabase.rpc('assign_subtask', { _subtask_id: subtaskId, _assignee_id: assigneeId })
+    if (error) return error.message
+    await get().refreshAll()
+    return null
   },
 
   rescheduleTask: async (taskId, deadline) => {
@@ -532,7 +631,7 @@ export const useAppStore = create<State>()((set, get) => ({
     const nowIso = new Date().toISOString()
     const { data: toExpire } = await supabase
       .from('tasks')
-      .select('id, title, urgency, community_id, macro_objective, category, deadline, recurrence, subtasks(*)')
+      .select('id, title, urgency, complexity, community_id, macro_objective_id, category, deadline, recurrence, subtasks(*)')
       .eq('user_id', authUser.id)
       .eq('completed', false)
       .eq('expired', false)
@@ -567,11 +666,12 @@ export const useAppStore = create<State>()((set, get) => ({
           spawnNextOccurrence({
             communityId: t.community_id ?? undefined,
             userId: authUser.id,
-            macroObjective: t.macro_objective,
+            macroObjectiveId: t.macro_objective_id,
             title: t.title,
             category: t.category,
             deadline: t.deadline,
             urgency: t.urgency as Severity,
+            complexity: (t.complexity as Complexity) ?? 'media',
             recurrence: t.recurrence as Recurrence,
             subtasks: (t.subtasks ?? []).map(mapSubtask),
           }),
@@ -693,6 +793,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
       users: [],
       communities: [],
       tasks: [],
+      macroObjectives: [],
       notifications: [],
     })
   }

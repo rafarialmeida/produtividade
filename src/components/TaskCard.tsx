@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CalendarClock, CheckCircle2, Circle, Clock, Pencil, Play, Repeat, RotateCcw, Tag, Target, Trash2, TriangleAlert, User } from 'lucide-react'
+import { CalendarClock, CheckCircle2, Circle, Clock, Pencil, Play, Repeat, RotateCcw, Tag, Target, Trash2, TriangleAlert, User, UserCog } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import type { Task } from '../types'
 import { RECURRENCE_LABEL } from '../types'
@@ -8,6 +8,8 @@ import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
 import { getTaskStatus, TASK_STATUS_CONFIG } from '../utils/taskStatus'
 import { formatDeadline, formatRelative, isNearDeadline, isPastDeadline } from '../utils/date'
 import TaskForm from './TaskForm'
+import AssignTaskModal from './AssignTaskModal'
+import CompleteTaskModal from './CompleteTaskModal'
 
 export default function TaskCard({
   task,
@@ -18,25 +20,38 @@ export default function TaskCard({
   showOwner?: boolean
   showCommunity?: boolean
 }) {
-  const currentUserId = useAppStore((s) => s.authUser?.id)
+  const authUser = useAppStore((s) => s.authUser)
+  const currentUserId = authUser?.id
   const toggleSubtask = useAppStore((s) => s.toggleSubtask)
   const setTaskStarted = useAppStore((s) => s.setTaskStarted)
   const completeTask = useAppStore((s) => s.completeTask)
   const reopenTask = useAppStore((s) => s.reopenTask)
   const deleteTask = useAppStore((s) => s.deleteTask)
   const owner = useAppStore((s) => s.getUserById(task.userId))
-  const community = useAppStore((s) => (showCommunity ? s.getCommunityById(task.communityId) : undefined))
+  const users = useAppStore((s) => s.users)
+  const community = useAppStore((s) => (task.communityId ? s.getCommunityById(task.communityId) : undefined))
   const cfg = URGENCY_CONFIG[task.urgency]
   const communityTypeCfg = community ? COMMUNITY_TYPE_CONFIG[community.type] : null
   const isOwner = task.userId === currentUserId
+  const isCommunityAdmin = Boolean(
+    community && authUser && (authUser.role === 'admin' || community.adminIds.includes(authUser.id)),
+  )
+  const isWorkCommunity = community?.type === 'trabalho'
   const taskStatus = getTaskStatus(task)
   const statusCfg = TASK_STATUS_CONFIG[taskStatus]
   const [editing, setEditing] = useState(false)
+  const [assigning, setAssigning] = useState(false)
+  const [completing, setCompleting] = useState(false)
 
   function handleDelete() {
     if (window.confirm(`Excluir a tarefa "${task.title}"? Essa ação não pode ser desfeita.`)) {
       deleteTask(task.id)
     }
+  }
+
+  function handleComplete() {
+    if (isWorkCommunity) setCompleting(true)
+    else completeTask(task.id)
   }
 
   const near = !task.completed && !task.expired && isNearDeadline(task.deadline)
@@ -100,6 +115,15 @@ export default function TaskCard({
           <span className={`text-[11px] font-semibold px-2 py-1 rounded-lg border ${cfg.bg} ${cfg.border} ${cfg.color}`}>
             {cfg.label}
           </span>
+          {isCommunityAdmin && isWorkCommunity && (
+            <button
+              onClick={() => setAssigning(true)}
+              title="Atribuir responsável"
+              className="p-1.5 rounded-lg text-zinc-600 hover:text-sky-300 hover:bg-sky-500/10 transition-colors"
+            >
+              <UserCog size={13} />
+            </button>
+          )}
           {isOwner && (
             <>
               <button
@@ -125,6 +149,7 @@ export default function TaskCard({
         {task.subtasks.map((st) => {
           const subtaskOverdue = !st.done && st.dueDate && isPastDeadline(st.dueDate)
           const subtaskNear = !st.done && st.dueDate && isNearDeadline(st.dueDate)
+          const subtaskAssignee = st.assigneeId && st.assigneeId !== task.userId ? users.find((u) => u.id === st.assigneeId) : undefined
           return (
             <button
               key={st.id}
@@ -138,6 +163,11 @@ export default function TaskCard({
                 <Circle size={15} className="text-zinc-600 shrink-0 group-hover:text-zinc-400" />
               )}
               <span className={`text-sm ${st.done ? 'text-zinc-500 line-through' : 'text-zinc-300 light:text-zinc-700'}`}>{st.text}</span>
+              {subtaskAssignee && (
+                <span className="text-[10px] text-sky-300 bg-sky-500/10 border border-sky-500/30 rounded px-1.5 py-0.5 shrink-0">
+                  {subtaskAssignee.name}
+                </span>
+              )}
               {st.dueDate && !st.done && (
                 <span
                   className={`flex items-center gap-1 text-[10px] shrink-0 ${
@@ -189,7 +219,7 @@ export default function TaskCard({
               </button>
             )}
             <button
-              onClick={() => completeTask(task.id)}
+              onClick={handleComplete}
               disabled={!allSubtasksDone}
               title={!allSubtasksDone ? 'Conclua todas as subtarefas do plano de execução primeiro' : ''}
               className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
@@ -213,6 +243,8 @@ export default function TaskCard({
       {editing && (
         <TaskForm task={task} communityId={task.communityId} userId={task.userId} onClose={() => setEditing(false)} />
       )}
+      {assigning && <AssignTaskModal task={task} onClose={() => setAssigning(false)} />}
+      {completing && <CompleteTaskModal task={task} onClose={() => setCompleting(false)} />}
     </div>
   )
 }

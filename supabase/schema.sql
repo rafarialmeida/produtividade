@@ -42,18 +42,29 @@ create table if not exists public.community_members (
   primary key (community_id, user_id)
 );
 
+create table if not exists public.macro_objectives (
+  id uuid primary key default gen_random_uuid(),
+  community_id uuid references public.communities (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  title text not null,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.tasks (
   id uuid primary key default gen_random_uuid(),
   community_id uuid references public.communities (id) on delete cascade,
   user_id uuid not null references public.profiles (id) on delete cascade,
-  macro_objective text not null,
+  macro_objective_id uuid not null references public.macro_objectives (id),
   title text not null,
   category text not null,
   deadline timestamptz not null,
   urgency text not null check (urgency in ('baixa', 'media', 'alta', 'critica')),
+  complexity text not null default 'media' check (complexity in ('baixa', 'media', 'alta', 'critica')),
   started boolean not null default false,
+  started_at timestamptz,
   completed boolean not null default false,
   completed_at timestamptz,
+  minutes_spent integer,
   expired boolean not null default false,
   reminder_sent_at timestamptz,
   recurrence text check (recurrence in ('daily', 'every_other_day', 'weekly', 'biweekly', 'monthly')),
@@ -66,7 +77,9 @@ create table if not exists public.subtasks (
   text text not null,
   done boolean not null default false,
   position int not null default 0,
-  due_date timestamptz
+  due_date timestamptz,
+  assignee_id uuid references public.profiles (id) on delete set null,
+  minutes_spent integer
 );
 
 create table if not exists public.notifications (
@@ -92,6 +105,8 @@ create table if not exists public.push_subscriptions (
 create index if not exists tasks_user_id_idx on public.tasks (user_id);
 create index if not exists tasks_community_id_idx on public.tasks (community_id);
 create index if not exists subtasks_task_id_idx on public.subtasks (task_id);
+create index if not exists macro_objectives_community_id_idx on public.macro_objectives (community_id);
+create index if not exists macro_objectives_user_id_idx on public.macro_objectives (user_id);
 create index if not exists notifications_user_id_idx on public.notifications (user_id);
 create index if not exists community_members_user_id_idx on public.community_members (user_id);
 create index if not exists push_subscriptions_user_id_idx on public.push_subscriptions (user_id);
@@ -315,6 +330,63 @@ begin
 end;
 $$;
 
+-- Atribui o responsável por uma tarefa (só admin da comunidade de trabalho da tarefa).
+create or replace function public.assign_task(_task_id uuid, _assignee_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _community_id uuid;
+begin
+  select community_id into _community_id from public.tasks where id = _task_id;
+  if _community_id is null then
+    raise exception 'NOT_ALLOWED';
+  end if;
+  if not (public.is_community_admin(_community_id) or public.is_admin()) then
+    raise exception 'NOT_ALLOWED';
+  end if;
+  if not exists (select 1 from public.community_members where community_id = _community_id and user_id = _assignee_id) then
+    raise exception 'NOT_A_MEMBER';
+  end if;
+
+  update public.tasks set user_id = _assignee_id where id = _task_id;
+end;
+$$;
+
+-- Atribui (ou remove, com _assignee_id null) o responsável por uma subtarefa
+-- (só admin da comunidade de trabalho da tarefa).
+create or replace function public.assign_subtask(_subtask_id uuid, _assignee_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _community_id uuid;
+begin
+  select t.community_id into _community_id
+  from public.subtasks s
+  join public.tasks t on t.id = s.task_id
+  where s.id = _subtask_id;
+
+  if _community_id is null then
+    raise exception 'NOT_ALLOWED';
+  end if;
+  if not (public.is_community_admin(_community_id) or public.is_admin()) then
+    raise exception 'NOT_ALLOWED';
+  end if;
+  if _assignee_id is not null and not exists (
+    select 1 from public.community_members where community_id = _community_id and user_id = _assignee_id
+  ) then
+    raise exception 'NOT_A_MEMBER';
+  end if;
+
+  update public.subtasks set assignee_id = _assignee_id where id = _subtask_id;
+end;
+$$;
+
 -- Gera um novo código de convite (só quem criou a comunidade ou um admin).
 create or replace function public.regenerate_invite_code(_community_id uuid)
 returns text
@@ -336,14 +408,14 @@ $$;
 
 -- Ranking agregado de toda a plataforma (Muro Global): calculado no servidor para
 -- que ninguém precise enxergar as tarefas de comunidades das quais não participa.
--- Dois rankings em paralelo:
---   - lost_points: pontos perdidos por urgência (Baixa -1/Média -3/Alta -5/Crítica -10),
---     só pela tarefa em si, sem contar subtarefas — igual desde o início.
---   - positive_points: 1 ponto por tarefa concluída + 1 ponto por subtarefa concluída,
---     sem peso de urgência (toda tarefa vale igual).
---   - xp: mesma contagem simples do positive_points, mas desconta quando uma tarefa
---     expira (-1 pela tarefa, -1 por cada subtarefa que ficou sem marcar) — usado
---     para o nível do usuário, que pode ficar negativo.
+-- Dois rankings em paralelo, ambos multiplicados pela complexidade da tarefa
+-- (baixa 1x / média 1.5x / alta 2x / crítica 3x) para que poucas tarefas complexas
+-- valham mais que muitas tarefas fáceis:
+--   - lost_points: pontos perdidos por urgência (Baixa 1/Média 3/Alta 5/Crítica 10) × complexidade.
+--   - positive_points: (1 + nº de subtarefas) × complexidade, por tarefa concluída.
+--   - xp: mesma conta do positive_points, mas desconta quando uma tarefa expira
+--     ((1 + subtarefas não marcadas) × complexidade) — usado para o nível do
+--     usuário, que pode ficar negativo.
 create function public.global_wall()
 returns table (
   user_id uuid,
@@ -351,11 +423,11 @@ returns table (
   avatar_seed text,
   avatar_url text,
   role text,
-  lost_points bigint,
+  lost_points numeric,
   tasks_expired bigint,
   subtasks_missed bigint,
-  positive_points bigint,
-  xp bigint,
+  positive_points numeric,
+  xp numeric,
   tasks_completed bigint,
   subtasks_completed bigint,
   community_count bigint
@@ -381,7 +453,14 @@ as $$
       t.completed,
       t.expired,
       coalesce(sa.subtask_count, 0) as subtask_count,
-      coalesce(sa.not_done_count, 0) as not_done_count
+      coalesce(sa.not_done_count, 0) as not_done_count,
+      case t.complexity
+        when 'baixa' then 1
+        when 'media' then 1.5
+        when 'alta' then 2
+        when 'critica' then 3
+        else 1
+      end as complexity_mult
     from public.tasks t
     left join subtask_agg sa on sa.task_id = t.id
   )
@@ -391,23 +470,23 @@ as $$
     p.avatar_seed,
     p.avatar_url,
     p.role,
-    coalesce(sum(case when ta.expired and not ta.completed then
-      case ta.urgency
+    coalesce(round(sum(case when ta.expired and not ta.completed then
+      (case ta.urgency
         when 'baixa' then 1
         when 'media' then 3
         when 'alta' then 5
         when 'critica' then 10
         else 0
-      end
-    else 0 end), 0) as lost_points,
+      end) * ta.complexity_mult
+    else 0 end)::numeric, 1), 0) as lost_points,
     count(*) filter (where ta.expired and not ta.completed) as tasks_expired,
     coalesce(sum(case when ta.expired and not ta.completed then ta.not_done_count else 0 end), 0) as subtasks_missed,
-    coalesce(sum(case when ta.completed then 1 + ta.subtask_count else 0 end), 0) as positive_points,
-    coalesce(sum(case
-      when ta.completed then 1 + ta.subtask_count
-      when ta.expired and not ta.completed then -(1 + ta.not_done_count)
+    coalesce(round(sum(case when ta.completed then (1 + ta.subtask_count) * ta.complexity_mult else 0 end)::numeric, 1), 0) as positive_points,
+    coalesce(round(sum(case
+      when ta.completed then (1 + ta.subtask_count) * ta.complexity_mult
+      when ta.expired and not ta.completed then -(1 + ta.not_done_count) * ta.complexity_mult
       else 0
-    end), 0) as xp,
+    end)::numeric, 1), 0) as xp,
     count(*) filter (where ta.completed) as tasks_completed,
     coalesce(sum(case when ta.completed then ta.subtask_count else 0 end), 0) as subtasks_completed,
     (select count(*) from public.community_members cm where cm.user_id = p.id) as community_count
@@ -425,11 +504,11 @@ returns table (
   avatar_seed text,
   avatar_url text,
   role text,
-  lost_points bigint,
+  lost_points numeric,
   tasks_expired bigint,
   subtasks_missed bigint,
-  positive_points bigint,
-  xp bigint,
+  positive_points numeric,
+  xp numeric,
   tasks_completed bigint,
   subtasks_completed bigint,
   community_count bigint
@@ -449,6 +528,8 @@ grant execute on function public.is_community_admin(uuid) to authenticated;
 grant execute on function public.create_community(text, text, text) to authenticated;
 grant execute on function public.set_community_admin(uuid, uuid, boolean) to authenticated;
 grant execute on function public.set_community_piece(uuid, text, text) to authenticated;
+grant execute on function public.assign_task(uuid, uuid) to authenticated;
+grant execute on function public.assign_subtask(uuid, uuid) to authenticated;
 grant execute on function public.join_community_with_code(text) to authenticated;
 grant execute on function public.regenerate_invite_code(uuid) to authenticated;
 grant execute on function public.global_wall() to authenticated;
@@ -461,6 +542,7 @@ grant execute on function public.get_public_profile(uuid) to authenticated;
 alter table public.profiles enable row level security;
 alter table public.communities enable row level security;
 alter table public.community_members enable row level security;
+alter table public.macro_objectives enable row level security;
 alter table public.tasks enable row level security;
 alter table public.subtasks enable row level security;
 alter table public.notifications enable row level security;
@@ -502,6 +584,31 @@ create policy "members_select_same_community" on public.community_members for se
 drop policy if exists "members_delete_self_or_creator" on public.community_members;
 create policy "members_delete_self_or_creator" on public.community_members for delete to authenticated
   using (user_id = auth.uid() or public.is_community_creator(community_id) or public.is_admin());
+
+-- macro_objectives: visível para membros da comunidade (ou para o próprio dono,
+-- se for um objetivo pessoal sem comunidade). Só o próprio dono edita/exclui.
+drop policy if exists "macro_objectives_select" on public.macro_objectives;
+create policy "macro_objectives_select" on public.macro_objectives for select to authenticated
+  using (
+    (community_id is not null and public.is_community_member(community_id))
+    or (community_id is null and user_id = auth.uid())
+    or public.is_admin()
+  );
+
+drop policy if exists "macro_objectives_insert" on public.macro_objectives;
+create policy "macro_objectives_insert" on public.macro_objectives for insert to authenticated
+  with check (
+    user_id = auth.uid()
+    and (community_id is null or public.is_community_member(community_id))
+  );
+
+drop policy if exists "macro_objectives_update_own" on public.macro_objectives;
+create policy "macro_objectives_update_own" on public.macro_objectives for update to authenticated
+  using (user_id = auth.uid() or public.is_admin());
+
+drop policy if exists "macro_objectives_delete_own" on public.macro_objectives;
+create policy "macro_objectives_delete_own" on public.macro_objectives for delete to authenticated
+  using (user_id = auth.uid() or public.is_admin());
 
 -- tasks: dono sempre vê e edita as próprias. Tarefas de uma comunidade são visíveis
 -- para todos os membros dela, mas só o dono edita/exclui/conclui.

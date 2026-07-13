@@ -2,6 +2,8 @@ export type Role = 'admin' | 'member'
 
 export type Severity = 'baixa' | 'media' | 'alta' | 'critica'
 
+export type Complexity = 'baixa' | 'media' | 'alta' | 'critica'
+
 export type CommunityType = 'trabalho' | 'competicao'
 
 export type Recurrence = 'daily' | 'every_other_day' | 'weekly' | 'biweekly' | 'monthly'
@@ -31,6 +33,22 @@ export const URGENCY_POINTS: Record<Severity, number> = {
   media: 3,
   alta: 5,
   critica: 10,
+}
+
+export const COMPLEXITY_LABEL: Record<Complexity, string> = {
+  baixa: 'Baixa',
+  media: 'Média',
+  alta: 'Alta',
+  critica: 'Crítica',
+}
+
+// Multiplica os pontos (positivos e perdidos) de uma tarefa: poucas tarefas
+// complexas devem valer mais que muitas tarefas fáceis.
+export const COMPLEXITY_MULTIPLIER: Record<Complexity, number> = {
+  baixa: 1,
+  media: 1.5,
+  alta: 2,
+  critica: 3,
 }
 
 export interface NotificationPreferences {
@@ -97,21 +115,35 @@ export interface SubTask {
   text: string
   done: boolean
   dueDate?: string
+  assigneeId?: string
+  minutesSpent?: number
+}
+
+export interface MacroObjective {
+  id: string
+  communityId?: string
+  userId: string
+  title: string
+  createdAt: string
 }
 
 export interface Task {
   id: string
   communityId?: string
   userId: string
+  macroObjectiveId: string
   macroObjective: string
   title: string
   category: string
   subtasks: SubTask[]
   deadline: string
   urgency: Severity
+  complexity: Complexity
   started: boolean
+  startedAt?: string
   completed: boolean
   completedAt?: string
+  minutesSpent?: number
   expired: boolean
   recurrence?: Recurrence
   createdAt: string

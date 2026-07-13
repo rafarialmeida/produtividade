@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   CalendarClock,
@@ -16,7 +16,8 @@ import {
   X,
 } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
-import type { Recurrence, Severity, Task } from '../types'
+import type { Complexity, Recurrence, Severity, Task } from '../types'
+import { COMPLEXITY_LABEL, COMPLEXITY_MULTIPLIER } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { CATEGORY_PRESETS } from '../utils/category'
 import { toDatetimeLocalValue } from '../utils/date'
@@ -87,7 +88,9 @@ export default function TaskForm({
   const optionStyle = theme === 'light' ? { backgroundColor: '#fff', color: '#18181b' } : { backgroundColor: '#0d0e14', color: '#fff' }
   const createTask = useAppStore((s) => s.createTask)
   const updateTask = useAppStore((s) => s.updateTask)
+  const createMacroObjective = useAppStore((s) => s.createMacroObjective)
   const allCommunities = useAppStore((s) => s.communities)
+  const allMacroObjectives = useAppStore((s) => s.macroObjectives)
   const user = useAppStore((s) => s.getUserById(userId))
   const myCommunities = useMemo(
     () => allCommunities.filter((c) => user?.communityIds.includes(c.id)),
@@ -99,13 +102,20 @@ export default function TaskForm({
   const community = useAppStore((s) => (communityId ? s.getCommunityById(communityId) : undefined))
 
   const allTasks = useAppStore((s) => s.tasks)
-  const communityTasks = useMemo(() => allTasks.filter((t) => t.communityId === communityId), [allTasks, communityId])
 
-  const macroSuggestions = Array.from(new Set(communityTasks.map((t) => t.macroObjective))).filter(Boolean)
   const usedCategories = Array.from(new Set(allTasks.map((t) => t.category))).filter(Boolean)
   const availableCategories = Array.from(new Set([...CATEGORY_PRESETS, ...usedCategories, ...(task ? [task.category] : [])]))
 
-  const [macroObjective, setMacroObjective] = useState(task?.macroObjective ?? '')
+  const scopedMacroObjectives = useMemo(
+    () => allMacroObjectives.filter((m) => (communityId ? m.communityId === communityId : !m.communityId && m.userId === userId)),
+    [allMacroObjectives, communityId, userId],
+  )
+
+  const [macroObjectiveId, setMacroObjectiveId] = useState(task?.macroObjectiveId ?? '')
+  const [addingMacro, setAddingMacro] = useState(false)
+  const [newMacro, setNewMacro] = useState('')
+  const [creatingMacro, setCreatingMacro] = useState(false)
+  const [complexity, setComplexity] = useState<Complexity>(task?.complexity ?? 'media')
   const [title, setTitle] = useState(task?.title ?? '')
   const [category, setCategory] = useState(task?.category ?? CATEGORY_PRESETS[0])
   const [categories, setCategories] = useState(availableCategories)
@@ -162,12 +172,18 @@ export default function TaskForm({
   const cleanSubtasks = subtasks.map((s) => ({ ...s, text: s.text.trim() })).filter((s) => s.text.length > 0)
 
   const isValid =
-    macroObjective.trim().length >= 3 &&
+    macroObjectiveId.length > 0 &&
     title.trim().length >= 3 &&
     category.trim().length > 0 &&
     cleanSubtasks.length >= 1 &&
     deadline.length > 0 &&
     new Date(deadline).getTime() > Date.now()
+
+  useEffect(() => {
+    if (macroObjectiveId && !scopedMacroObjectives.some((m) => m.id === macroObjectiveId)) {
+      setMacroObjectiveId('')
+    }
+  }, [communityId, scopedMacroObjectives, macroObjectiveId])
 
   function updateSubtaskText(index: number, value: string) {
     setSubtasks((s) => s.map((item, i) => (i === index ? { ...item, text: value } : item)))
@@ -199,6 +215,21 @@ export default function TaskForm({
     setAddingCategory(false)
   }
 
+  async function confirmNewMacro() {
+    if (creatingMacro) return
+    const trimmed = newMacro.trim()
+    if (!trimmed) {
+      setAddingMacro(false)
+      return
+    }
+    setCreatingMacro(true)
+    const id = await createMacroObjective(trimmed, communityId || undefined)
+    setCreatingMacro(false)
+    if (id) setMacroObjectiveId(id)
+    setNewMacro('')
+    setAddingMacro(false)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!isValid || submitting) return
@@ -207,7 +238,7 @@ export default function TaskForm({
     try {
       const baseFields = {
         communityId: communityId || undefined,
-        macroObjective: macroObjective.trim(),
+        macroObjectiveId,
         title: title.trim(),
         category: category.trim(),
         subtasks: cleanSubtasks.map((s) => ({
@@ -216,6 +247,7 @@ export default function TaskForm({
           dueDate: s.dueDate ? new Date(s.dueDate).toISOString() : undefined,
         })),
         urgency,
+        complexity,
       }
 
       if (task) {
@@ -301,24 +333,63 @@ export default function TaskForm({
 
           <div>
             <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
-              <Target size={13} className="text-purple-400" /> Objetivo Macro — o "porquê"
+              <Target size={13} className="text-purple-400" /> Objetivo Macro
             </label>
-            <input
-              value={macroObjective}
-              onChange={(e) => setMacroObjective(e.target.value)}
-              placeholder={community?.type === 'competicao' ? 'Ex.: Meta pessoal de saúde' : 'Ex.: Lançamento Q3 do produto'}
-              list="macro-suggestions"
-              className="input"
-            />
-            <datalist id="macro-suggestions">
-              {macroSuggestions.map((m) => (
-                <option key={m} value={m} />
-              ))}
-            </datalist>
+            <div className="flex flex-wrap gap-1.5">
+              {scopedMacroObjectives.map((m) => {
+                const active = macroObjectiveId === m.id
+                return (
+                  <button
+                    type="button"
+                    key={m.id}
+                    onClick={() => setMacroObjectiveId(m.id)}
+                    className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
+                      active
+                        ? 'bg-purple-500/15 border-purple-500/40 text-purple-200 light:bg-purple-500/10 light:text-purple-700'
+                        : 'border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/5 light:border-black/10 light:bg-black/[0.02] light:text-zinc-600 light:hover:bg-black/5'
+                    }`}
+                  >
+                    {m.title}
+                  </button>
+                )
+              })}
+              {addingMacro ? (
+                <input
+                  autoFocus
+                  value={newMacro}
+                  onChange={(e) => setNewMacro(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      confirmNewMacro()
+                    }
+                    if (e.key === 'Escape') {
+                      setAddingMacro(false)
+                      setNewMacro('')
+                    }
+                  }}
+                  onBlur={confirmNewMacro}
+                  disabled={creatingMacro}
+                  placeholder={community?.type === 'competicao' ? 'Ex.: Meta pessoal de saúde' : 'Ex.: Lançamento Q3 do produto'}
+                  className="text-xs px-2.5 py-1.5 rounded-lg border border-purple-500/40 bg-white/5 text-white outline-none w-44 light:bg-black/5 light:text-zinc-900 disabled:opacity-50"
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setAddingMacro(true)}
+                  className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-dashed border-white/15 text-zinc-500 hover:text-purple-300 hover:border-purple-500/40 transition-colors light:border-black/15"
+                >
+                  <Plus size={12} /> Novo objetivo
+                </button>
+              )}
+            </div>
+            {scopedMacroObjectives.length === 0 && !addingMacro && (
+              <p className="text-[11px] text-zinc-500 mt-1.5">Nenhum objetivo macro ainda — crie um pra vincular essa tarefa.</p>
+            )}
           </div>
 
           <div>
-            <label className="text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5 block">A Tarefa — o "o quê"</label>
+            <label className="text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5 block">A Tarefa</label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -341,7 +412,7 @@ export default function TaskForm({
                     onClick={() => setCategory(c)}
                     className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
                       active
-                        ? 'bg-purple-500/15 border-purple-500/40 text-purple-200'
+                        ? 'bg-purple-500/15 border-purple-500/40 text-purple-200 light:bg-purple-500/10 light:text-purple-700'
                         : 'border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/5 light:border-black/10 light:bg-black/[0.02] light:text-zinc-600 light:hover:bg-black/5'
                     }`}
                   >
@@ -605,6 +676,35 @@ export default function TaskForm({
                 )
               })}
             </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-zinc-400 light:text-zinc-600 mb-2 block">Nível de Complexidade</label>
+            <div className="grid grid-cols-2 gap-2">
+              {(Object.keys(COMPLEXITY_LABEL) as Complexity[]).map((key) => {
+                const active = complexity === key
+                return (
+                  <button
+                    type="button"
+                    key={key}
+                    onClick={() => setComplexity(key)}
+                    className={`rounded-xl border px-3 py-2 text-left transition-all ${
+                      active
+                        ? 'bg-purple-500/10 border-purple-500/40'
+                        : 'border-white/10 bg-white/[0.03] hover:bg-white/5 light:border-black/10 light:bg-black/[0.02] light:hover:bg-black/5'
+                    }`}
+                  >
+                    <p className={`text-sm font-semibold ${active ? 'text-purple-300 light:text-purple-700' : 'text-zinc-300 light:text-zinc-700'}`}>
+                      {COMPLEXITY_LABEL[key]}
+                    </p>
+                    <p className="text-[11px] text-zinc-500">pontuação ×{COMPLEXITY_MULTIPLIER[key]}</p>
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-[11px] text-zinc-500 mt-1.5">
+              Multiplica os pontos ganhos (ou perdidos, se expirar) por essa tarefa — assim tarefas complexas valem mais que várias tarefas fáceis.
+            </p>
           </div>
 
           <button type="submit" disabled={!isValid || submitting} className="btn-secondary mt-1 shrink-0">
