@@ -84,14 +84,25 @@ export default function CommunityBoard({ communityId }: { communityId: string })
       }
     })
 
-    const rankById = new Map(computeCompositeRanking(raw).map((r) => [r.item.id, r.compositeRank]))
-    return raw.map((m) => ({ ...m, compositeRank: rankById.get(m.id) ?? null }))
+    // Administradores da comunidade não participam do ranking: não pontuam
+    // nem afetam a posição dos demais membros.
+    const rankableRaw = raw.filter((m) => !community.adminIds.includes(m.id))
+    const rankById = new Map(computeCompositeRanking(rankableRaw).map((r) => [r.item.id, r.compositeRank]))
+    return raw.map((m) => ({
+      ...m,
+      compositeRank: community.adminIds.includes(m.id) ? null : (rankById.get(m.id) ?? null),
+    }))
   }, [community, users, allTasks, communityId])
 
   if (!community) return null
 
   const myPiece = authUser ? members.find((m) => m.id === authUser.id) : undefined
   const isCommunityAdmin = Boolean(authUser && (authUser.role === 'admin' || community.adminIds.includes(authUser.id)))
+
+  // Administradores ficam de fora da lista de ranking pros demais membros —
+  // só o próprio admin consegue ver sua linha ali (staircase 3D continua
+  // mostrando todo mundo, isso é só o ranking/medalhas).
+  const rankedMembers = members.filter((m) => !community.adminIds.includes(m.id) || m.id === authUser?.id)
 
   return (
     <div className="flex flex-col gap-4">
@@ -119,10 +130,11 @@ export default function CommunityBoard({ communityId }: { communityId: string })
 
       <p className="text-[11px] text-zinc-500">
         Ranking pondera tarefas, subtarefas e complexidade concluídas, além de lead time e cycle time médios.
+        Administradores da comunidade não entram no ranking.
       </p>
 
       <div className="glass-panel rounded-xl divide-y divide-white/5 overflow-hidden">
-        {[...members]
+        {[...rankedMembers]
           .sort((a, b) => {
             if (a.compositeRank == null && b.compositeRank == null) return b.completed - a.completed
             if (a.compositeRank == null) return 1
