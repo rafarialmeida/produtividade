@@ -99,10 +99,10 @@ export default function CommunityBoard({ communityId }: { communityId: string })
   const myPiece = authUser ? members.find((m) => m.id === authUser.id) : undefined
   const isCommunityAdmin = Boolean(authUser && (authUser.role === 'admin' || community.adminIds.includes(authUser.id)))
 
-  // Administradores ficam de fora da lista de ranking pros demais membros —
-  // só o próprio admin consegue ver sua linha ali (staircase 3D continua
-  // mostrando todo mundo, isso é só o ranking/medalhas).
-  const rankedMembers = members.filter((m) => !community.adminIds.includes(m.id) || m.id === authUser?.id)
+  // Administradores ficam de fora tanto da escadaria 3D quanto da lista de
+  // ranking pros demais membros, pra não se expor — só o próprio admin
+  // consegue se ver ali.
+  const visibleMembers = members.filter((m) => !community.adminIds.includes(m.id) || m.id === authUser?.id)
 
   return (
     <div className="flex flex-col gap-4">
@@ -125,7 +125,7 @@ export default function CommunityBoard({ communityId }: { communityId: string })
       </p>
 
       <CommunityBoard3D
-        members={members.map((m) => ({ id: m.id, name: m.name, completed: m.completed, pieceId: m.recipe.id, color: m.color }))}
+        members={visibleMembers.map((m) => ({ id: m.id, name: m.name, completed: m.completed, pieceId: m.recipe.id, color: m.color }))}
       />
 
       <p className="text-[11px] text-zinc-500">
@@ -134,7 +134,7 @@ export default function CommunityBoard({ communityId }: { communityId: string })
       </p>
 
       <div className="glass-panel rounded-xl divide-y divide-white/5 overflow-hidden">
-        {[...rankedMembers]
+        {[...visibleMembers]
           .sort((a, b) => {
             if (a.compositeRank == null && b.compositeRank == null) return b.completed - a.completed
             if (a.compositeRank == null) return 1
