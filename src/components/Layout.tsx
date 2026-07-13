@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { Briefcase, LogOut, Moon, Settings2, Skull, Sparkles, Star, Sun, Users, ShieldCheck, Zap } from 'lucide-react'
+import { Briefcase, HelpCircle, LogOut, Moon, Settings2, Skull, Sparkles, Star, Sun, Users, ShieldCheck, Zap } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { useExpirationTicker } from '../hooks/useExpirationTicker'
 import { usePresence } from '../hooks/usePresence'
@@ -29,6 +29,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const signOut = useAppStore((s) => s.signOut)
   const [showPreferences, setShowPreferences] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
+  const [showTourAgain, setShowTourAgain] = useState(false)
   const [levelMode, setLevelMode] = useState<'work' | 'personal'>('work')
   const activeLevelInfo = myStats ? getLevelInfo(levelMode === 'work' ? myStats.workXp : myStats.personalXp) : null
   const { theme, toggleTheme } = useTheme()
@@ -122,6 +123,13 @@ export default function Layout({ children }: { children: ReactNode }) {
                 </div>
                 <PushToggle userId={user.id} />
                 <button
+                  onClick={() => setShowTourAgain(true)}
+                  title="Ver tutorial de boas-vindas novamente"
+                  className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 light:hover:text-zinc-900 light:hover:bg-black/5 transition-colors"
+                >
+                  <HelpCircle size={16} />
+                </button>
+                <button
                   onClick={() => setShowPreferences(true)}
                   title="Preferências de notificação"
                   className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 light:hover:text-zinc-900 light:hover:bg-black/5 transition-colors"
@@ -189,7 +197,9 @@ export default function Layout({ children }: { children: ReactNode }) {
       )}
       {showPreferences && <NotificationPreferencesModal onClose={() => setShowPreferences(false)} />}
       {showProfile && user && <ProfileModal userId={user.id} onClose={() => setShowProfile(false)} />}
-      {user && !user.onboardingCompletedAt && <OnboardingTour />}
+      {user && (!user.onboardingCompletedAt || showTourAgain) && (
+        <OnboardingTour onDismiss={() => setShowTourAgain(false)} />
+      )}
     </div>
   )
 }

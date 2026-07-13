@@ -36,17 +36,22 @@ const STEPS = [
   },
 ]
 
-export default function OnboardingTour() {
+export default function OnboardingTour({ onDismiss }: { onDismiss?: () => void }) {
   const completeOnboarding = useAppStore((s) => s.completeOnboarding)
   const [step, setStep] = useState(0)
   const isLast = step === STEPS.length - 1
   const current = STEPS[step]
 
+  function finish() {
+    completeOnboarding()
+    onDismiss?.()
+  }
+
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
       <div className="glass-panel neon-border-purple rounded-2xl w-full max-w-md relative">
         <button
-          onClick={completeOnboarding}
+          onClick={finish}
           className="absolute top-4 right-4 text-xs text-zinc-500 hover:text-white light:hover:text-zinc-900 transition-colors"
         >
           Pular
@@ -72,7 +77,7 @@ export default function OnboardingTour() {
               Voltar
             </button>
           )}
-          <button onClick={() => (isLast ? completeOnboarding() : setStep((s) => s + 1))} className="btn-primary flex-1">
+          <button onClick={() => (isLast ? finish() : setStep((s) => s + 1))} className="btn-primary flex-1">
             {isLast ? 'Começar' : 'Próximo'}
           </button>
         </div>
