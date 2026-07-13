@@ -147,6 +147,11 @@ grant execute on function public.assign_subtask(uuid, uuid) to authenticated;
 -- Pontuação: multiplicador de complexidade sobre pontos positivos e negativos
 -- ============================================================================
 
+-- O tipo de retorno mudou (lost_points/positive_points/xp: bigint -> numeric),
+-- então as funções antigas precisam ser removidas antes de recriar.
+drop function if exists public.get_public_profile(uuid);
+drop function if exists public.global_wall();
+
 create or replace function public.global_wall()
 returns table (
   user_id uuid,
