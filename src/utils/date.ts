@@ -33,6 +33,12 @@ export function isPastDeadline(iso: string) {
   return new Date(iso).getTime() < Date.now()
 }
 
+export function formatDurationHours(hours: number | null | undefined): string {
+  if (hours == null) return '—'
+  if (hours >= 48) return `${(hours / 24).toFixed(1)} dias`
+  return `${hours.toFixed(1)}h`
+}
+
 export function toDatetimeLocalValue(date: Date) {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`

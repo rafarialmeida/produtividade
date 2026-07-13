@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { LogOut, Moon, Settings2, Skull, Sparkles, Star, Sun, Users, ShieldCheck, Zap } from 'lucide-react'
+import { Briefcase, LogOut, Moon, Settings2, Skull, Sparkles, Star, Sun, Users, ShieldCheck, Zap } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { useExpirationTicker } from '../hooks/useExpirationTicker'
 import { useTheme } from '../hooks/useTheme'
@@ -24,7 +24,8 @@ export default function Layout({ children }: { children: ReactNode }) {
   const signOut = useAppStore((s) => s.signOut)
   const [showPreferences, setShowPreferences] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
-  const levelInfo = myStats ? getLevelInfo(myStats.xp) : null
+  const personalLevelInfo = myStats ? getLevelInfo(myStats.personalXp) : null
+  const workLevelInfo = myStats && myStats.workXp !== 0 ? getLevelInfo(myStats.workXp) : null
   const { theme, toggleTheme } = useTheme()
 
   return (
@@ -73,18 +74,32 @@ export default function Layout({ children }: { children: ReactNode }) {
                 )}
               </nav>
               <div className="flex items-center gap-2 pl-3 border-l border-white/10 light:border-black/10 shrink-0">
-                {levelInfo && (
+                {personalLevelInfo && (
                   <button
                     onClick={() => setShowProfile(true)}
-                    title="Ver perfil"
+                    title="Ver perfil (nível pessoal)"
                     className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border transition-colors ${
-                      levelInfo.level >= 1
+                      personalLevelInfo.level >= 1
                         ? 'border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 light:text-purple-600'
                         : 'border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 light:text-rose-600'
                     }`}
                   >
-                    <Star size={11} /> Nv {levelInfo.level}
-                    <span className="hidden sm:inline text-zinc-400 light:text-zinc-500 font-normal">· {levelInfo.xp} XP</span>
+                    <Star size={11} /> Nv {personalLevelInfo.level}
+                    <span className="hidden sm:inline text-zinc-400 light:text-zinc-500 font-normal">· {personalLevelInfo.xp} XP</span>
+                  </button>
+                )}
+                {workLevelInfo && (
+                  <button
+                    onClick={() => setShowProfile(true)}
+                    title="Ver perfil (nível de trabalho)"
+                    className={`hidden sm:flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border transition-colors ${
+                      workLevelInfo.level >= 1
+                        ? 'border-sky-500/30 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 light:text-sky-600'
+                        : 'border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 light:text-rose-600'
+                    }`}
+                  >
+                    <Briefcase size={11} /> Nv {workLevelInfo.level}
+                    <span className="hidden md:inline text-zinc-400 light:text-zinc-500 font-normal">· {workLevelInfo.xp} XP</span>
                   </button>
                 )}
                 <div className="text-right hidden sm:block">

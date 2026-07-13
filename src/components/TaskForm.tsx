@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
+  Ban,
   CalendarClock,
   CheckCircle2,
   ChevronDown,
@@ -111,11 +112,14 @@ export default function TaskForm({
     [allMacroObjectives, communityId, userId],
   )
 
+  const isWorkCommunity = community?.type === 'trabalho'
+
   const [macroObjectiveId, setMacroObjectiveId] = useState(task?.macroObjectiveId ?? '')
   const [addingMacro, setAddingMacro] = useState(false)
   const [newMacro, setNewMacro] = useState('')
   const [creatingMacro, setCreatingMacro] = useState(false)
   const [complexity, setComplexity] = useState<Complexity>(task?.complexity ?? 'media')
+  const [notScored, setNotScored] = useState(task ? !task.scored : false)
   const [title, setTitle] = useState(task?.title ?? '')
   const [category, setCategory] = useState(task?.category ?? CATEGORY_PRESETS[0])
   const [categories, setCategories] = useState(availableCategories)
@@ -185,6 +189,10 @@ export default function TaskForm({
     }
   }, [communityId, scopedMacroObjectives, macroObjectiveId])
 
+  useEffect(() => {
+    if (isWorkCommunity && notScored) setNotScored(false)
+  }, [isWorkCommunity, notScored])
+
   function updateSubtaskText(index: number, value: string) {
     setSubtasks((s) => s.map((item, i) => (i === index ? { ...item, text: value } : item)))
   }
@@ -248,6 +256,7 @@ export default function TaskForm({
         })),
         urgency,
         complexity,
+        scored: isWorkCommunity ? true : !notScored,
       }
 
       if (task) {
@@ -706,6 +715,26 @@ export default function TaskForm({
               Multiplica os pontos ganhos (ou perdidos, se expirar) por essa tarefa — assim tarefas complexas valem mais que várias tarefas fáceis.
             </p>
           </div>
+
+          {!isWorkCommunity && (
+            <label className="flex items-start gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-3 cursor-pointer light:border-black/10 light:bg-black/[0.02]">
+              <input
+                type="checkbox"
+                checked={notScored}
+                onChange={(e) => setNotScored(e.target.checked)}
+                className="mt-0.5 accent-purple-500"
+              />
+              <span className="flex items-start gap-2.5">
+                <Ban size={15} className="shrink-0 mt-0.5 text-zinc-500" />
+                <span>
+                  <span className="block text-sm font-semibold text-zinc-300 light:text-zinc-700">Não pontuar esta tarefa</span>
+                  <span className="block text-xs text-zinc-500 mt-0.5">
+                    Ideal pra listas do dia a dia (ex.: compras do mercado) que não devem contar pro seu nível.
+                  </span>
+                </span>
+              </span>
+            </label>
+          )}
 
           <button type="submit" disabled={!isValid || submitting} className="btn-secondary mt-1 shrink-0">
             <CheckCircle2 size={16} /> {submitting ? 'Salvando…' : isEditing ? 'Salvar Alterações' : 'Salvar Tarefa'}

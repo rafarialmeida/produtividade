@@ -3,9 +3,10 @@ import { Clock, History, LayoutDashboard, Timer, TrendingDown, TrendingUp, Users
 import { useAppStore } from '../store/useStore'
 import { COMPLEXITY_MULTIPLIER, URGENCY_POINTS } from '../types'
 import type { Task } from '../types'
-import { formatDeadline, formatRelative } from '../utils/date'
+import { formatDeadline, formatDurationHours, formatRelative } from '../utils/date'
 import { getTaskStatus, TASK_STATUS_CONFIG, type TaskStatus } from '../utils/taskStatus'
 import TaskDetailModal from './TaskDetailModal'
+import MemberHoursModal from './MemberHoursModal'
 
 const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000
 
@@ -26,9 +27,7 @@ interface MemberStat {
 
 function avgDurationLabel(hoursList: number[]): string {
   if (hoursList.length === 0) return '—'
-  const avg = hoursList.reduce((a, b) => a + b, 0) / hoursList.length
-  if (avg >= 48) return `${(avg / 24).toFixed(1)} dias`
-  return `${avg.toFixed(1)}h`
+  return formatDurationHours(hoursList.reduce((a, b) => a + b, 0) / hoursList.length)
 }
 
 export default function CommunityDashboard({
@@ -44,6 +43,7 @@ export default function CommunityDashboard({
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null)
   const [taskFilter, setTaskFilter] = useState<'all' | TaskStatus>('all')
   const [showAllCompleted, setShowAllCompleted] = useState(false)
+  const [hoursUserId, setHoursUserId] = useState<string | null>(null)
 
   const communityTasks = useMemo(() => allTasks.filter((t) => t.communityId === communityId), [allTasks, communityId])
 
@@ -270,10 +270,14 @@ export default function CommunityDashboard({
           {[...stats]
             .sort((a, b) => b.hours - a.hours)
             .map((s) => (
-              <div key={s.userId} className="flex items-center justify-between gap-3 px-4 py-2 text-xs">
+              <button
+                key={s.userId}
+                onClick={() => setHoursUserId(s.userId)}
+                className="w-full flex items-center justify-between gap-3 px-4 py-2 text-xs text-left hover:bg-white/5 light:hover:bg-black/5 transition-colors"
+              >
                 <span className="text-zinc-200 light:text-zinc-800 truncate">{s.name}</span>
                 <span className="text-zinc-400 light:text-zinc-600 tabular-nums shrink-0">{s.hours.toFixed(1)}h</span>
-              </div>
+              </button>
             ))}
         </div>
       </div>
@@ -335,6 +339,13 @@ export default function CommunityDashboard({
       </div>
 
       {detailTaskId && <TaskDetailModal taskId={detailTaskId} onClose={() => setDetailTaskId(null)} />}
+      {hoursUserId && (
+        <MemberHoursModal
+          name={stats.find((s) => s.userId === hoursUserId)?.name ?? 'Membro'}
+          tasks={communityTasks.filter((t) => t.userId === hoursUserId)}
+          onClose={() => setHoursUserId(null)}
+        />
+      )}
     </div>
   )
 }

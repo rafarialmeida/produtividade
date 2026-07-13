@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
+  Briefcase,
   Camera,
   CheckCircle2,
   Crown,
@@ -9,6 +10,7 @@ import {
   Loader2,
   Pencil,
   Star,
+  Timer,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -18,6 +20,7 @@ import {
 import { useAppStore } from '../store/useStore'
 import type { PublicProfile } from '../types'
 import { getLevelInfo } from '../utils/level'
+import { formatDurationHours } from '../utils/date'
 import TaskHistoryModal from './TaskHistoryModal'
 import ImageCropperModal from './ImageCropperModal'
 
@@ -187,7 +190,10 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
               </div>
             </div>
 
-            <LevelCard xp={profile.xp} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <LevelCard label="Nível Pessoal" icon={Star} xp={profile.personalXp} />
+              {profile.workXp !== 0 && <LevelCard label="Nível de Trabalho" icon={Briefcase} xp={profile.workXp} accent="sky" />}
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               <StatBox icon={TrendingUp} color="emerald" label="Pontos positivos" value={profile.positivePoints} />
@@ -196,6 +202,23 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
               <StatBox icon={TriangleAlert} color="rose" label="Tarefas expiradas" value={profile.tasksExpired} />
               <StatBox icon={CheckCircle2} color="purple" label="Subtarefas concluídas" value={profile.subtasksCompleted} />
               <StatBox icon={TriangleAlert} color="purple" label="Subtarefas perdidas" value={profile.subtasksMissed} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 light:border-black/10 light:bg-black/[0.02]">
+                <p className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-500">
+                  <Timer size={12} /> Lead time médio
+                </p>
+                <p className="text-lg font-bold text-white light:text-zinc-900 mt-1">{formatDurationHours(profile.leadTimeHours)}</p>
+                <p className="text-[10px] text-zinc-500 mt-0.5">Da criação até a conclusão</p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 light:border-black/10 light:bg-black/[0.02]">
+                <p className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-500">
+                  <Timer size={12} /> Cycle time médio
+                </p>
+                <p className="text-lg font-bold text-white light:text-zinc-900 mt-1">{formatDurationHours(profile.cycleTimeHours)}</p>
+                <p className="text-[10px] text-zinc-500 mt-0.5">Do início até a conclusão</p>
+              </div>
             </div>
 
             {isOwn && (
@@ -246,20 +269,35 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
   )
 }
 
-function LevelCard({ xp }: { xp: number }) {
+function LevelCard({
+  label,
+  icon: Icon,
+  xp,
+  accent = 'purple',
+}: {
+  label: string
+  icon: typeof Star
+  xp: number
+  accent?: 'purple' | 'sky'
+}) {
   const info = getLevelInfo(xp)
   const positive = info.level >= 1
+  const colors = positive
+    ? accent === 'sky'
+      ? { border: 'border-sky-500/30', bg: 'bg-sky-500/[0.06]', text: 'text-sky-300', bar: 'bg-sky-500' }
+      : { border: 'border-purple-500/30', bg: 'bg-purple-500/[0.06]', text: 'text-purple-300', bar: 'bg-purple-500' }
+    : { border: 'border-rose-500/30', bg: 'bg-rose-500/[0.06]', text: 'text-rose-400', bar: 'bg-rose-500' }
   return (
-    <div className={`rounded-xl border p-4 ${positive ? 'border-purple-500/30 bg-purple-500/[0.06]' : 'border-rose-500/30 bg-rose-500/[0.06]'}`}>
+    <div className={`rounded-xl border p-4 ${colors.border} ${colors.bg}`}>
       <div className="flex items-center justify-between">
-        <p className={`flex items-center gap-1.5 text-sm font-bold ${positive ? 'text-purple-300' : 'text-rose-400'}`}>
-          <Star size={14} /> Nível {info.level}
+        <p className={`flex items-center gap-1.5 text-sm font-bold ${colors.text}`}>
+          <Icon size={14} /> {label} · Nv {info.level}
         </p>
         <p className="text-xs text-zinc-400 light:text-zinc-600 tabular-nums">{xp} XP</p>
       </div>
       <div className="mt-2.5 h-1.5 rounded-full bg-white/5 overflow-hidden">
         <div
-          className={`h-full rounded-full ${positive ? 'bg-purple-500' : 'bg-rose-500'}`}
+          className={`h-full rounded-full ${colors.bar}`}
           style={{ width: `${Math.min(100, Math.max(0, info.progress * 100))}%` }}
         />
       </div>

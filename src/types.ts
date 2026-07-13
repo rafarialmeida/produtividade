@@ -86,10 +86,13 @@ export interface PublicProfile {
   tasksExpired: number
   subtasksMissed: number
   positivePoints: number
-  xp: number
+  workXp: number
+  personalXp: number
   tasksCompleted: number
   subtasksCompleted: number
   communityCount: number
+  leadTimeHours?: number
+  cycleTimeHours?: number
 }
 
 export interface CommunityPiece {
@@ -146,6 +149,7 @@ export interface Task {
   completedAt?: string
   minutesSpent?: number
   expired: boolean
+  scored: boolean
   recurrence?: Recurrence
   createdAt: string
 }

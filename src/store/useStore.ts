@@ -29,7 +29,6 @@ export interface GlobalWallEntry {
   tasksExpired: number
   subtasksMissed: number
   positivePoints: number
-  xp: number
   tasksCompleted: number
   subtasksCompleted: number
   communityCount: number
@@ -46,10 +45,13 @@ function mapProfileStatsRow(row: Record<string, unknown>): PublicProfile {
     tasksExpired: Number(row.tasks_expired),
     subtasksMissed: Number(row.subtasks_missed),
     positivePoints: Number(row.positive_points),
-    xp: Number(row.xp),
+    workXp: Number(row.work_xp),
+    personalXp: Number(row.personal_xp),
     tasksCompleted: Number(row.tasks_completed),
     subtasksCompleted: Number(row.subtasks_completed),
     communityCount: Number(row.community_count),
+    leadTimeHours: row.lead_time_avg_hours == null ? undefined : Number(row.lead_time_avg_hours),
+    cycleTimeHours: row.cycle_time_avg_hours == null ? undefined : Number(row.cycle_time_avg_hours),
   }
 }
 
@@ -63,6 +65,7 @@ interface CreateTaskInput {
   deadline: string
   urgency: Severity
   complexity: Complexity
+  scored: boolean
   recurrence?: Recurrence
 }
 
@@ -75,6 +78,7 @@ interface UpdateTaskInput {
   deadline: string
   urgency: Severity
   complexity: Complexity
+  scored: boolean
   recurrence?: Recurrence
 }
 
@@ -178,6 +182,7 @@ function mapTask(row: Record<string, unknown>): Task {
     completedAt: (row.completed_at as string | null) ?? undefined,
     minutesSpent: (row.minutes_spent as number | null) ?? undefined,
     expired: row.expired as boolean,
+    scored: (row.scored as boolean | null) ?? true,
     recurrence: (row.recurrence as Recurrence | null) ?? undefined,
     createdAt: row.created_at as string,
   }
@@ -235,6 +240,7 @@ async function spawnNextOccurrence(task: {
   deadline: string
   urgency: Severity
   complexity: Complexity
+  scored: boolean
   recurrence: Recurrence
   subtasks: SubTask[]
 }) {
@@ -250,6 +256,7 @@ async function spawnNextOccurrence(task: {
       deadline: nextDeadline.toISOString(),
       urgency: task.urgency,
       complexity: task.complexity,
+      scored: task.scored,
       recurrence: task.recurrence,
     })
     .select()
@@ -456,7 +463,7 @@ export const useAppStore = create<State>()((set, get) => ({
     return data.id as string
   },
 
-  createTask: async ({ communityId, userId, macroObjectiveId, title, category, subtasks, deadline, urgency, complexity, recurrence }) => {
+  createTask: async ({ communityId, userId, macroObjectiveId, title, category, subtasks, deadline, urgency, complexity, scored, recurrence }) => {
     const { data: task, error } = await supabase
       .from('tasks')
       .insert({
@@ -468,6 +475,7 @@ export const useAppStore = create<State>()((set, get) => ({
         deadline,
         urgency,
         complexity,
+        scored,
         recurrence: recurrence ?? null,
       })
       .select()
@@ -491,7 +499,7 @@ export const useAppStore = create<State>()((set, get) => ({
     return null
   },
 
-  updateTask: async (taskId, { communityId, macroObjectiveId, title, category, subtasks, deadline, urgency, complexity, recurrence }) => {
+  updateTask: async (taskId, { communityId, macroObjectiveId, title, category, subtasks, deadline, urgency, complexity, scored, recurrence }) => {
     const { error: taskError } = await supabase
       .from('tasks')
       .update({
@@ -502,6 +510,7 @@ export const useAppStore = create<State>()((set, get) => ({
         deadline,
         urgency,
         complexity,
+        scored,
         recurrence: recurrence ?? null,
         expired: false,
         reminder_sent_at: null,
@@ -596,6 +605,7 @@ export const useAppStore = create<State>()((set, get) => ({
           deadline: task.deadline,
           urgency: task.urgency,
           complexity: task.complexity,
+          scored: task.scored,
           recurrence: task.recurrence,
           subtasks: task.subtasks,
         })
@@ -649,7 +659,7 @@ export const useAppStore = create<State>()((set, get) => ({
     const nowIso = new Date().toISOString()
     const { data: toExpire } = await supabase
       .from('tasks')
-      .select('id, title, urgency, complexity, community_id, macro_objective_id, category, deadline, recurrence, subtasks(*)')
+      .select('id, title, urgency, complexity, scored, community_id, macro_objective_id, category, deadline, recurrence, subtasks(*)')
       .eq('user_id', authUser.id)
       .eq('completed', false)
       .eq('expired', false)
@@ -690,6 +700,7 @@ export const useAppStore = create<State>()((set, get) => ({
             deadline: t.deadline,
             urgency: t.urgency as Severity,
             complexity: (t.complexity as Complexity) ?? 'media',
+            scored: (t.scored as boolean | null) ?? true,
             recurrence: t.recurrence as Recurrence,
             subtasks: (t.subtasks ?? []).map(mapSubtask),
           }),
@@ -734,7 +745,6 @@ export const useAppStore = create<State>()((set, get) => ({
         tasksExpired: stats.tasksExpired,
         subtasksMissed: stats.subtasksMissed,
         positivePoints: stats.positivePoints,
-        xp: stats.xp,
         tasksCompleted: stats.tasksCompleted,
         subtasksCompleted: stats.subtasksCompleted,
         communityCount: stats.communityCount,
