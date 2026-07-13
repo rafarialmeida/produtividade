@@ -160,6 +160,7 @@ interface State {
   checkExpirations: () => Promise<void>
   assignTask: (taskId: string, assigneeId: string) => Promise<string | null>
   assignSubtask: (subtaskId: string, assigneeId: string | null) => Promise<string | null>
+  setTaskBlocked: (taskId: string, blocked: boolean, reason?: string) => Promise<string | null>
 
   // notifications
   markNotificationRead: (id: string) => Promise<void>
@@ -214,6 +215,10 @@ function mapTask(row: Record<string, unknown>): Task {
     expired: row.expired as boolean,
     scored: (row.scored as boolean | null) ?? true,
     recurrence: (row.recurrence as Recurrence | null) ?? undefined,
+    blocked: (row.blocked as boolean | null) ?? false,
+    blockedReason: (row.blocked_reason as string | null) ?? undefined,
+    blockedAt: (row.blocked_at as string | null) ?? undefined,
+    blockedBy: (row.blocked_by as string | null) ?? undefined,
     deletedAt: (row.deleted_at as string | null) ?? undefined,
     createdAt: row.created_at as string,
   }
@@ -744,6 +749,13 @@ export const useAppStore = create<State>()((set, get) => ({
     return null
   },
 
+  setTaskBlocked: async (taskId, blocked, reason) => {
+    const { error } = await supabase.rpc('set_task_blocked', { _task_id: taskId, _blocked: blocked, _reason: reason ?? null })
+    if (error) return error.message
+    await get().refreshAll()
+    return null
+  },
+
   rescheduleTask: async (taskId, deadline) => {
     await supabase.from('tasks').update({ deadline, reminder_sent_at: null, expired: false }).eq('id', taskId)
     await get().refreshAll()
@@ -759,6 +771,7 @@ export const useAppStore = create<State>()((set, get) => ({
       .eq('user_id', authUser.id)
       .eq('completed', false)
       .eq('expired', false)
+      .eq('blocked', false)
       .lt('deadline', nowIso)
 
     if (!toExpire || toExpire.length === 0) return

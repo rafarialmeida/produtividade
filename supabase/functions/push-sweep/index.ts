@@ -169,6 +169,7 @@ async function handleSweep(): Promise<Response> {
     )
     .eq('completed', false)
     .eq('expired', false)
+    .eq('blocked', false)
     .lt('deadline', nowIso)
 
   const expired = (toExpire ?? []) as unknown as TaskRow[]
@@ -215,6 +216,7 @@ async function handleSweep(): Promise<Response> {
     .select('id, title, urgency, user_id, deadline, profiles(notify_reminder, notify_only_urgent)')
     .eq('completed', false)
     .eq('expired', false)
+    .eq('blocked', false)
     .is('reminder_sent_at', null)
     .lte('deadline', reminderThreshold)
     .gt('deadline', nowIso)

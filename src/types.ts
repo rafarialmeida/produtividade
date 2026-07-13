@@ -158,6 +158,10 @@ export interface Task {
   expired: boolean
   scored: boolean
   recurrence?: Recurrence
+  blocked: boolean
+  blockedReason?: string
+  blockedAt?: string
+  blockedBy?: string
   deletedAt?: string
   createdAt: string
 }

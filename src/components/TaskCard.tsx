@@ -1,5 +1,22 @@
 import { useState } from 'react'
-import { CalendarClock, CheckCircle2, Circle, Clock, Pencil, Play, Repeat, RotateCcw, Tag, Target, Trash2, TriangleAlert, User, UserCog } from 'lucide-react'
+import {
+  CalendarClock,
+  CheckCircle2,
+  Circle,
+  Clock,
+  Lock,
+  Pencil,
+  Play,
+  Repeat,
+  RotateCcw,
+  Tag,
+  Target,
+  Trash2,
+  TriangleAlert,
+  Unlock,
+  User,
+  UserCog,
+} from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import type { Task } from '../types'
 import { RECURRENCE_LABEL } from '../types'
@@ -9,6 +26,7 @@ import { getTaskStatus, TASK_STATUS_CONFIG } from '../utils/taskStatus'
 import { formatDeadline, formatRelative, isNearDeadline, isPastDeadline } from '../utils/date'
 import TaskForm from './TaskForm'
 import AssignTaskModal from './AssignTaskModal'
+import BlockTaskModal from './BlockTaskModal'
 import CompleteTaskModal from './CompleteTaskModal'
 
 export default function TaskCard({
@@ -27,6 +45,7 @@ export default function TaskCard({
   const completeTask = useAppStore((s) => s.completeTask)
   const reopenTask = useAppStore((s) => s.reopenTask)
   const deleteTask = useAppStore((s) => s.deleteTask)
+  const setTaskBlocked = useAppStore((s) => s.setTaskBlocked)
   const owner = useAppStore((s) => s.getUserById(task.userId))
   const users = useAppStore((s) => s.users)
   const community = useAppStore((s) => (task.communityId ? s.getCommunityById(task.communityId) : undefined))
@@ -37,16 +56,22 @@ export default function TaskCard({
     community && authUser && (authUser.role === 'admin' || community.adminIds.includes(authUser.id)),
   )
   const isWorkCommunity = community?.type === 'trabalho'
+  const canBlock = isOwner || isCommunityAdmin
   const taskStatus = getTaskStatus(task)
   const statusCfg = TASK_STATUS_CONFIG[taskStatus]
   const [editing, setEditing] = useState(false)
   const [assigning, setAssigning] = useState(false)
   const [completing, setCompleting] = useState(false)
+  const [blocking, setBlocking] = useState(false)
 
   function handleDelete() {
     if (window.confirm(`Excluir a tarefa "${task.title}"? Ela vai pra lixeira e dá pra restaurar depois.`)) {
       deleteTask(task.id)
     }
+  }
+
+  function handleUnblock() {
+    setTaskBlocked(task.id, false)
   }
 
   function handleComplete() {
@@ -58,10 +83,11 @@ export default function TaskCard({
   const doneCount = task.subtasks.filter((s) => s.done).length
   const allSubtasksDone = doneCount === task.subtasks.length
 
-  const cardStatus = task.completed ? 'completed' : task.expired ? 'expired' : near ? 'near' : 'active'
+  const cardStatus = task.completed ? 'completed' : task.blocked ? 'blocked' : task.expired ? 'expired' : near ? 'near' : 'active'
 
   const statusStyles: Record<string, string> = {
     completed: 'border-white/10 opacity-70',
+    blocked: 'border-slate-400/30 bg-slate-500/[0.04]',
     expired: 'border-rose-500/40 bg-rose-500/[0.04]',
     near: 'border-amber-500/40 bg-amber-500/[0.04]',
     active: 'border-white/10',
@@ -95,6 +121,14 @@ export default function TaskCard({
                 {statusCfg.label}
               </span>
             )}
+            {task.blocked && (
+              <span
+                title={task.blockedReason}
+                className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-300 bg-slate-500/10 border border-slate-400/30 rounded px-1.5 py-0.5 light:text-slate-600"
+              >
+                <Lock size={9} /> Bloqueada{task.blockedReason ? `: ${task.blockedReason}` : ''}
+              </span>
+            )}
           </div>
           {showOwner && owner && <p className="text-xs text-zinc-500 mt-1">Responsável: {owner.name}</p>}
           {showCommunity && (
@@ -122,6 +156,15 @@ export default function TaskCard({
               className="p-1.5 rounded-lg text-zinc-600 hover:text-sky-300 hover:bg-sky-500/10 transition-colors"
             >
               <UserCog size={13} />
+            </button>
+          )}
+          {canBlock && !task.completed && (
+            <button
+              onClick={() => (task.blocked ? handleUnblock() : setBlocking(true))}
+              title={task.blocked ? 'Desbloquear tarefa' : 'Bloquear tarefa (pausa o prazo)'}
+              className="p-1.5 rounded-lg text-zinc-600 hover:text-amber-300 hover:bg-amber-500/10 transition-colors"
+            >
+              {task.blocked ? <Unlock size={13} /> : <Lock size={13} />}
             </button>
           )}
           {isOwner && (
@@ -245,6 +288,7 @@ export default function TaskCard({
       )}
       {assigning && <AssignTaskModal task={task} onClose={() => setAssigning(false)} />}
       {completing && <CompleteTaskModal task={task} onClose={() => setCompleting(false)} />}
+      {blocking && <BlockTaskModal task={task} onClose={() => setBlocking(false)} />}
     </div>
   )
 }
