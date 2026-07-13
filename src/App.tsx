@@ -5,6 +5,7 @@ import { useAppStore } from './store/useStore'
 import { isSupabaseConfigured } from './lib/supabase'
 import Layout from './components/Layout'
 import LoginPage from './pages/LoginPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import MyDay from './pages/MyDay'
 import CommunitiesHub from './pages/CommunitiesHub'
 import GlobalWall from './pages/GlobalWall'
@@ -68,6 +69,7 @@ function App() {
     <Routes>
       <Route path="/" element={<RootRedirect />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route
         path="/day"
         element={

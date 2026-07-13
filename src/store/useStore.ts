@@ -127,6 +127,7 @@ interface State {
   signInWithGoogle: () => Promise<void>
   signInWithMicrosoft: () => Promise<void>
   signOut: () => Promise<void>
+  sendPasswordReset: (email: string) => Promise<string | null>
   setOnlineUserIds: (ids: Set<string>) => void
   completeOnboarding: () => Promise<void>
 
@@ -362,6 +363,13 @@ export const useAppStore = create<State>()((set, get) => ({
 
   signOut: async () => {
     await supabase.auth.signOut()
+  },
+
+  sendPasswordReset: async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
+    return error?.message ?? null
   },
 
   refreshAll: async () => {

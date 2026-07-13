@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Loader2, Lock, LogIn, Mail, Moon, Sun, User, UserPlus, Zap } from 'lucide-react'
+import { ArrowLeft, Loader2, Lock, LogIn, Mail, Moon, Sun, User, UserPlus, Zap } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { useTheme } from '../hooks/useTheme'
 
@@ -12,6 +12,7 @@ export default function LoginPage() {
   const signUp = useAppStore((s) => s.signUp)
   const signInWithGoogle = useAppStore((s) => s.signInWithGoogle)
   const signInWithMicrosoft = useAppStore((s) => s.signInWithMicrosoft)
+  const sendPasswordReset = useAppStore((s) => s.sendPasswordReset)
 
   const [mode, setMode] = useState<Mode>('login')
   const [name, setName] = useState('')
@@ -22,6 +23,37 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<'google' | 'microsoft' | null>(null)
   const { theme, toggleTheme } = useTheme()
+
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotError, setForgotError] = useState('')
+  const [forgotMessage, setForgotMessage] = useState('')
+  const [forgotSubmitting, setForgotSubmitting] = useState(false)
+
+  function openForgotPassword() {
+    setForgotEmail(email)
+    setForgotError('')
+    setForgotMessage('')
+    setShowForgotPassword(true)
+  }
+
+  async function handleForgotSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setForgotError('')
+    setForgotMessage('')
+    if (!forgotEmail.trim()) {
+      setForgotError('Informe seu e-mail.')
+      return
+    }
+    setForgotSubmitting(true)
+    try {
+      const resetError = await sendPasswordReset(forgotEmail.trim())
+      if (resetError) setForgotError(resetError)
+      else setForgotMessage('Se esse e-mail estiver cadastrado, você vai receber um link para redefinir a senha.')
+    } finally {
+      setForgotSubmitting(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -84,93 +116,146 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="glass-panel rounded-2xl p-1.5 flex gap-1 mb-6">
-          <TabButton active={mode === 'login'} onClick={() => { setMode('login'); setError(''); setConfirmationMessage('') }}>
-            Entrar
-          </TabButton>
-          <TabButton active={mode === 'signup'} onClick={() => { setMode('signup'); setError(''); setConfirmationMessage('') }}>
-            Criar conta
-          </TabButton>
-        </div>
-
-        <div className="glass-panel rounded-2xl p-6 sm:p-7 flex flex-col gap-5">
-          <div className="flex flex-col gap-2.5">
+        {showForgotPassword ? (
+          <div className="glass-panel rounded-2xl p-6 sm:p-7 flex flex-col gap-5">
             <button
               type="button"
-              onClick={() => handleOAuth('google')}
-              disabled={oauthLoading !== null}
-              className="flex items-center justify-center gap-2.5 rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] text-sm font-medium text-white py-2.5 transition-colors disabled:opacity-50 light:border-black/15 light:bg-black/[0.02] light:hover:bg-black/[0.05] light:text-zinc-900"
+              onClick={() => setShowForgotPassword(false)}
+              className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700 -mb-1 self-start"
             >
-              {oauthLoading === 'google' ? <Loader2 size={16} className="animate-spin" /> : <GoogleIcon />}
-              Continuar com Google
+              <ArrowLeft size={13} /> Voltar para login
             </button>
-            <button
-              type="button"
-              onClick={() => handleOAuth('microsoft')}
-              disabled={oauthLoading !== null}
-              className="flex items-center justify-center gap-2.5 rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] text-sm font-medium text-white py-2.5 transition-colors disabled:opacity-50 light:border-black/15 light:bg-black/[0.02] light:hover:bg-black/[0.05] light:text-zinc-900"
-            >
-              {oauthLoading === 'microsoft' ? <Loader2 size={16} className="animate-spin" /> : <MicrosoftIcon />}
-              Continuar com Microsoft
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-white/10 light:bg-black/10" />
-            <span className="text-[11px] text-zinc-600">ou</span>
-            <div className="h-px flex-1 bg-white/10 light:bg-black/10" />
-          </div>
-
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            {mode === 'signup' && (
+            <div>
+              <h2 className="text-base font-bold text-white light:text-zinc-900">Recuperar senha</h2>
+              <p className="text-xs text-zinc-500 mt-1">
+                Informe seu e-mail e enviaremos um link para você redefinir a senha.
+              </p>
+            </div>
+            <form onSubmit={handleForgotSubmit} className="flex flex-col gap-4">
               <div>
                 <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
-                  <User size={13} /> Nome
+                  <Mail size={13} /> E-mail
                 </label>
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome completo" className="input" />
+                <input
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  type="email"
+                  placeholder="voce@exemplo.com"
+                  className="input"
+                />
               </div>
-            )}
-            <div>
-              <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
-                <Mail size={13} /> E-mail
-              </label>
-              <input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                type="email"
-                placeholder="voce@exemplo.com"
-                className="input"
-              />
-            </div>
-            <div>
-              <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
-                <Lock size={13} /> Senha
-              </label>
-              <input
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                type="password"
-                placeholder="••••••••"
-                minLength={6}
-                className="input"
-              />
+
+              {forgotError && <p className="text-xs text-rose-400">{forgotError}</p>}
+              {forgotMessage && <p className="text-xs text-emerald-400">{forgotMessage}</p>}
+
+              <button type="submit" disabled={forgotSubmitting} className="btn-primary mt-1">
+                {forgotSubmitting ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
+                Enviar link de recuperação
+              </button>
+            </form>
+          </div>
+        ) : (
+          <>
+            <div className="glass-panel rounded-2xl p-1.5 flex gap-1 mb-6">
+              <TabButton active={mode === 'login'} onClick={() => { setMode('login'); setError(''); setConfirmationMessage('') }}>
+                Entrar
+              </TabButton>
+              <TabButton active={mode === 'signup'} onClick={() => { setMode('signup'); setError(''); setConfirmationMessage('') }}>
+                Criar conta
+              </TabButton>
             </div>
 
-            {error && <p className="text-xs text-rose-400">{error}</p>}
-            {confirmationMessage && <p className="text-xs text-emerald-400">{confirmationMessage}</p>}
+            <div className="glass-panel rounded-2xl p-6 sm:p-7 flex flex-col gap-5">
+              <div className="flex flex-col gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleOAuth('google')}
+                  disabled={oauthLoading !== null}
+                  className="flex items-center justify-center gap-2.5 rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] text-sm font-medium text-white py-2.5 transition-colors disabled:opacity-50 light:border-black/15 light:bg-black/[0.02] light:hover:bg-black/[0.05] light:text-zinc-900"
+                >
+                  {oauthLoading === 'google' ? <Loader2 size={16} className="animate-spin" /> : <GoogleIcon />}
+                  Continuar com Google
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOAuth('microsoft')}
+                  disabled={oauthLoading !== null}
+                  className="flex items-center justify-center gap-2.5 rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] text-sm font-medium text-white py-2.5 transition-colors disabled:opacity-50 light:border-black/15 light:bg-black/[0.02] light:hover:bg-black/[0.05] light:text-zinc-900"
+                >
+                  {oauthLoading === 'microsoft' ? <Loader2 size={16} className="animate-spin" /> : <MicrosoftIcon />}
+                  Continuar com Microsoft
+                </button>
+              </div>
 
-            <button type="submit" disabled={submitting} className="btn-primary mt-1">
-              {submitting ? (
-                <Loader2 size={15} className="animate-spin" />
-              ) : mode === 'signup' ? (
-                <UserPlus size={15} />
-              ) : (
-                <LogIn size={15} />
-              )}
-              {mode === 'signup' ? 'Criar conta' : 'Entrar'}
-            </button>
-          </form>
-        </div>
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-white/10 light:bg-black/10" />
+                <span className="text-[11px] text-zinc-600">ou</span>
+                <div className="h-px flex-1 bg-white/10 light:bg-black/10" />
+              </div>
+
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                {mode === 'signup' && (
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
+                      <User size={13} /> Nome
+                    </label>
+                    <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome completo" className="input" />
+                  </div>
+                )}
+                <div>
+                  <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
+                    <Mail size={13} /> E-mail
+                  </label>
+                  <input
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    type="email"
+                    placeholder="voce@exemplo.com"
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600">
+                      <Lock size={13} /> Senha
+                    </label>
+                    {mode === 'login' && (
+                      <button
+                        type="button"
+                        onClick={openForgotPassword}
+                        className="text-xs text-purple-300 hover:text-purple-200 light:text-purple-600 light:hover:text-purple-700"
+                      >
+                        Esqueceu a senha?
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    type="password"
+                    placeholder="••••••••"
+                    minLength={6}
+                    className="input"
+                  />
+                </div>
+
+                {error && <p className="text-xs text-rose-400">{error}</p>}
+                {confirmationMessage && <p className="text-xs text-emerald-400">{confirmationMessage}</p>}
+
+                <button type="submit" disabled={submitting} className="btn-primary mt-1">
+                  {submitting ? (
+                    <Loader2 size={15} className="animate-spin" />
+                  ) : mode === 'signup' ? (
+                    <UserPlus size={15} />
+                  ) : (
+                    <LogIn size={15} />
+                  )}
+                  {mode === 'signup' ? 'Criar conta' : 'Entrar'}
+                </button>
+              </form>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
