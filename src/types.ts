@@ -56,6 +56,7 @@ export interface NotificationPreferences {
   notifyExpired: boolean
   notifyCompleted: boolean
   notifyOnlyUrgent: boolean
+  notifyWeeklyDigest: boolean
 }
 
 export interface User {
@@ -74,6 +75,7 @@ export interface AuthUser extends NotificationPreferences {
   role: Role
   avatarSeed: string
   avatarUrl?: string
+  onboardingCompletedAt?: string
 }
 
 export interface PublicProfile {

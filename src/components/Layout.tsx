@@ -7,6 +7,7 @@ import { usePresence } from '../hooks/usePresence'
 import { useTheme } from '../hooks/useTheme'
 import { getLevelInfo } from '../utils/level'
 import NotificationToasts from './NotificationToasts'
+import OnboardingTour from './OnboardingTour'
 import OnlineDot from './OnlineDot'
 import PushToggle from './PushToggle'
 import NotificationPreferencesModal from './NotificationPreferencesModal'
@@ -188,6 +189,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       )}
       {showPreferences && <NotificationPreferencesModal onClose={() => setShowPreferences(false)} />}
       {showProfile && user && <ProfileModal userId={user.id} onClose={() => setShowProfile(false)} />}
+      {user && !user.onboardingCompletedAt && <OnboardingTour />}
     </div>
   )
 }

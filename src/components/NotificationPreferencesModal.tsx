@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom'
-import { BellRing, CheckCircle2, Clock, Settings2, TriangleAlert, X } from 'lucide-react'
+import { BarChart3, BellRing, CheckCircle2, Clock, Settings2, TriangleAlert, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 
 function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
@@ -100,6 +100,22 @@ export default function NotificationPreferencesModal({ onClose }: { onClose: () 
             <Toggle
               checked={authUser.notifyCompleted}
               onChange={(v) => updateNotificationPreferences({ notifyCompleted: v })}
+            />
+          </div>
+
+          <div className="flex items-start justify-between gap-3 border-t border-white/5 pt-5">
+            <div className="flex gap-2.5">
+              <BarChart3 size={16} className="text-sky-300 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-white light:text-zinc-900">Resumo semanal</p>
+                <p className="text-xs text-zinc-500">
+                  Toda semana, quantas tarefas você concluiu (vs a semana anterior) e sua posição no Muro Global.
+                </p>
+              </div>
+            </div>
+            <Toggle
+              checked={authUser.notifyWeeklyDigest}
+              onChange={(v) => updateNotificationPreferences({ notifyWeeklyDigest: v })}
             />
           </div>
 

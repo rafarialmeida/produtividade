@@ -125,6 +125,7 @@ interface State {
   signInWithMicrosoft: () => Promise<void>
   signOut: () => Promise<void>
   setOnlineUserIds: (ids: Set<string>) => void
+  completeOnboarding: () => Promise<void>
 
   refreshAll: () => Promise<void>
 
@@ -751,8 +752,17 @@ export const useAppStore = create<State>()((set, get) => ({
         ...(prefs.notifyExpired !== undefined && { notify_expired: prefs.notifyExpired }),
         ...(prefs.notifyCompleted !== undefined && { notify_completed: prefs.notifyCompleted }),
         ...(prefs.notifyOnlyUrgent !== undefined && { notify_only_urgent: prefs.notifyOnlyUrgent }),
+        ...(prefs.notifyWeeklyDigest !== undefined && { notify_weekly_digest: prefs.notifyWeeklyDigest }),
       })
       .eq('id', authUser.id)
+  },
+
+  completeOnboarding: async () => {
+    const authUser = get().authUser
+    if (!authUser) return
+    const now = new Date().toISOString()
+    set({ authUser: { ...authUser, onboardingCompletedAt: now } })
+    await supabase.from('profiles').update({ onboarding_completed_at: now }).eq('id', authUser.id)
   },
 
   fetchGlobalWall: async () => {
@@ -877,6 +887,8 @@ async function loadAuthUser(userId: string, email: string) {
       notifyExpired: profile.notify_expired,
       notifyCompleted: profile.notify_completed,
       notifyOnlyUrgent: profile.notify_only_urgent,
+      notifyWeeklyDigest: profile.notify_weekly_digest,
+      onboardingCompletedAt: profile.onboarding_completed_at ?? undefined,
     },
     authLoading: false,
   })

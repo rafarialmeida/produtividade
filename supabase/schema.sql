@@ -18,6 +18,8 @@ create table if not exists public.profiles (
   notify_expired boolean not null default true,
   notify_completed boolean not null default true,
   notify_only_urgent boolean not null default false,
+  notify_weekly_digest boolean not null default true,
+  onboarding_completed_at timestamptz,
   avatar_url text,
   created_at timestamptz not null default now()
 );
@@ -745,6 +747,104 @@ as $$
   where c.type = 'trabalho';
 $$;
 
+-- Estatísticas semanais por usuário: tarefas concluídas e pontos ganhos essa
+-- semana vs a semana passada (tarefa + subtarefas, creditadas a quem
+-- executou, ponderadas por complexidade, só entregas pontuadas), mais a
+-- posição atual no ranking individual do Muro Global (mesmo critério de
+-- personal_positive_points usado lá, só entre quem já está em pelo menos 1
+-- comunidade). Usada pela Edge Function "weekly-digest" (via service role,
+-- não precisa de grant para "authenticated").
+create or replace function public.weekly_digest_stats()
+returns table (
+  user_id uuid,
+  tasks_this_week bigint,
+  tasks_last_week bigint,
+  points_this_week numeric,
+  points_last_week numeric,
+  global_rank bigint,
+  total_ranked bigint
+)
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  with task_info as (
+    select
+      t.id,
+      t.user_id,
+      t.completed_at,
+      t.scored,
+      case t.complexity
+        when 'baixa' then 1
+        when 'media' then 1.5
+        when 'alta' then 2
+        when 'critica' then 3
+        else 1
+      end as complexity_mult
+    from public.tasks t
+    where t.completed and t.completed_at is not null
+  ),
+  task_weekly as (
+    select
+      user_id,
+      count(*) filter (where completed_at >= date_trunc('week', now())) as tasks_this_week,
+      count(*) filter (where completed_at >= date_trunc('week', now()) - interval '7 days'
+                          and completed_at < date_trunc('week', now())) as tasks_last_week,
+      coalesce(sum(complexity_mult) filter (where scored and completed_at >= date_trunc('week', now())), 0) as points_this_week,
+      coalesce(sum(complexity_mult) filter (where scored and completed_at >= date_trunc('week', now()) - interval '7 days'
+                          and completed_at < date_trunc('week', now())), 0) as points_last_week
+    from task_info
+    group by user_id
+  ),
+  subtask_weekly as (
+    select
+      coalesce(s.assignee_id, ti.user_id) as user_id,
+      count(*) filter (where ti.completed_at >= date_trunc('week', now())) as tasks_this_week,
+      count(*) filter (where ti.completed_at >= date_trunc('week', now()) - interval '7 days'
+                          and ti.completed_at < date_trunc('week', now())) as tasks_last_week,
+      coalesce(sum(ti.complexity_mult) filter (where ti.scored and ti.completed_at >= date_trunc('week', now())), 0) as points_this_week,
+      coalesce(sum(ti.complexity_mult) filter (where ti.scored and ti.completed_at >= date_trunc('week', now()) - interval '7 days'
+                          and ti.completed_at < date_trunc('week', now())), 0) as points_last_week
+    from public.subtasks s
+    join task_info ti on ti.id = s.task_id
+    group by coalesce(s.assignee_id, ti.user_id)
+  ),
+  combined as (
+    select
+      user_id,
+      sum(tasks_this_week) as tasks_this_week,
+      sum(tasks_last_week) as tasks_last_week,
+      sum(points_this_week) as points_this_week,
+      sum(points_last_week) as points_last_week
+    from (
+      select * from task_weekly
+      union all
+      select * from subtask_weekly
+    ) u
+    group by user_id
+  ),
+  ranked as (
+    select
+      gw.user_id,
+      row_number() over (order by gw.personal_positive_points desc) as global_rank,
+      count(*) over () as total_ranked
+    from public.global_wall() gw
+    where gw.community_count > 0
+  )
+  select
+    p.id as user_id,
+    coalesce(c.tasks_this_week, 0) as tasks_this_week,
+    coalesce(c.tasks_last_week, 0) as tasks_last_week,
+    coalesce(round(c.points_this_week::numeric, 1), 0) as points_this_week,
+    coalesce(round(c.points_last_week::numeric, 1), 0) as points_last_week,
+    r.global_rank,
+    r.total_ranked
+  from public.profiles p
+  left join combined c on c.user_id = p.id
+  left join ranked r on r.user_id = p.id;
+$$;
+
 grant execute on function public.is_admin() to authenticated;
 grant execute on function public.is_community_member(uuid) to authenticated;
 grant execute on function public.is_community_creator(uuid) to authenticated;
@@ -786,8 +886,11 @@ create policy "profiles_update_own" on public.profiles for update to authenticat
   using (id = auth.uid()) with check (id = auth.uid());
 
 revoke update on public.profiles from authenticated;
-grant update (name, avatar_seed, avatar_url, notify_reminder, notify_expired, notify_completed, notify_only_urgent)
-  on public.profiles to authenticated;
+grant update (
+  name, avatar_seed, avatar_url,
+  notify_reminder, notify_expired, notify_completed, notify_only_urgent, notify_weekly_digest,
+  onboarding_completed_at
+) on public.profiles to authenticated;
 
 -- communities: visível para quem é membro (ou admin). Criar é livre para qualquer
 -- autenticado (via a função create_community). Editar/excluir só criador ou admin.
