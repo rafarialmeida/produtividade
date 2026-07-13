@@ -50,6 +50,22 @@ export default function CommunityDashboard({
   const stats: MemberStat[] = useMemo(() => {
     if (!community) return []
     const weeksElapsed = Math.max(1, (Date.now() - new Date(community.createdAt).getTime()) / (7 * 24 * 60 * 60 * 1000))
+
+    // Pontos positivos são creditados a quem efetivamente fez o trabalho: a
+    // tarefa em si sempre credita o responsável pela tarefa, mas cada
+    // subtarefa credita seu próprio responsável (se atribuído), não
+    // necessariamente o dono da tarefa.
+    const positiveByUser = new Map<string, number>()
+    for (const t of communityTasks) {
+      if (!t.completed) continue
+      const mult = COMPLEXITY_MULTIPLIER[t.complexity]
+      positiveByUser.set(t.userId, (positiveByUser.get(t.userId) ?? 0) + mult)
+      for (const s of t.subtasks) {
+        const creditedTo = s.assigneeId ?? t.userId
+        positiveByUser.set(creditedTo, (positiveByUser.get(creditedTo) ?? 0) + mult)
+      }
+    }
+
     return community.memberIds.map((id) => {
       const user = users.find((u) => u.id === id)
       const memberTasks = communityTasks.filter((t) => t.userId === id)
@@ -67,7 +83,7 @@ export default function CommunityDashboard({
         completed: completed.length,
         expired: expired.length,
         lostPoints: expired.reduce((sum, t) => sum + URGENCY_POINTS[t.urgency] * COMPLEXITY_MULTIPLIER[t.complexity], 0),
-        positivePoints: completed.reduce((sum, t) => sum + (1 + t.subtasks.length) * COMPLEXITY_MULTIPLIER[t.complexity], 0),
+        positivePoints: positiveByUser.get(id) ?? 0,
         hours: completed.reduce((sum, t) => sum + (t.minutesSpent ?? 0), 0) / 60,
         perWeek: completed.length / weeksElapsed,
       }

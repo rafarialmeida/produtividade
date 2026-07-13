@@ -428,16 +428,21 @@ $$;
 -- que ninguém precise enxergar as tarefas de comunidades das quais não participa.
 -- Multiplicado pela complexidade da tarefa (baixa 1x / média 1.5x / alta 2x /
 -- crítica 3x) para que poucas tarefas complexas valham mais que muitas tarefas
--- fáceis, e ignorando tarefas marcadas como "sem pontuação" (scored = false):
---   - lost_points: pontos perdidos por urgência (Baixa 1/Média 3/Alta 5/Crítica 10) × complexidade.
---   - positive_points: (1 + nº de subtarefas) × complexidade, por tarefa concluída.
---   - work_xp / personal_xp: mesma conta do positive_points, descontando quando uma
---     tarefa expira, mas separadas por origem — work_xp só conta tarefas de
---     comunidades do tipo Trabalho, personal_xp conta o resto (tarefas sem
---     comunidade + comunidades de Competição). Evita comparar injustamente quem
---     usa o app para o trabalho com quem usa pra listas do dia a dia.
+-- fáceis, e ignorando tarefas marcadas como "sem pontuação" (scored = false).
+-- Pontos positivos/XP são decompostos por responsável: a tarefa em si sempre
+-- credita quem é responsável por ela (tasks.user_id, atualizado via
+-- assign_task), mas cada subtarefa credita seu próprio responsável
+-- (subtasks.assignee_id), caindo pro dono da tarefa se não tiver um
+-- responsável específico — assim quem efetivamente faz o trabalho é quem
+-- pontua, não quem só criou ou é dono da tarefa.
+--   - lost_points: pontos perdidos por urgência (Baixa 1/Média 3/Alta 5/Crítica 10) ×
+--     complexidade, sempre do dono da tarefa (é sobre perder o prazo como um todo).
+--   - work_xp / personal_xp: soma da base da tarefa + de cada subtarefa,
+--     separadas por origem — work_xp só conta tarefas de comunidades do tipo
+--     Trabalho, personal_xp conta o resto (tarefas sem comunidade + comunidades
+--     de Competição).
 --   - lead_time_avg_hours / cycle_time_avg_hours: médias de criação->conclusão e
---     início->conclusão, cross-comunidade, em horas.
+--     início->conclusão, cross-comunidade, em horas (sempre do dono da tarefa).
 create function public.global_wall()
 returns table (
   user_id uuid,
@@ -462,15 +467,7 @@ security definer
 stable
 set search_path = public
 as $$
-  with subtask_agg as (
-    select
-      task_id,
-      count(*) as subtask_count,
-      count(*) filter (where not done) as not_done_count
-    from public.subtasks
-    group by task_id
-  ),
-  task_agg as (
+  with task_info as (
     select
       t.id,
       t.user_id,
@@ -481,8 +478,6 @@ as $$
       t.created_at,
       t.completed_at,
       t.started_at,
-      coalesce(sa.subtask_count, 0) as subtask_count,
-      coalesce(sa.not_done_count, 0) as not_done_count,
       case t.complexity
         when 'baixa' then 1
         when 'media' then 1.5
@@ -492,8 +487,68 @@ as $$
       end as complexity_mult,
       (t.community_id is not null and c.type = 'trabalho') as is_work
     from public.tasks t
-    left join subtask_agg sa on sa.task_id = t.id
     left join public.communities c on c.id = t.community_id
+  ),
+  task_scored as (
+    select
+      ti.*,
+      case
+        when ti.completed and ti.scored then ti.complexity_mult
+        when ti.expired and not ti.completed and ti.scored then -ti.complexity_mult
+        else 0
+      end as base_points
+    from task_info ti
+  ),
+  task_level as (
+    select
+      user_id,
+      count(*) filter (where completed) as tasks_completed,
+      count(*) filter (where expired and not completed) as tasks_expired,
+      coalesce(sum(case when expired and not completed and scored then
+        (case urgency
+          when 'baixa' then 1
+          when 'media' then 3
+          when 'alta' then 5
+          when 'critica' then 10
+          else 0
+        end) * complexity_mult
+      else 0 end), 0) as lost_points,
+      coalesce(sum(base_points) filter (where is_work), 0) as work_base,
+      coalesce(sum(base_points) filter (where not is_work), 0) as personal_base,
+      coalesce(sum(case when base_points > 0 then base_points else 0 end), 0) as positive_base,
+      avg(extract(epoch from (completed_at - created_at)) / 3600.0)
+        filter (where completed and completed_at is not null) as lead_time_avg_hours,
+      avg(extract(epoch from (completed_at - started_at)) / 3600.0)
+        filter (where completed and completed_at is not null and started_at is not null) as cycle_time_avg_hours
+    from task_scored
+    group by user_id
+  ),
+  subtask_rows as (
+    select
+      coalesce(s.assignee_id, ti.user_id) as credited_user_id,
+      ti.is_work,
+      ti.scored,
+      case
+        when ti.completed then ti.complexity_mult
+        when ti.expired and not ti.completed and not s.done then -ti.complexity_mult
+        else 0
+      end as sub_points,
+      ti.completed as counts_completed,
+      (ti.expired and not ti.completed and not s.done) as counts_missed
+    from public.subtasks s
+    join task_info ti on ti.id = s.task_id
+    where ti.completed or (ti.expired and not ti.completed)
+  ),
+  subtask_level as (
+    select
+      credited_user_id as user_id,
+      count(*) filter (where counts_completed) as subtasks_completed,
+      count(*) filter (where counts_missed) as subtasks_missed,
+      coalesce(sum(sub_points) filter (where scored and is_work), 0) as work_sub,
+      coalesce(sum(sub_points) filter (where scored and not is_work), 0) as personal_sub,
+      coalesce(sum(case when scored and sub_points > 0 then sub_points else 0 end), 0) as positive_sub
+    from subtask_rows
+    group by credited_user_id
   )
   select
     p.id as user_id,
@@ -501,38 +556,20 @@ as $$
     p.avatar_seed,
     p.avatar_url,
     p.role,
-    coalesce(round(sum(case when ta.expired and not ta.completed and ta.scored then
-      (case ta.urgency
-        when 'baixa' then 1
-        when 'media' then 3
-        when 'alta' then 5
-        when 'critica' then 10
-        else 0
-      end) * ta.complexity_mult
-    else 0 end)::numeric, 1), 0) as lost_points,
-    count(*) filter (where ta.expired and not ta.completed) as tasks_expired,
-    coalesce(sum(case when ta.expired and not ta.completed then ta.not_done_count else 0 end), 0) as subtasks_missed,
-    coalesce(round(sum(case when ta.completed and ta.scored then (1 + ta.subtask_count) * ta.complexity_mult else 0 end)::numeric, 1), 0) as positive_points,
-    coalesce(round(sum(case
-      when ta.completed and ta.scored and ta.is_work then (1 + ta.subtask_count) * ta.complexity_mult
-      when ta.expired and not ta.completed and ta.scored and ta.is_work then -(1 + ta.not_done_count) * ta.complexity_mult
-      else 0
-    end)::numeric, 1), 0) as work_xp,
-    coalesce(round(sum(case
-      when ta.completed and ta.scored and not ta.is_work then (1 + ta.subtask_count) * ta.complexity_mult
-      when ta.expired and not ta.completed and ta.scored and not ta.is_work then -(1 + ta.not_done_count) * ta.complexity_mult
-      else 0
-    end)::numeric, 1), 0) as personal_xp,
-    count(*) filter (where ta.completed) as tasks_completed,
-    coalesce(sum(case when ta.completed then ta.subtask_count else 0 end), 0) as subtasks_completed,
+    coalesce(round(tl.lost_points::numeric, 1), 0) as lost_points,
+    coalesce(tl.tasks_expired, 0) as tasks_expired,
+    coalesce(sl.subtasks_missed, 0) as subtasks_missed,
+    coalesce(round((coalesce(tl.positive_base, 0) + coalesce(sl.positive_sub, 0))::numeric, 1), 0) as positive_points,
+    coalesce(round((coalesce(tl.work_base, 0) + coalesce(sl.work_sub, 0))::numeric, 1), 0) as work_xp,
+    coalesce(round((coalesce(tl.personal_base, 0) + coalesce(sl.personal_sub, 0))::numeric, 1), 0) as personal_xp,
+    coalesce(tl.tasks_completed, 0) as tasks_completed,
+    coalesce(sl.subtasks_completed, 0) as subtasks_completed,
     (select count(*) from public.community_members cm where cm.user_id = p.id) as community_count,
-    round((avg(extract(epoch from (ta.completed_at - ta.created_at)) / 3600.0)
-      filter (where ta.completed and ta.completed_at is not null))::numeric, 1) as lead_time_avg_hours,
-    round((avg(extract(epoch from (ta.completed_at - ta.started_at)) / 3600.0)
-      filter (where ta.completed and ta.completed_at is not null and ta.started_at is not null))::numeric, 1) as cycle_time_avg_hours
+    round(tl.lead_time_avg_hours::numeric, 1) as lead_time_avg_hours,
+    round(tl.cycle_time_avg_hours::numeric, 1) as cycle_time_avg_hours
   from public.profiles p
-  left join task_agg ta on ta.user_id = p.id
-  group by p.id, p.name, p.avatar_seed, p.avatar_url, p.role;
+  left join task_level tl on tl.user_id = p.id
+  left join subtask_level sl on sl.user_id = p.id;
 $$;
 
 -- Perfil público de um único usuário (visível a partir do Muro Global ou das
