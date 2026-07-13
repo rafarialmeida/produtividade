@@ -31,12 +31,14 @@ export interface GlobalWallEntry {
   positivePoints: number
   personalPositivePoints: number
   personalLostPoints: number
+  personalTasksCompleted: number
+  personalTasksExpired: number
   tasksCompleted: number
   subtasksCompleted: number
   communityCount: number
 }
 
-export interface CompetitionCommunityRanking {
+export interface CommunityRankingEntry {
   communityId: string
   name: string
   memberCount: number
@@ -59,6 +61,8 @@ function mapProfileStatsRow(row: Record<string, unknown>): PublicProfile {
     positivePoints: Number(row.positive_points),
     personalPositivePoints: Number(row.personal_positive_points),
     personalLostPoints: Number(row.personal_lost_points),
+    personalTasksCompleted: Number(row.personal_tasks_completed),
+    personalTasksExpired: Number(row.personal_tasks_expired),
     workXp: Number(row.work_xp),
     personalXp: Number(row.personal_xp),
     tasksCompleted: Number(row.tasks_completed),
@@ -154,7 +158,8 @@ interface State {
   // global wall (calculado no servidor, não depende do cache local de tasks)
   fetchGlobalWall: () => Promise<GlobalWallEntry[]>
   fetchPublicProfile: (userId: string) => Promise<PublicProfile | null>
-  fetchCompetitionCommunityRankings: () => Promise<CompetitionCommunityRanking[]>
+  fetchCompetitionCommunityRankings: () => Promise<CommunityRankingEntry[]>
+  fetchWorkCommunityRankings: () => Promise<CommunityRankingEntry[]>
 
   // perfil
   updatePassword: (newPassword: string) => Promise<string | null>
@@ -762,6 +767,8 @@ export const useAppStore = create<State>()((set, get) => ({
         positivePoints: stats.positivePoints,
         personalPositivePoints: stats.personalPositivePoints,
         personalLostPoints: stats.personalLostPoints,
+        personalTasksCompleted: stats.personalTasksCompleted,
+        personalTasksExpired: stats.personalTasksExpired,
         tasksCompleted: stats.tasksCompleted,
         subtasksCompleted: stats.subtasksCompleted,
         communityCount: stats.communityCount,
@@ -778,6 +785,20 @@ export const useAppStore = create<State>()((set, get) => ({
 
   fetchCompetitionCommunityRankings: async () => {
     const { data, error } = await supabase.rpc('competition_community_rankings')
+    if (error || !data) return []
+    return (data as Record<string, unknown>[]).map((row) => ({
+      communityId: row.community_id as string,
+      name: row.name as string,
+      memberCount: Number(row.member_count),
+      tasksCompleted: Number(row.tasks_completed),
+      subtasksCompleted: Number(row.subtasks_completed),
+      leadTimeHours: row.lead_time_avg_hours == null ? undefined : Number(row.lead_time_avg_hours),
+      cycleTimeHours: row.cycle_time_avg_hours == null ? undefined : Number(row.cycle_time_avg_hours),
+    }))
+  },
+
+  fetchWorkCommunityRankings: async () => {
+    const { data, error } = await supabase.rpc('work_community_rankings')
     if (error || !data) return []
     return (data as Record<string, unknown>[]).map((row) => ({
       communityId: row.community_id as string,

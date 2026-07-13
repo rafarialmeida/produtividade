@@ -7,7 +7,7 @@ import TaskCard from '../components/TaskCard'
 import TaskForm from '../components/TaskForm'
 import InviteModal from '../components/InviteModal'
 import CommunityDashboard from '../components/CommunityDashboard'
-import CommunityMemberRanking from '../components/CommunityMemberRanking'
+import CommunityRankingBoard from '../components/CommunityRankingBoard'
 import TaskHistoryModal from '../components/TaskHistoryModal'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
@@ -185,7 +185,7 @@ export default function CommunityPage() {
         </Suspense>
       )}
 
-      {activeTab === 'ranking' && showBoard && <CommunityMemberRanking communityId={community.id} />}
+      {activeTab === 'ranking' && showBoard && <CommunityRankingBoard communityId={community.id} />}
 
       {activeTab === 'tasks' && (
         <div>

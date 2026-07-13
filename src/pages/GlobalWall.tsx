@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Crown, Flame, Globe2, Loader2, Swords, Timer, Trophy, Users } from 'lucide-react'
-import { useAppStore, type CompetitionCommunityRanking, type GlobalWallEntry } from '../store/useStore'
+import { useAppStore, type CommunityRankingEntry, type GlobalWallEntry } from '../store/useStore'
 import ProfileModal from '../components/ProfileModal'
 import { computeCompositeRanking } from '../utils/ranking'
 import { formatDurationHours } from '../utils/date'
@@ -11,7 +11,7 @@ export default function GlobalWall() {
   const fetchGlobalWall = useAppStore((s) => s.fetchGlobalWall)
   const fetchCompetitionCommunityRankings = useAppStore((s) => s.fetchCompetitionCommunityRankings)
   const [ranking, setRanking] = useState<GlobalWallEntry[]>([])
-  const [communityRanking, setCommunityRanking] = useState<CompetitionCommunityRanking[]>([])
+  const [communityRanking, setCommunityRanking] = useState<CommunityRankingEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingCommunities, setLoadingCommunities] = useState(true)
   const [tab, setTab] = useState<Tab>('positive')
@@ -173,8 +173,8 @@ export default function GlobalWall() {
                       </p>
                       <p className="text-[11px] text-zinc-500">
                         {positive
-                          ? `${entry.tasksCompleted} tarefa${entry.tasksCompleted !== 1 ? 's' : ''} concluída${entry.tasksCompleted !== 1 ? 's' : ''}`
-                          : `${entry.tasksExpired} tarefa${entry.tasksExpired !== 1 ? 's' : ''} perdida${entry.tasksExpired !== 1 ? 's' : ''}`}
+                          ? `${entry.personalTasksCompleted} tarefa${entry.personalTasksCompleted !== 1 ? 's' : ''} concluída${entry.personalTasksCompleted !== 1 ? 's' : ''}`
+                          : `${entry.personalTasksExpired} tarefa${entry.personalTasksExpired !== 1 ? 's' : ''} perdida${entry.personalTasksExpired !== 1 ? 's' : ''}`}
                       </p>
                     </div>
                   </button>

@@ -88,6 +88,8 @@ export interface PublicProfile {
   positivePoints: number
   personalPositivePoints: number
   personalLostPoints: number
+  personalTasksCompleted: number
+  personalTasksExpired: number
   workXp: number
   personalXp: number
   tasksCompleted: number

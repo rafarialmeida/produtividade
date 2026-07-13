@@ -447,6 +447,9 @@ $$;
 --     positive_points/lost_points, mas só considerando tarefas fora de
 --     comunidades de Trabalho — é o que alimenta o ranking individual do Muro
 --     Global, que é sobre tarefas gerais, não sobre desempenho no trabalho.
+--   - personal_tasks_completed / personal_tasks_expired: idem, contagens de
+--     tarefas (não pontos) só fora de comunidades de Trabalho — usadas nas
+--     legendas do ranking individual do Muro Global.
 create function public.global_wall()
 returns table (
   user_id uuid,
@@ -460,6 +463,8 @@ returns table (
   positive_points numeric,
   personal_positive_points numeric,
   personal_lost_points numeric,
+  personal_tasks_completed bigint,
+  personal_tasks_expired bigint,
   work_xp numeric,
   personal_xp numeric,
   tasks_completed bigint,
@@ -510,6 +515,8 @@ as $$
       user_id,
       count(*) filter (where completed) as tasks_completed,
       count(*) filter (where expired and not completed) as tasks_expired,
+      count(*) filter (where completed and not is_work) as personal_tasks_completed,
+      count(*) filter (where expired and not completed and not is_work) as personal_tasks_expired,
       coalesce(sum(case when expired and not completed and scored then
         (case urgency
           when 'baixa' then 1
@@ -579,6 +586,8 @@ as $$
     coalesce(round((coalesce(tl.positive_base, 0) + coalesce(sl.positive_sub, 0))::numeric, 1), 0) as positive_points,
     coalesce(round((coalesce(tl.personal_positive_base, 0) + coalesce(sl.personal_positive_sub, 0))::numeric, 1), 0) as personal_positive_points,
     coalesce(round(tl.personal_lost_points::numeric, 1), 0) as personal_lost_points,
+    coalesce(tl.personal_tasks_completed, 0) as personal_tasks_completed,
+    coalesce(tl.personal_tasks_expired, 0) as personal_tasks_expired,
     coalesce(round((coalesce(tl.work_base, 0) + coalesce(sl.work_sub, 0))::numeric, 1), 0) as work_xp,
     coalesce(round((coalesce(tl.personal_base, 0) + coalesce(sl.personal_sub, 0))::numeric, 1), 0) as personal_xp,
     coalesce(tl.tasks_completed, 0) as tasks_completed,
@@ -606,6 +615,8 @@ returns table (
   positive_points numeric,
   personal_positive_points numeric,
   personal_lost_points numeric,
+  personal_tasks_completed bigint,
+  personal_tasks_expired bigint,
   work_xp numeric,
   personal_xp numeric,
   tasks_completed bigint,
@@ -678,6 +689,62 @@ as $$
   where c.type = 'competicao';
 $$;
 
+-- Ranking de comunidades de Trabalho (a comunidade como um todo, não seus
+-- membros) — análogo ao competition_community_rankings(), mas para o tipo
+-- "trabalho". Usado dentro da própria comunidade (aba "Ranking", ao lado do
+-- Tabuleiro) pra comparar com as demais comunidades de trabalho da
+-- plataforma.
+create or replace function public.work_community_rankings()
+returns table (
+  community_id uuid,
+  name text,
+  member_count bigint,
+  tasks_completed bigint,
+  subtasks_completed bigint,
+  lead_time_avg_hours numeric,
+  cycle_time_avg_hours numeric
+)
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  with task_level as (
+    select
+      t.community_id,
+      count(*) filter (where t.completed and t.scored) as tasks_completed,
+      avg(extract(epoch from (t.completed_at - t.created_at)) / 3600.0)
+        filter (where t.completed and t.scored and t.completed_at is not null) as lead_time_avg_hours,
+      avg(extract(epoch from (t.completed_at - t.started_at)) / 3600.0)
+        filter (where t.completed and t.scored and t.completed_at is not null and t.started_at is not null) as cycle_time_avg_hours
+    from public.tasks t
+    join public.communities c on c.id = t.community_id and c.type = 'trabalho'
+    group by t.community_id
+  ),
+  subtask_level as (
+    select
+      t.community_id,
+      count(*) as subtasks_completed
+    from public.subtasks s
+    join public.tasks t on t.id = s.task_id
+    join public.communities c on c.id = t.community_id and c.type = 'trabalho'
+    where t.completed and t.scored
+    group by t.community_id
+  )
+  select
+    c.id as community_id,
+    c.name,
+    (select count(*) from public.community_members cm where cm.community_id = c.id) as member_count,
+    coalesce(tl.tasks_completed, 0) as tasks_completed,
+    coalesce(sl.subtasks_completed, 0) as subtasks_completed,
+    round(tl.lead_time_avg_hours::numeric, 1) as lead_time_avg_hours,
+    round(tl.cycle_time_avg_hours::numeric, 1) as cycle_time_avg_hours
+  from public.communities c
+  left join task_level tl on tl.community_id = c.id
+  left join subtask_level sl on sl.community_id = c.id
+  where c.type = 'trabalho';
+$$;
+
 grant execute on function public.is_admin() to authenticated;
 grant execute on function public.is_community_member(uuid) to authenticated;
 grant execute on function public.is_community_creator(uuid) to authenticated;
@@ -693,6 +760,7 @@ grant execute on function public.regenerate_invite_code(uuid) to authenticated;
 grant execute on function public.global_wall() to authenticated;
 grant execute on function public.get_public_profile(uuid) to authenticated;
 grant execute on function public.competition_community_rankings() to authenticated;
+grant execute on function public.work_community_rankings() to authenticated;
 
 -- ============================================================================
 -- ROW LEVEL SECURITY
