@@ -119,7 +119,7 @@ export default function CommunityPage() {
       <ProcrastinationWall communityId={community.id} />
 
       {tabs.length > 1 && (
-        <div className="flex gap-1 border-b border-white/5 light:border-black/10">
+        <div className="flex gap-1 overflow-x-auto border-b border-white/5 light:border-black/10">
           {tabs.map((t) => (
             <button
               key={t.key}

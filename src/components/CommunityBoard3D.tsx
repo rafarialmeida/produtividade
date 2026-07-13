@@ -125,7 +125,10 @@ export default function CommunityBoard3D({ members }: { members: BoardMember[] }
   const camDist = 5.5 + spread * 0.55
 
   return (
-    <div className="rounded-xl overflow-hidden border border-white/10 light:border-black/10" style={{ height: 380 }}>
+    <div
+      className="rounded-xl overflow-hidden border border-white/10 light:border-black/10 h-[280px] sm:h-[380px]"
+      style={{ touchAction: 'none' }}
+    >
       <Canvas shadows camera={{ position: [4.2, targetY + 2.6 + spread * 0.12, targetZ + camDist], fov: 42 }}>
         <color attach="background" args={['#0b0c12']} />
         <fog attach="fog" args={['#0b0c12', 6, 24]} />

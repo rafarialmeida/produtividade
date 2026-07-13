@@ -114,7 +114,7 @@ export default function PiecePickerModal({
 
           <div>
             <p className="text-xs font-medium text-zinc-400 light:text-zinc-600 mb-2">Cor</p>
-            <div className="grid grid-cols-10 gap-2">
+            <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
               {BOARD_COLORS.map((c) => (
                 <button
                   key={c}

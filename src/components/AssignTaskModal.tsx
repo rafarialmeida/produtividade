@@ -89,7 +89,7 @@ export default function AssignTaskModal({ task, onClose }: { task: Task; onClose
                     <select
                       value={subtaskAssignees[s.id] ?? ''}
                       onChange={(e) => setSubtaskAssignees((prev) => ({ ...prev, [s.id]: e.target.value }))}
-                      className="input !w-auto !py-1 !text-xs shrink-0"
+                      className="input !w-32 sm:!w-40 !py-1 !text-xs shrink-0"
                     >
                       <option value="">Mesmo da tarefa</option>
                       {members.map((m) => (

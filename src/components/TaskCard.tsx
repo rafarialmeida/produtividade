@@ -182,7 +182,7 @@ export default function TaskCard({
         })}
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 text-xs">
           {task.completed ? (
             <span className="flex items-center gap-1 text-emerald-400">

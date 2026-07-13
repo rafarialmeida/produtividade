@@ -67,7 +67,7 @@ export default function TaskHistoryModal({
           </button>
         </div>
 
-        <div className="px-6 pt-4 flex gap-1.5">
+        <div className="px-6 pt-4 flex flex-wrap gap-1.5">
           {filterOptions.map((f) => (
             <button
               key={f}
