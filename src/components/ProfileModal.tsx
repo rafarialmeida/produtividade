@@ -191,8 +191,8 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <LevelCard label="Nível Pessoal" icon={Star} xp={profile.personalXp} />
-              {profile.workXp !== 0 && <LevelCard label="Nível de Trabalho" icon={Briefcase} xp={profile.workXp} accent="sky" />}
+              <LevelCard label="Nível de Trabalho" icon={Briefcase} xp={profile.workXp} accent="sky" />
+              <LevelCard label="Nível de Tarefas Gerais" icon={Star} xp={profile.personalXp} />
             </div>
 
             <div className="grid grid-cols-2 gap-3">

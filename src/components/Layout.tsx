@@ -24,8 +24,8 @@ export default function Layout({ children }: { children: ReactNode }) {
   const signOut = useAppStore((s) => s.signOut)
   const [showPreferences, setShowPreferences] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
-  const personalLevelInfo = myStats ? getLevelInfo(myStats.personalXp) : null
-  const workLevelInfo = myStats && myStats.workXp !== 0 ? getLevelInfo(myStats.workXp) : null
+  const [levelMode, setLevelMode] = useState<'work' | 'personal'>('work')
+  const activeLevelInfo = myStats ? getLevelInfo(levelMode === 'work' ? myStats.workXp : myStats.personalXp) : null
   const { theme, toggleTheme } = useTheme()
 
   return (
@@ -74,32 +74,25 @@ export default function Layout({ children }: { children: ReactNode }) {
                 )}
               </nav>
               <div className="flex items-center gap-2 pl-3 border-l border-white/10 light:border-black/10 shrink-0">
-                {personalLevelInfo && (
+                {activeLevelInfo && (
                   <button
-                    onClick={() => setShowProfile(true)}
-                    title="Ver perfil (nível pessoal)"
+                    onClick={() => setLevelMode((m) => (m === 'work' ? 'personal' : 'work'))}
+                    title={
+                      levelMode === 'work'
+                        ? 'Nível de Trabalho — clique para ver o nível de tarefas gerais'
+                        : 'Nível de tarefas gerais — clique para ver o nível de Trabalho'
+                    }
                     className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border transition-colors ${
-                      personalLevelInfo.level >= 1
-                        ? 'border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 light:text-purple-600'
+                      activeLevelInfo.level >= 1
+                        ? levelMode === 'work'
+                          ? 'border-sky-500/30 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 light:text-sky-600'
+                          : 'border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 light:text-purple-600'
                         : 'border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 light:text-rose-600'
                     }`}
                   >
-                    <Star size={11} /> Nv {personalLevelInfo.level}
-                    <span className="hidden sm:inline text-zinc-400 light:text-zinc-500 font-normal">· {personalLevelInfo.xp} XP</span>
-                  </button>
-                )}
-                {workLevelInfo && (
-                  <button
-                    onClick={() => setShowProfile(true)}
-                    title="Ver perfil (nível de trabalho)"
-                    className={`hidden sm:flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border transition-colors ${
-                      workLevelInfo.level >= 1
-                        ? 'border-sky-500/30 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 light:text-sky-600'
-                        : 'border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 light:text-rose-600'
-                    }`}
-                  >
-                    <Briefcase size={11} /> Nv {workLevelInfo.level}
-                    <span className="hidden md:inline text-zinc-400 light:text-zinc-500 font-normal">· {workLevelInfo.xp} XP</span>
+                    {levelMode === 'work' ? <Briefcase size={11} /> : <Star size={11} />}
+                    Nv {activeLevelInfo.level}
+                    <span className="hidden sm:inline text-zinc-400 light:text-zinc-500 font-normal">· {activeLevelInfo.xp} XP</span>
                   </button>
                 )}
                 <div className="text-right hidden sm:block">
