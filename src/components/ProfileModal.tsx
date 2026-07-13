@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import {
   Briefcase,
   Camera,
+  Check,
   CheckCircle2,
   Crown,
   History,
@@ -51,6 +52,7 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
   const uploadAvatar = useAppStore((s) => s.uploadAvatar)
   const removeAvatar = useAppStore((s) => s.removeAvatar)
   const updatePassword = useAppStore((s) => s.updatePassword)
+  const updateName = useAppStore((s) => s.updateName)
 
   const isOwn = authUser?.id === userId
   const [profile, setProfile] = useState<PublicProfile | null>(null)
@@ -65,6 +67,10 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
   const [passwordMsg, setPasswordMsg] = useState<{ text: string; ok: boolean } | null>(null)
   const [savingPassword, setSavingPassword] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [nameDraft, setNameDraft] = useState('')
+  const [savingName, setSavingName] = useState(false)
+  const [nameError, setNameError] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -101,6 +107,35 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
     const ok = await removeAvatar()
     setRemoving(false)
     if (ok && profile) setProfile({ ...profile, avatarUrl: undefined })
+  }
+
+  function startEditingName() {
+    if (!profile) return
+    setNameDraft(profile.name)
+    setNameError('')
+    setEditingName(true)
+  }
+
+  async function handleSaveName() {
+    if (!profile) return
+    const trimmed = nameDraft.trim()
+    if (!trimmed) {
+      setNameError('Nome não pode ser vazio.')
+      return
+    }
+    setSavingName(true)
+    try {
+      const error = await updateName(trimmed)
+      if (error) {
+        setNameError(error)
+      } else {
+        setNameError('')
+        setProfile({ ...profile, name: trimmed })
+        setEditingName(false)
+      }
+    } finally {
+      setSavingName(false)
+    }
   }
 
   async function handlePasswordSubmit(e: React.FormEvent) {
@@ -179,11 +214,54 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                 )}
               </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="font-semibold text-white light:text-zinc-900 truncate">{profile.name}</p>
-                  {profile.role === 'admin' && <Crown size={13} className="text-amber-400 shrink-0" />}
-                </div>
+              <div className="min-w-0 flex-1">
+                {editingName ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      value={nameDraft}
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveName()
+                        if (e.key === 'Escape') setEditingName(false)
+                      }}
+                      autoFocus
+                      disabled={savingName}
+                      maxLength={60}
+                      className="input !py-1 !text-sm font-semibold"
+                    />
+                    <button
+                      onClick={handleSaveName}
+                      disabled={savingName}
+                      title="Salvar"
+                      className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors disabled:opacity-40 shrink-0"
+                    >
+                      <Check size={14} />
+                    </button>
+                    <button
+                      onClick={() => setEditingName(false)}
+                      disabled={savingName}
+                      title="Cancelar"
+                      className="p-1.5 rounded-lg text-zinc-500 hover:bg-white/5 transition-colors disabled:opacity-40 shrink-0"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-semibold text-white light:text-zinc-900 truncate">{profile.name}</p>
+                    {profile.role === 'admin' && <Crown size={13} className="text-amber-400 shrink-0" />}
+                    {isOwn && (
+                      <button
+                        onClick={startEditingName}
+                        title="Editar nome"
+                        className="p-1 rounded text-zinc-600 hover:text-purple-300 hover:bg-purple-500/10 transition-colors shrink-0"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                    )}
+                  </div>
+                )}
+                {nameError && <p className="text-[11px] text-rose-400 mt-0.5">{nameError}</p>}
                 <p className="text-xs text-zinc-500 mt-0.5">
                   {profile.communityCount} comunidade{profile.communityCount !== 1 ? 's' : ''}
                 </p>

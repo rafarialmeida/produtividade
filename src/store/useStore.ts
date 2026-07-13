@@ -18,6 +18,7 @@ import type {
 } from '../types'
 import { URGENCY_POINTS } from '../types'
 import { nextRecurrenceDate } from '../utils/recurrence'
+import { containsOffensiveLanguage } from '../utils/profanity'
 
 export interface GlobalWallEntry {
   userId: string
@@ -175,6 +176,7 @@ interface State {
 
   // perfil
   updatePassword: (newPassword: string) => Promise<string | null>
+  updateName: (name: string) => Promise<string | null>
   uploadAvatar: (file: Blob) => Promise<string | null>
   removeAvatar: () => Promise<boolean>
 
@@ -920,6 +922,22 @@ export const useAppStore = create<State>()((set, get) => ({
   updatePassword: async (newPassword) => {
     const { error } = await supabase.auth.updateUser({ password: newPassword })
     return error?.message ?? null
+  },
+
+  updateName: async (name) => {
+    const authUser = get().authUser
+    if (!authUser) return 'Não autenticado.'
+    const trimmed = name.trim()
+    if (!trimmed) return 'Nome não pode ser vazio.'
+    if (trimmed.length > 60) return 'Nome muito longo (máx. 60 caracteres).'
+    if (containsOffensiveLanguage(trimmed)) return 'Esse nome contém uma palavra não permitida.'
+    const { error } = await supabase.from('profiles').update({ name: trimmed }).eq('id', authUser.id)
+    if (error) return error.message.includes('OFFENSIVE_NAME') ? 'Esse nome contém uma palavra não permitida.' : error.message
+    set({
+      authUser: { ...authUser, name: trimmed },
+      users: get().users.map((u) => (u.id === authUser.id ? { ...u, name: trimmed } : u)),
+    })
+    return null
   },
 
   uploadAvatar: async (file) => {
