@@ -105,7 +105,8 @@ interface State {
   refreshAll: () => Promise<void>
 
   // community actions
-  createCommunity: (name: string, severity: Severity, type: CommunityType) => Promise<string | null>
+  createCommunity: (name: string, severity: Severity, type: CommunityType, boardEnabled?: boolean) => Promise<string | null>
+  setCommunityBoardEnabled: (communityId: string, enabled: boolean) => Promise<string | null>
   joinCommunityWithCode: (code: string) => Promise<{ error: string | null; communityName: string | null }>
   regenerateInviteCode: (communityId: string) => Promise<void>
   deleteCommunity: (communityId: string) => Promise<void>
@@ -138,7 +139,8 @@ interface State {
 
   // perfil
   updatePassword: (newPassword: string) => Promise<string | null>
-  uploadAvatar: (file: File) => Promise<string | null>
+  uploadAvatar: (file: Blob) => Promise<string | null>
+  removeAvatar: () => Promise<boolean>
 
   // selectors
   getUserById: (id: string) => User | undefined
@@ -207,6 +209,7 @@ function mapCommunity(
     adminIds,
     pieces,
     creatorId: row.creator_id as string,
+    boardEnabled: row.board_enabled as boolean,
     createdAt: row.created_at as string,
   }
 }
@@ -379,11 +382,26 @@ export const useAppStore = create<State>()((set, get) => ({
     set({ users, communities, tasks, macroObjectives, notifications, myStats, dataLoading: false })
   },
 
-  createCommunity: async (name, severity, type) => {
-    const { data, error } = await supabase.rpc('create_community', { _name: name, _type: type, _severity: severity })
+  createCommunity: async (name, severity, type, boardEnabled = true) => {
+    const { data, error } = await supabase.rpc('create_community', {
+      _name: name,
+      _type: type,
+      _severity: severity,
+      _board_enabled: boardEnabled,
+    })
     if (error || !data) return null
     await get().refreshAll()
     return (data as { id: string }).id
+  },
+
+  setCommunityBoardEnabled: async (communityId, enabled) => {
+    const { error } = await supabase.rpc('set_community_board_enabled', {
+      _community_id: communityId,
+      _enabled: enabled,
+    })
+    if (error) return error.message
+    await get().refreshAll()
+    return null
   },
 
   joinCommunityWithCode: async (code) => {
@@ -739,7 +757,7 @@ export const useAppStore = create<State>()((set, get) => ({
   uploadAvatar: async (file) => {
     const authUser = get().authUser
     if (!authUser) return null
-    const ext = file.name.split('.').pop() ?? 'jpg'
+    const ext = file instanceof File ? (file.name.split('.').pop() ?? 'jpg') : 'jpg'
     const path = `${authUser.id}/avatar.${ext}`
     const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
     if (uploadError) return null
@@ -750,8 +768,24 @@ export const useAppStore = create<State>()((set, get) => ({
     const { error: updateError } = await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', authUser.id)
     if (updateError) return null
 
-    set({ authUser: { ...authUser, avatarUrl } })
+    set({
+      authUser: { ...authUser, avatarUrl },
+      users: get().users.map((u) => (u.id === authUser.id ? { ...u, avatarUrl } : u)),
+    })
     return avatarUrl
+  },
+
+  removeAvatar: async () => {
+    const authUser = get().authUser
+    if (!authUser) return false
+    const { error } = await supabase.from('profiles').update({ avatar_url: null }).eq('id', authUser.id)
+    if (error) return false
+
+    set({
+      authUser: { ...authUser, avatarUrl: undefined },
+      users: get().users.map((u) => (u.id === authUser.id ? { ...u, avatarUrl: undefined } : u)),
+    })
+    return true
   },
 
   getUserById: (id) => get().users.find((u) => u.id === id),

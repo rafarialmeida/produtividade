@@ -7,7 +7,9 @@ import {
   History,
   Lock,
   Loader2,
+  Pencil,
   Star,
+  Trash2,
   TrendingDown,
   TrendingUp,
   TriangleAlert,
@@ -17,6 +19,7 @@ import { useAppStore } from '../store/useStore'
 import type { PublicProfile } from '../types'
 import { getLevelInfo } from '../utils/level'
 import TaskHistoryModal from './TaskHistoryModal'
+import ImageCropperModal from './ImageCropperModal'
 
 function Avatar({ profile, size = 80 }: { profile: PublicProfile; size?: number }) {
   if (profile.avatarUrl) {
@@ -43,12 +46,15 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
   const authUser = useAppStore((s) => s.authUser)
   const fetchPublicProfile = useAppStore((s) => s.fetchPublicProfile)
   const uploadAvatar = useAppStore((s) => s.uploadAvatar)
+  const removeAvatar = useAppStore((s) => s.removeAvatar)
   const updatePassword = useAppStore((s) => s.updatePassword)
 
   const isOwn = authUser?.id === userId
   const [profile, setProfile] = useState<PublicProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [removing, setRemoving] = useState(false)
+  const [cropSource, setCropSource] = useState<File | string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [newPassword, setNewPassword] = useState('')
@@ -71,14 +77,27 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
     }
   }, [userId, fetchPublicProfile])
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    setUploading(true)
-    const url = await uploadAvatar(file)
-    setUploading(false)
-    if (url && profile) setProfile({ ...profile, avatarUrl: url })
+    setCropSource(file)
     if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  async function handleCropConfirm(blob: Blob) {
+    setUploading(true)
+    const url = await uploadAvatar(blob)
+    setUploading(false)
+    setCropSource(null)
+    if (url && profile) setProfile({ ...profile, avatarUrl: url })
+  }
+
+  async function handleRemoveAvatar() {
+    if (!window.confirm('Excluir sua foto de perfil?')) return
+    setRemoving(true)
+    const ok = await removeAvatar()
+    setRemoving(false)
+    if (ok && profile) setProfile({ ...profile, avatarUrl: undefined })
   }
 
   async function handlePasswordSubmit(e: React.FormEvent) {
@@ -131,6 +150,26 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
                     className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-purple-600 hover:bg-purple-500 border-2 border-[#0d0e14] light:border-white flex items-center justify-center text-white disabled:opacity-60"
                   >
                     {uploading ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
+                  </button>
+                )}
+                {isOwn && profile.avatarUrl && (
+                  <button
+                    onClick={() => setCropSource(profile.avatarUrl!)}
+                    disabled={uploading}
+                    title="Editar enquadramento"
+                    className="absolute -bottom-1 -left-1 w-7 h-7 rounded-full bg-sky-600 hover:bg-sky-500 border-2 border-[#0d0e14] light:border-white flex items-center justify-center text-white disabled:opacity-60"
+                  >
+                    <Pencil size={11} />
+                  </button>
+                )}
+                {isOwn && profile.avatarUrl && (
+                  <button
+                    onClick={handleRemoveAvatar}
+                    disabled={removing}
+                    title="Excluir foto"
+                    className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-500 border-2 border-[#0d0e14] light:border-white flex items-center justify-center text-white disabled:opacity-60"
+                  >
+                    {removing ? <Loader2 size={10} className="animate-spin" /> : <Trash2 size={10} />}
                   </button>
                 )}
                 {isOwn && (
@@ -199,6 +238,9 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
         )}
       </div>
       {showHistory && <TaskHistoryModal userId={userId} onClose={() => setShowHistory(false)} />}
+      {cropSource && (
+        <ImageCropperModal source={cropSource} onCancel={() => setCropSource(null)} onConfirm={handleCropConfirm} />
+      )}
     </div>,
     document.body,
   )

@@ -41,7 +41,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
           {user && (
             <>
-              <nav className="flex items-center gap-1 overflow-x-auto">
+              <nav className="hidden sm:flex items-center gap-1 overflow-x-auto">
                 {NAV_ITEMS.map((item) => (
                   <NavLink
                     key={item.to}
@@ -135,7 +135,42 @@ export default function Layout({ children }: { children: ReactNode }) {
           </button>
         </div>
       </header>
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">{children}</main>
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 pb-24 sm:pb-8">{children}</main>
+      {user && (
+        <nav className="sm:hidden fixed bottom-0 inset-x-0 z-40 flex items-stretch border-t border-white/10 bg-black/80 backdrop-blur-md light:border-black/10 light:bg-white/85 pb-[env(safe-area-inset-bottom)]">
+          {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors ${
+                  isActive
+                    ? 'text-purple-300 light:text-purple-600'
+                    : 'text-zinc-500 light:text-zinc-500'
+                }`
+              }
+            >
+              <item.icon size={18} />
+              {item.label}
+            </NavLink>
+          ))}
+          {user.role === 'admin' && (
+            <NavLink
+              to="/admin"
+              className={({ isActive }) =>
+                `flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors ${
+                  isActive
+                    ? 'text-purple-300 light:text-purple-600'
+                    : 'text-zinc-500 light:text-zinc-500'
+                }`
+              }
+            >
+              <ShieldCheck size={18} />
+              Admin
+            </NavLink>
+          )}
+        </nav>
+      )}
       {showPreferences && <NotificationPreferencesModal onClose={() => setShowPreferences(false)} />}
       {showProfile && user && <ProfileModal userId={user.id} onClose={() => setShowProfile(false)} />}
     </div>

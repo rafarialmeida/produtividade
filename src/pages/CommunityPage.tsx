@@ -1,6 +1,6 @@
-import { lazy, Suspense, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Loader2, Plus, Trash2, UserPlus, Users } from 'lucide-react'
+import { ArrowLeft, Dices, Loader2, Plus, Trash2, UserPlus, Users } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import ProcrastinationWall from '../components/ProcrastinationWall'
 import TaskCard from '../components/TaskCard'
@@ -21,6 +21,7 @@ export default function CommunityPage() {
   const currentUserId = currentUser.id
   const community = useAppStore((s) => (id ? s.getCommunityById(id) : undefined))
   const deleteCommunity = useAppStore((s) => s.deleteCommunity)
+  const setCommunityBoardEnabled = useAppStore((s) => s.setCommunityBoardEnabled)
   const allTasks = useAppStore((s) => s.tasks)
   const tasks = useMemo(() => allTasks.filter((t) => t.communityId === id), [allTasks, id])
   const [showForm, setShowForm] = useState(false)
@@ -28,6 +29,15 @@ export default function CommunityPage() {
   const [filter, setFilter] = useState<'all' | 'active' | 'expired' | 'completed'>('all')
   const [historyUserId, setHistoryUserId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'tasks' | 'dashboard' | 'board'>('tasks')
+  const [togglingBoard, setTogglingBoard] = useState(false)
+
+  useEffect(() => {
+    if (!community) return
+    const boardOk = community.type === 'trabalho' && community.boardEnabled
+    const dashboardOk = community.type === 'trabalho' && (currentUser?.role === 'admin' || community.adminIds.includes(currentUserId))
+    if (activeTab === 'board' && !boardOk) setActiveTab('tasks')
+    if (activeTab === 'dashboard' && !dashboardOk) setActiveTab('tasks')
+  }, [community, activeTab, currentUser, currentUserId])
 
   if (!community) {
     return (
@@ -46,7 +56,8 @@ export default function CommunityPage() {
   const canDelete = currentUser?.role === 'admin' || community.creatorId === currentUserId
   const isCommunityAdmin = currentUser?.role === 'admin' || community.adminIds.includes(currentUserId)
   const showDashboard = community.type === 'trabalho' && isCommunityAdmin
-  const showBoard = community.type === 'trabalho'
+  const showBoard = community.type === 'trabalho' && community.boardEnabled
+  const canToggleBoard = community.type === 'trabalho' && isCommunityAdmin
   const tabs = [
     { key: 'tasks' as const, label: 'Tarefas' },
     ...(showDashboard ? [{ key: 'dashboard' as const, label: 'Dashboard' }] : []),
@@ -58,6 +69,17 @@ export default function CommunityPage() {
     if (window.confirm(`Excluir a comunidade "${community.name}"? Todas as tarefas dela serão perdidas. Essa ação não pode ser desfeita.`)) {
       await deleteCommunity(community.id)
       navigate('/communities')
+    }
+  }
+
+  async function handleToggleBoard() {
+    if (!community) return
+    setTogglingBoard(true)
+    try {
+      await setCommunityBoardEnabled(community.id, !community.boardEnabled)
+      if (activeTab === 'board' && community.boardEnabled) setActiveTab('tasks')
+    } finally {
+      setTogglingBoard(false)
     }
   }
 
@@ -103,6 +125,20 @@ export default function CommunityPage() {
             <button onClick={() => setShowForm(true)} className="btn-secondary !w-auto px-4">
               <Plus size={16} /> Nova Tarefa
             </button>
+            {canToggleBoard && (
+              <button
+                onClick={handleToggleBoard}
+                disabled={togglingBoard}
+                title={community.boardEnabled ? 'Desativar tabuleiro gamificado' : 'Ativar tabuleiro gamificado'}
+                className={`p-2.5 rounded-xl border transition-colors disabled:opacity-50 ${
+                  community.boardEnabled
+                    ? 'border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
+                    : 'border-white/10 bg-white/5 text-zinc-500 hover:text-zinc-300 hover:bg-white/10 light:border-black/10 light:bg-black/[0.03]'
+                }`}
+              >
+                <Dices size={15} />
+              </button>
+            )}
             {canDelete && (
               <button
                 onClick={handleDeleteCommunity}

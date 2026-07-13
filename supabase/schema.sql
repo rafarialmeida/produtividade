@@ -29,6 +29,7 @@ create table if not exists public.communities (
   severity text not null check (severity in ('baixa', 'media', 'alta', 'critica')),
   invite_code text not null unique,
   creator_id uuid not null references public.profiles (id) on delete cascade,
+  board_enabled boolean not null default true,
   created_at timestamptz not null default now()
 );
 
@@ -211,7 +212,7 @@ create trigger on_auth_user_created
   for each row execute function public.handle_new_user();
 
 -- Cria uma comunidade e já matricula quem criou, de forma atômica.
-create or replace function public.create_community(_name text, _type text, _severity text)
+create or replace function public.create_community(_name text, _type text, _severity text, _board_enabled boolean default true)
 returns public.communities
 language plpgsql
 security definer
@@ -222,14 +223,30 @@ declare
   _code text;
 begin
   _code := upper(substr(md5(random()::text), 1, 6));
-  insert into public.communities (name, type, severity, invite_code, creator_id)
-  values (_name, _type, _severity, _code, auth.uid())
+  insert into public.communities (name, type, severity, invite_code, creator_id, board_enabled)
+  values (_name, _type, _severity, _code, auth.uid(), _board_enabled)
   returning * into _community;
 
   insert into public.community_members (community_id, user_id, role)
   values (_community.id, auth.uid(), 'admin');
 
   return _community;
+end;
+$$;
+
+-- Ativa/desativa o tabuleiro de uma comunidade (só admin da comunidade ou admin da plataforma).
+create or replace function public.set_community_board_enabled(_community_id uuid, _enabled boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not (public.is_community_admin(_community_id) or public.is_admin()) then
+    raise exception 'NOT_ALLOWED';
+  end if;
+
+  update public.communities set board_enabled = _enabled where id = _community_id;
 end;
 $$;
 
@@ -525,9 +542,10 @@ grant execute on function public.is_admin() to authenticated;
 grant execute on function public.is_community_member(uuid) to authenticated;
 grant execute on function public.is_community_creator(uuid) to authenticated;
 grant execute on function public.is_community_admin(uuid) to authenticated;
-grant execute on function public.create_community(text, text, text) to authenticated;
+grant execute on function public.create_community(text, text, text, boolean) to authenticated;
 grant execute on function public.set_community_admin(uuid, uuid, boolean) to authenticated;
 grant execute on function public.set_community_piece(uuid, text, text) to authenticated;
+grant execute on function public.set_community_board_enabled(uuid, boolean) to authenticated;
 grant execute on function public.assign_task(uuid, uuid) to authenticated;
 grant execute on function public.assign_subtask(uuid, uuid) to authenticated;
 grant execute on function public.join_community_with_code(text) to authenticated;

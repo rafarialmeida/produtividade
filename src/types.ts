@@ -107,6 +107,7 @@ export interface Community {
   adminIds: string[]
   pieces: Record<string, CommunityPiece>
   creatorId: string
+  boardEnabled: boolean
   createdAt: string
 }
 

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { Layers, X } from 'lucide-react'
+import { Dices, Layers, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import type { CommunityType, Severity } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
@@ -13,6 +13,7 @@ export default function CreateCommunityModal({ onClose }: { onClose: () => void 
   const [name, setName] = useState('')
   const [severity, setSeverity] = useState<Severity>('media')
   const [type, setType] = useState<CommunityType>('trabalho')
+  const [boardEnabled, setBoardEnabled] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
   const isValid = name.trim().length >= 3
@@ -22,7 +23,7 @@ export default function CreateCommunityModal({ onClose }: { onClose: () => void 
     if (!isValid || submitting) return
     setSubmitting(true)
     try {
-      const communityId = await createCommunity(name.trim(), severity, type)
+      const communityId = await createCommunity(name.trim(), severity, type, boardEnabled)
       onClose()
       if (communityId) navigate(`/community/${communityId}`)
     } finally {
@@ -102,6 +103,26 @@ export default function CreateCommunityModal({ onClose }: { onClose: () => void 
               })}
             </div>
           </div>
+          {type === 'trabalho' && (
+            <label className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-3 cursor-pointer light:border-black/10 light:bg-black/[0.02]">
+              <input
+                type="checkbox"
+                checked={boardEnabled}
+                onChange={(e) => setBoardEnabled(e.target.checked)}
+                className="mt-0.5 accent-purple-500"
+              />
+              <span className="flex items-start gap-2.5">
+                <Dices size={16} className="shrink-0 mt-0.5 text-purple-300" />
+                <span>
+                  <span className="block text-sm font-semibold text-zinc-300 light:text-zinc-700">Incluir tabuleiro gamificado</span>
+                  <span className="block text-xs text-zinc-500 mt-0.5">
+                    Cada membro sobe a escadaria conforme conclui tarefas. Pode ativar ou desativar depois.
+                  </span>
+                </span>
+              </span>
+            </label>
+          )}
+
           <button type="submit" disabled={!isValid || submitting} className="btn-primary">
             {submitting ? 'Criando…' : 'Criar Comunidade'}
           </button>
