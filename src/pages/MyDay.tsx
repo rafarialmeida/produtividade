@@ -5,9 +5,11 @@ import { useAppStore } from '../store/useStore'
 import TaskForm from '../components/TaskForm'
 import TaskCard from '../components/TaskCard'
 import TaskCalendar from '../components/TaskCalendar'
+import TaskListModal from '../components/TaskListModal'
 import MoodWall from '../components/MoodWall'
 import { isNearDeadline } from '../utils/date'
 import { URGENCY_POINTS } from '../types'
+import type { Task } from '../types'
 
 export default function MyDay() {
   const user = useAppStore((s) => s.authUser)!
@@ -19,6 +21,7 @@ export default function MyDay() {
   const allTasks = useAppStore((s) => s.tasks)
 
   const [showForm, setShowForm] = useState(false)
+  const [listModal, setListModal] = useState<{ title: string; tasks: Task[] } | null>(null)
 
   const myTasks = useMemo(() => allTasks.filter((t) => t.userId === user.id), [allTasks, user.id])
 
@@ -46,10 +49,31 @@ export default function MyDay() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Vencem em 24h" value={dueToday.length} accent="amber" />
-        <StatCard label="Tarefas ativas" value={active.length} accent="purple" />
-        <StatCard label="Expiradas" value={expired.length} accent="rose" />
-        <StatCard label="Pontos perdidos" value={lostPoints} accent="rose" prefix="-" />
+        <StatCard
+          label="Vencem em 24h"
+          value={dueToday.length}
+          accent="amber"
+          onClick={dueToday.length > 0 ? () => setListModal({ title: 'Vencem em 24h', tasks: dueToday }) : undefined}
+        />
+        <StatCard
+          label="Tarefas ativas"
+          value={active.length}
+          accent="purple"
+          onClick={active.length > 0 ? () => setListModal({ title: 'Tarefas ativas', tasks: active }) : undefined}
+        />
+        <StatCard
+          label="Expiradas"
+          value={expired.length}
+          accent="rose"
+          onClick={expired.length > 0 ? () => setListModal({ title: 'Expiradas', tasks: expired }) : undefined}
+        />
+        <StatCard
+          label="Pontos perdidos"
+          value={lostPoints}
+          accent="rose"
+          prefix="-"
+          onClick={expired.length > 0 ? () => setListModal({ title: 'Tarefas que geraram pontos perdidos', tasks: expired }) : undefined}
+        />
       </div>
 
       <div className="grid sm:grid-cols-2 gap-3">
@@ -129,6 +153,14 @@ export default function MyDay() {
       )}
 
       {showForm && <TaskForm userId={user.id} onClose={() => setShowForm(false)} />}
+      {listModal && (
+        <TaskListModal
+          title={listModal.title}
+          tasks={listModal.tasks}
+          showCommunity={multiCommunity}
+          onClose={() => setListModal(null)}
+        />
+      )}
     </div>
   )
 }
@@ -155,19 +187,35 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
   )
 }
 
-function StatCard({ label, value, accent, prefix = '' }: { label: string; value: number; accent: 'purple' | 'amber' | 'rose'; prefix?: string }) {
+function StatCard({
+  label,
+  value,
+  accent,
+  prefix = '',
+  onClick,
+}: {
+  label: string
+  value: number
+  accent: 'purple' | 'amber' | 'rose'
+  prefix?: string
+  onClick?: () => void
+}) {
   const colors = {
     purple: 'text-purple-300',
     amber: 'text-amber-300',
     rose: 'text-rose-400',
   }
   return (
-    <div className="glass-panel rounded-2xl p-4">
+    <button
+      onClick={onClick}
+      disabled={!onClick}
+      className={`glass-panel rounded-2xl p-4 text-left transition-colors ${onClick ? 'hover:border-white/20 cursor-pointer' : 'cursor-default'}`}
+    >
       <p className={`text-2xl font-bold tabular-nums ${colors[accent]}`}>
         {prefix}
         {value}
       </p>
       <p className="text-[11px] text-zinc-500 mt-1">{label}</p>
-    </div>
+    </button>
   )
 }

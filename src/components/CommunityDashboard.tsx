@@ -7,6 +7,7 @@ import { formatDeadline, formatDurationHours, formatRelative } from '../utils/da
 import { getTaskStatus, TASK_STATUS_CONFIG, type TaskStatus } from '../utils/taskStatus'
 import TaskDetailModal from './TaskDetailModal'
 import MemberHoursModal from './MemberHoursModal'
+import TaskListModal from './TaskListModal'
 
 const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000
 
@@ -44,6 +45,7 @@ export default function CommunityDashboard({
   const [taskFilter, setTaskFilter] = useState<'all' | TaskStatus>('all')
   const [showAllCompleted, setShowAllCompleted] = useState(false)
   const [hoursUserId, setHoursUserId] = useState<string | null>(null)
+  const [listModal, setListModal] = useState<{ title: string; tasks: Task[] } | null>(null)
 
   const communityTasks = useMemo(() => allTasks.filter((t) => t.communityId === communityId), [allTasks, communityId])
 
@@ -126,10 +128,9 @@ export default function CommunityDashboard({
 
   if (!community) return null
 
-  const totalTasks = communityTasks.length
-  const totalInProgress = communityTasks.filter((t) => !t.completed && !t.expired && t.started).length
-  const totalNotStarted = communityTasks.filter((t) => !t.completed && !t.expired && !t.started).length
-  const totalExpired = communityTasks.filter((t) => t.expired && !t.completed).length
+  const inProgressTasks = communityTasks.filter((t) => !t.completed && !t.expired && t.started)
+  const notStartedTasks = communityTasks.filter((t) => !t.completed && !t.expired && !t.started)
+  const expiredTasks = communityTasks.filter((t) => t.expired && !t.completed)
 
   const lowestProductivity = [...stats].filter((s) => s.total > 0).sort((a, b) => a.positivePoints - b.positivePoints)[0]
   const mostDelivering = [...stats].sort((a, b) => b.completed - a.completed)[0]
@@ -151,10 +152,30 @@ export default function CommunityDashboard({
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Tarefas no total" value={totalTasks} accent="purple" />
-        <StatCard label="Em andamento" value={totalInProgress} accent="sky" />
-        <StatCard label="Não iniciadas" value={totalNotStarted} accent="amber" />
-        <StatCard label="Expiradas" value={totalExpired} accent="rose" />
+        <StatCard
+          label="Tarefas no total"
+          value={communityTasks.length}
+          accent="purple"
+          onClick={communityTasks.length > 0 ? () => setListModal({ title: 'Tarefas no total', tasks: communityTasks }) : undefined}
+        />
+        <StatCard
+          label="Em andamento"
+          value={inProgressTasks.length}
+          accent="sky"
+          onClick={inProgressTasks.length > 0 ? () => setListModal({ title: 'Em andamento', tasks: inProgressTasks }) : undefined}
+        />
+        <StatCard
+          label="Não iniciadas"
+          value={notStartedTasks.length}
+          accent="amber"
+          onClick={notStartedTasks.length > 0 ? () => setListModal({ title: 'Não iniciadas', tasks: notStartedTasks }) : undefined}
+        />
+        <StatCard
+          label="Expiradas"
+          value={expiredTasks.length}
+          accent="rose"
+          onClick={expiredTasks.length > 0 ? () => setListModal({ title: 'Expiradas', tasks: expiredTasks }) : undefined}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -362,6 +383,9 @@ export default function CommunityDashboard({
           onClose={() => setHoursUserId(null)}
         />
       )}
+      {listModal && (
+        <TaskListModal title={listModal.title} tasks={listModal.tasks} showOwner onClose={() => setListModal(null)} />
+      )}
     </div>
   )
 }
@@ -390,13 +414,27 @@ function TaskRow({ task, onClick }: { task: Task; onClick: () => void }) {
   )
 }
 
-function StatCard({ label, value, accent }: { label: string; value: number; accent: 'purple' | 'amber' | 'rose' | 'sky' }) {
+function StatCard({
+  label,
+  value,
+  accent,
+  onClick,
+}: {
+  label: string
+  value: number
+  accent: 'purple' | 'amber' | 'rose' | 'sky'
+  onClick?: () => void
+}) {
   const colors = { purple: 'text-purple-300', amber: 'text-amber-300', rose: 'text-rose-400', sky: 'text-sky-300' }
   return (
-    <div className="glass-panel rounded-2xl p-4">
+    <button
+      onClick={onClick}
+      disabled={!onClick}
+      className={`glass-panel rounded-2xl p-4 text-left transition-colors ${onClick ? 'hover:border-white/20 cursor-pointer' : 'cursor-default'}`}
+    >
       <p className={`text-2xl font-bold tabular-nums ${colors[accent]}`}>{value}</p>
       <p className="text-[11px] text-zinc-500 mt-1">{label}</p>
-    </div>
+    </button>
   )
 }
 
