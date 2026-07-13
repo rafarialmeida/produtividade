@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Crown, Flame, Globe2, Loader2, Swords, Timer, Trophy, Users } from 'lucide-react'
 import { useAppStore, type CommunityRankingEntry, type GlobalWallEntry } from '../store/useStore'
 import ProfileModal from '../components/ProfileModal'
+import RankBadge from '../components/RankBadge'
 import { computeCompositeRanking } from '../utils/ranking'
 import { formatDurationHours } from '../utils/date'
 
@@ -124,17 +125,19 @@ export default function GlobalWall() {
                       isLeader ? (positive ? 'bg-emerald-500/[0.06]' : 'bg-rose-500/[0.06]') : ''
                     }`}
                   >
-                    <div
-                      className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-bold text-sm ${
-                        isLeader
-                          ? positive
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                            : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                          : 'bg-white/5 text-zinc-400 border border-white/10 light:bg-black/[0.03] light:text-zinc-600 light:border-black/10'
-                      }`}
-                    >
-                      {isLeader ? (positive ? <Trophy size={15} /> : <Flame size={15} />) : i + 1}
-                    </div>
+                    {positive ? (
+                      <RankBadge rank={points > 0 ? i + 1 : null} />
+                    ) : (
+                      <div
+                        className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-bold text-sm ${
+                          isLeader
+                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                            : 'bg-white/5 text-zinc-400 border border-white/10 light:bg-black/[0.03] light:text-zinc-600 light:border-black/10'
+                        }`}
+                      >
+                        {isLeader ? <Flame size={15} /> : i + 1}
+                      </div>
+                    )}
 
                     {entry.avatarUrl ? (
                       <img src={entry.avatarUrl} alt={entry.name} className="w-8 h-8 shrink-0 rounded-full object-cover border border-white/10" />
@@ -201,15 +204,7 @@ export default function GlobalWall() {
               <div className="divide-y divide-white/5">
                 {rankedCommunities.map(({ item, compositeRank, community }) => (
                   <div key={item.id} className="px-6 py-4 flex items-center gap-4">
-                    <div
-                      className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-bold text-sm ${
-                        compositeRank === 1
-                          ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
-                          : 'bg-white/5 text-zinc-400 border border-white/10 light:bg-black/[0.03] light:text-zinc-600 light:border-black/10'
-                      }`}
-                    >
-                      {compositeRank === 1 ? <Trophy size={15} /> : (compositeRank ?? '—')}
-                    </div>
+                    <RankBadge rank={compositeRank} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium text-white light:text-zinc-900 truncate">{community.name}</p>

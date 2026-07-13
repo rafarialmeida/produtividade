@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Dices, Medal } from 'lucide-react'
+import { Dices } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { COMPLEXITY_MULTIPLIER } from '../types'
 import { BOARD_COLORS, CHARACTERS, CHARACTER_MAP, type CharacterRecipe } from '../utils/boardPieces'
@@ -7,30 +7,7 @@ import { computeCompositeRanking } from '../utils/ranking'
 import CommunityBoard3D from './CommunityBoard3D'
 import OnlineDot from './OnlineDot'
 import PiecePickerModal from './PiecePickerModal'
-
-const MEDAL_STYLE: Record<number, string> = {
-  1: 'bg-amber-400/20 text-amber-300 border-amber-400/50',
-  2: 'bg-slate-400/20 text-slate-200 border-slate-400/50 light:bg-black/[0.04] light:text-slate-600 light:border-black/15',
-  3: 'bg-orange-700/20 text-orange-300 border-orange-700/50',
-}
-
-function RankBadge({ rank }: { rank: number | null }) {
-  if (rank != null && rank <= 3) {
-    return (
-      <span className={`w-6 h-6 shrink-0 rounded-full border flex items-center justify-center ${MEDAL_STYLE[rank]}`} title={`${rank}º lugar no ranking`}>
-        <Medal size={12} />
-      </span>
-    )
-  }
-  return (
-    <span
-      className="w-6 h-6 shrink-0 rounded-full border border-white/10 bg-white/5 text-zinc-500 light:bg-black/[0.03] light:border-black/10 flex items-center justify-center text-[10px] font-semibold tabular-nums"
-      title="Posição no ranking"
-    >
-      {rank ?? '—'}
-    </span>
-  )
-}
+import RankBadge from './RankBadge'
 
 function hashString(s: string): number {
   let h = 0
@@ -154,7 +131,7 @@ export default function CommunityBoard({ communityId }: { communityId: string })
           })
           .map((m) => (
             <div key={m.id} className="flex items-center gap-3 px-4 py-2 text-xs">
-              <RankBadge rank={m.compositeRank} />
+              <RankBadge rank={m.compositeRank} size="sm" />
               <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: m.color }} />
               <OnlineDot online={onlineUserIds.has(m.id)} />
               <span className="text-zinc-200 light:text-zinc-800 flex-1 truncate">{m.name}</span>

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Loader2, Swords, Timer, Trophy, Users } from 'lucide-react'
+import { Loader2, Swords, Timer, Users } from 'lucide-react'
 import { useAppStore, type CommunityRankingEntry } from '../store/useStore'
 import { computeCompositeRanking } from '../utils/ranking'
 import { formatDurationHours } from '../utils/date'
+import RankBadge from './RankBadge'
 
 export default function CommunityRankingBoard({ communityId }: { communityId: string }) {
   const fetchWorkCommunityRankings = useAppStore((s) => s.fetchWorkCommunityRankings)
@@ -52,15 +53,7 @@ export default function CommunityRankingBoard({ communityId }: { communityId: st
               const isCurrent = item.id === communityId
               return (
                 <div key={item.id} className={`px-5 py-3.5 flex items-center gap-4 ${isCurrent ? 'bg-sky-500/[0.06]' : ''}`}>
-                  <div
-                    className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-bold text-sm ${
-                      compositeRank === 1
-                        ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
-                        : 'bg-white/5 text-zinc-400 border border-white/10 light:bg-black/[0.03] light:text-zinc-600 light:border-black/10'
-                    }`}
-                  >
-                    {compositeRank === 1 ? <Trophy size={15} /> : (compositeRank ?? '—')}
-                  </div>
+                  <RankBadge rank={compositeRank} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className={`text-sm font-medium truncate ${isCurrent ? 'text-sky-300' : 'text-white light:text-zinc-900'}`}>
