@@ -29,9 +29,21 @@ export interface GlobalWallEntry {
   tasksExpired: number
   subtasksMissed: number
   positivePoints: number
+  personalPositivePoints: number
+  personalLostPoints: number
   tasksCompleted: number
   subtasksCompleted: number
   communityCount: number
+}
+
+export interface CompetitionCommunityRanking {
+  communityId: string
+  name: string
+  memberCount: number
+  tasksCompleted: number
+  subtasksCompleted: number
+  leadTimeHours?: number
+  cycleTimeHours?: number
 }
 
 function mapProfileStatsRow(row: Record<string, unknown>): PublicProfile {
@@ -45,6 +57,8 @@ function mapProfileStatsRow(row: Record<string, unknown>): PublicProfile {
     tasksExpired: Number(row.tasks_expired),
     subtasksMissed: Number(row.subtasks_missed),
     positivePoints: Number(row.positive_points),
+    personalPositivePoints: Number(row.personal_positive_points),
+    personalLostPoints: Number(row.personal_lost_points),
     workXp: Number(row.work_xp),
     personalXp: Number(row.personal_xp),
     tasksCompleted: Number(row.tasks_completed),
@@ -140,6 +154,7 @@ interface State {
   // global wall (calculado no servidor, não depende do cache local de tasks)
   fetchGlobalWall: () => Promise<GlobalWallEntry[]>
   fetchPublicProfile: (userId: string) => Promise<PublicProfile | null>
+  fetchCompetitionCommunityRankings: () => Promise<CompetitionCommunityRanking[]>
 
   // perfil
   updatePassword: (newPassword: string) => Promise<string | null>
@@ -745,6 +760,8 @@ export const useAppStore = create<State>()((set, get) => ({
         tasksExpired: stats.tasksExpired,
         subtasksMissed: stats.subtasksMissed,
         positivePoints: stats.positivePoints,
+        personalPositivePoints: stats.personalPositivePoints,
+        personalLostPoints: stats.personalLostPoints,
         tasksCompleted: stats.tasksCompleted,
         subtasksCompleted: stats.subtasksCompleted,
         communityCount: stats.communityCount,
@@ -757,6 +774,20 @@ export const useAppStore = create<State>()((set, get) => ({
     if (error || !data || (Array.isArray(data) && data.length === 0)) return null
     const row = Array.isArray(data) ? data[0] : data
     return mapProfileStatsRow(row as Record<string, unknown>)
+  },
+
+  fetchCompetitionCommunityRankings: async () => {
+    const { data, error } = await supabase.rpc('competition_community_rankings')
+    if (error || !data) return []
+    return (data as Record<string, unknown>[]).map((row) => ({
+      communityId: row.community_id as string,
+      name: row.name as string,
+      memberCount: Number(row.member_count),
+      tasksCompleted: Number(row.tasks_completed),
+      subtasksCompleted: Number(row.subtasks_completed),
+      leadTimeHours: row.lead_time_avg_hours == null ? undefined : Number(row.lead_time_avg_hours),
+      cycleTimeHours: row.cycle_time_avg_hours == null ? undefined : Number(row.cycle_time_avg_hours),
+    }))
   },
 
   updatePassword: async (newPassword) => {

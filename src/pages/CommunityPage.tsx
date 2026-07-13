@@ -7,6 +7,7 @@ import TaskCard from '../components/TaskCard'
 import TaskForm from '../components/TaskForm'
 import InviteModal from '../components/InviteModal'
 import CommunityDashboard from '../components/CommunityDashboard'
+import CommunityMemberRanking from '../components/CommunityMemberRanking'
 import TaskHistoryModal from '../components/TaskHistoryModal'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
@@ -28,7 +29,7 @@ export default function CommunityPage() {
   const [showInvite, setShowInvite] = useState(false)
   const [filter, setFilter] = useState<'all' | 'active' | 'expired' | 'completed'>('all')
   const [historyUserId, setHistoryUserId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'tasks' | 'dashboard' | 'board'>('tasks')
+  const [activeTab, setActiveTab] = useState<'tasks' | 'dashboard' | 'board' | 'ranking'>('tasks')
   const [togglingBoard, setTogglingBoard] = useState(false)
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function CommunityPage() {
     const boardOk = community.type === 'trabalho' && community.boardEnabled
     const dashboardOk = community.type === 'trabalho' && (currentUser?.role === 'admin' || community.adminIds.includes(currentUserId))
     if (activeTab === 'board' && !boardOk) setActiveTab('tasks')
+    if (activeTab === 'ranking' && !boardOk) setActiveTab('tasks')
     if (activeTab === 'dashboard' && !dashboardOk) setActiveTab('tasks')
   }, [community, activeTab, currentUser, currentUserId])
 
@@ -62,6 +64,7 @@ export default function CommunityPage() {
     { key: 'tasks' as const, label: 'Tarefas' },
     ...(showDashboard ? [{ key: 'dashboard' as const, label: 'Dashboard' }] : []),
     ...(showBoard ? [{ key: 'board' as const, label: 'Tabuleiro' }] : []),
+    ...(showBoard ? [{ key: 'ranking' as const, label: 'Ranking' }] : []),
   ]
 
   async function handleDeleteCommunity() {
@@ -77,7 +80,7 @@ export default function CommunityPage() {
     setTogglingBoard(true)
     try {
       await setCommunityBoardEnabled(community.id, !community.boardEnabled)
-      if (activeTab === 'board' && community.boardEnabled) setActiveTab('tasks')
+      if ((activeTab === 'board' || activeTab === 'ranking') && community.boardEnabled) setActiveTab('tasks')
     } finally {
       setTogglingBoard(false)
     }
@@ -181,6 +184,8 @@ export default function CommunityPage() {
           <CommunityBoard communityId={community.id} />
         </Suspense>
       )}
+
+      {activeTab === 'ranking' && showBoard && <CommunityMemberRanking communityId={community.id} />}
 
       {activeTab === 'tasks' && (
         <div>

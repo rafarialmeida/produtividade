@@ -443,6 +443,10 @@ $$;
 --     de Competição).
 --   - lead_time_avg_hours / cycle_time_avg_hours: médias de criação->conclusão e
 --     início->conclusão, cross-comunidade, em horas (sempre do dono da tarefa).
+--   - personal_positive_points / personal_lost_points: mesma conta de
+--     positive_points/lost_points, mas só considerando tarefas fora de
+--     comunidades de Trabalho — é o que alimenta o ranking individual do Muro
+--     Global, que é sobre tarefas gerais, não sobre desempenho no trabalho.
 create function public.global_wall()
 returns table (
   user_id uuid,
@@ -454,6 +458,8 @@ returns table (
   tasks_expired bigint,
   subtasks_missed bigint,
   positive_points numeric,
+  personal_positive_points numeric,
+  personal_lost_points numeric,
   work_xp numeric,
   personal_xp numeric,
   tasks_completed bigint,
@@ -513,9 +519,19 @@ as $$
           else 0
         end) * complexity_mult
       else 0 end), 0) as lost_points,
+      coalesce(sum(case when expired and not completed and scored and not is_work then
+        (case urgency
+          when 'baixa' then 1
+          when 'media' then 3
+          when 'alta' then 5
+          when 'critica' then 10
+          else 0
+        end) * complexity_mult
+      else 0 end), 0) as personal_lost_points,
       coalesce(sum(base_points) filter (where is_work), 0) as work_base,
       coalesce(sum(base_points) filter (where not is_work), 0) as personal_base,
       coalesce(sum(case when base_points > 0 then base_points else 0 end), 0) as positive_base,
+      coalesce(sum(case when base_points > 0 and not is_work then base_points else 0 end), 0) as personal_positive_base,
       avg(extract(epoch from (completed_at - created_at)) / 3600.0)
         filter (where completed and completed_at is not null) as lead_time_avg_hours,
       avg(extract(epoch from (completed_at - started_at)) / 3600.0)
@@ -546,7 +562,8 @@ as $$
       count(*) filter (where counts_missed) as subtasks_missed,
       coalesce(sum(sub_points) filter (where scored and is_work), 0) as work_sub,
       coalesce(sum(sub_points) filter (where scored and not is_work), 0) as personal_sub,
-      coalesce(sum(case when scored and sub_points > 0 then sub_points else 0 end), 0) as positive_sub
+      coalesce(sum(case when scored and sub_points > 0 then sub_points else 0 end), 0) as positive_sub,
+      coalesce(sum(case when scored and sub_points > 0 and not is_work then sub_points else 0 end), 0) as personal_positive_sub
     from subtask_rows
     group by credited_user_id
   )
@@ -560,6 +577,8 @@ as $$
     coalesce(tl.tasks_expired, 0) as tasks_expired,
     coalesce(sl.subtasks_missed, 0) as subtasks_missed,
     coalesce(round((coalesce(tl.positive_base, 0) + coalesce(sl.positive_sub, 0))::numeric, 1), 0) as positive_points,
+    coalesce(round((coalesce(tl.personal_positive_base, 0) + coalesce(sl.personal_positive_sub, 0))::numeric, 1), 0) as personal_positive_points,
+    coalesce(round(tl.personal_lost_points::numeric, 1), 0) as personal_lost_points,
     coalesce(round((coalesce(tl.work_base, 0) + coalesce(sl.work_sub, 0))::numeric, 1), 0) as work_xp,
     coalesce(round((coalesce(tl.personal_base, 0) + coalesce(sl.personal_sub, 0))::numeric, 1), 0) as personal_xp,
     coalesce(tl.tasks_completed, 0) as tasks_completed,
@@ -585,6 +604,8 @@ returns table (
   tasks_expired bigint,
   subtasks_missed bigint,
   positive_points numeric,
+  personal_positive_points numeric,
+  personal_lost_points numeric,
   work_xp numeric,
   personal_xp numeric,
   tasks_completed bigint,
@@ -601,6 +622,62 @@ as $$
   select * from public.global_wall() where user_id = _user_id;
 $$;
 
+-- Ranking de comunidades de Competição (não de usuários) para o Muro Global:
+-- agrega as tarefas de cada comunidade do tipo "competicao", ignorando
+-- tarefas marcadas como "sem pontuação". Qualquer usuário autenticado pode
+-- ver esse ranking, mesmo sem ser membro da comunidade (é global por
+-- natureza).
+create function public.competition_community_rankings()
+returns table (
+  community_id uuid,
+  name text,
+  member_count bigint,
+  tasks_completed bigint,
+  subtasks_completed bigint,
+  lead_time_avg_hours numeric,
+  cycle_time_avg_hours numeric
+)
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  with task_level as (
+    select
+      t.community_id,
+      count(*) filter (where t.completed and t.scored) as tasks_completed,
+      avg(extract(epoch from (t.completed_at - t.created_at)) / 3600.0)
+        filter (where t.completed and t.scored and t.completed_at is not null) as lead_time_avg_hours,
+      avg(extract(epoch from (t.completed_at - t.started_at)) / 3600.0)
+        filter (where t.completed and t.scored and t.completed_at is not null and t.started_at is not null) as cycle_time_avg_hours
+    from public.tasks t
+    join public.communities c on c.id = t.community_id and c.type = 'competicao'
+    group by t.community_id
+  ),
+  subtask_level as (
+    select
+      t.community_id,
+      count(*) as subtasks_completed
+    from public.subtasks s
+    join public.tasks t on t.id = s.task_id
+    join public.communities c on c.id = t.community_id and c.type = 'competicao'
+    where t.completed and t.scored
+    group by t.community_id
+  )
+  select
+    c.id as community_id,
+    c.name,
+    (select count(*) from public.community_members cm where cm.community_id = c.id) as member_count,
+    coalesce(tl.tasks_completed, 0) as tasks_completed,
+    coalesce(sl.subtasks_completed, 0) as subtasks_completed,
+    round(tl.lead_time_avg_hours::numeric, 1) as lead_time_avg_hours,
+    round(tl.cycle_time_avg_hours::numeric, 1) as cycle_time_avg_hours
+  from public.communities c
+  left join task_level tl on tl.community_id = c.id
+  left join subtask_level sl on sl.community_id = c.id
+  where c.type = 'competicao';
+$$;
+
 grant execute on function public.is_admin() to authenticated;
 grant execute on function public.is_community_member(uuid) to authenticated;
 grant execute on function public.is_community_creator(uuid) to authenticated;
@@ -615,6 +692,7 @@ grant execute on function public.join_community_with_code(text) to authenticated
 grant execute on function public.regenerate_invite_code(uuid) to authenticated;
 grant execute on function public.global_wall() to authenticated;
 grant execute on function public.get_public_profile(uuid) to authenticated;
+grant execute on function public.competition_community_rankings() to authenticated;
 
 -- ============================================================================
 -- ROW LEVEL SECURITY
