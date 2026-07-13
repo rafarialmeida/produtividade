@@ -134,6 +134,7 @@ interface State {
   // community actions
   createCommunity: (name: string, severity: Severity, type: CommunityType, boardEnabled?: boolean) => Promise<string | null>
   setCommunityBoardEnabled: (communityId: string, enabled: boolean) => Promise<string | null>
+  renameCommunity: (communityId: string, name: string) => Promise<string | null>
   joinCommunityWithCode: (code: string) => Promise<{ error: string | null; communityName: string | null }>
   regenerateInviteCode: (communityId: string) => Promise<void>
   deleteCommunity: (communityId: string) => Promise<void>
@@ -449,6 +450,13 @@ export const useAppStore = create<State>()((set, get) => ({
       _community_id: communityId,
       _enabled: enabled,
     })
+    if (error) return error.message
+    await get().refreshAll()
+    return null
+  },
+
+  renameCommunity: async (communityId, name) => {
+    const { error } = await supabase.rpc('rename_community', { _community_id: communityId, _name: name })
     if (error) return error.message
     await get().refreshAll()
     return null

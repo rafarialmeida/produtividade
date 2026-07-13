@@ -261,6 +261,25 @@ begin
 end;
 $$;
 
+-- Renomeia uma comunidade (admin da comunidade, promovido ou criador, ou admin da plataforma).
+create or replace function public.rename_community(_community_id uuid, _name text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not (public.is_community_admin(_community_id) or public.is_admin()) then
+    raise exception 'NOT_ALLOWED';
+  end if;
+  if trim(_name) = '' then
+    raise exception 'EMPTY_NAME';
+  end if;
+
+  update public.communities set name = trim(_name) where id = _community_id;
+end;
+$$;
+
 -- Promove ou rebaixa um membro a admin da comunidade (só quem já é admin dela,
 -- ou admin da plataforma, pode chamar). Impede remover o último admin restante.
 create or replace function public.set_community_admin(_community_id uuid, _user_id uuid, _is_admin boolean)
@@ -947,6 +966,7 @@ grant execute on function public.create_community(text, text, text, boolean) to 
 grant execute on function public.set_community_admin(uuid, uuid, boolean) to authenticated;
 grant execute on function public.set_community_piece(uuid, text, text) to authenticated;
 grant execute on function public.set_community_board_enabled(uuid, boolean) to authenticated;
+grant execute on function public.rename_community(uuid, text) to authenticated;
 grant execute on function public.assign_task(uuid, uuid) to authenticated;
 grant execute on function public.assign_subtask(uuid, uuid) to authenticated;
 grant execute on function public.set_task_blocked(uuid, boolean, text) to authenticated;

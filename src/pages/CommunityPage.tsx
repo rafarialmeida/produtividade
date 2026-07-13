@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Dices, Loader2, Plus, Trash2, UserPlus, Users } from 'lucide-react'
+import { ArrowLeft, Check, Dices, Loader2, Pencil, Plus, Trash2, UserPlus, Users, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import ProcrastinationWall from '../components/ProcrastinationWall'
 import TaskCard from '../components/TaskCard'
@@ -23,6 +23,7 @@ export default function CommunityPage() {
   const community = useAppStore((s) => (id ? s.getCommunityById(id) : undefined))
   const deleteCommunity = useAppStore((s) => s.deleteCommunity)
   const setCommunityBoardEnabled = useAppStore((s) => s.setCommunityBoardEnabled)
+  const renameCommunity = useAppStore((s) => s.renameCommunity)
   const allTasks = useAppStore((s) => s.tasks)
   const tasks = useMemo(() => allTasks.filter((t) => t.communityId === id), [allTasks, id])
   const [showForm, setShowForm] = useState(false)
@@ -31,6 +32,10 @@ export default function CommunityPage() {
   const [historyUserId, setHistoryUserId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'tasks' | 'dashboard' | 'board' | 'ranking'>('tasks')
   const [togglingBoard, setTogglingBoard] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [nameDraft, setNameDraft] = useState('')
+  const [savingName, setSavingName] = useState(false)
+  const [nameError, setNameError] = useState('')
 
   useEffect(() => {
     if (!community) return
@@ -75,6 +80,30 @@ export default function CommunityPage() {
     }
   }
 
+  function startEditingName() {
+    if (!community) return
+    setNameDraft(community.name)
+    setNameError('')
+    setEditingName(true)
+  }
+
+  async function handleSaveName() {
+    if (!community) return
+    const trimmed = nameDraft.trim()
+    if (!trimmed) {
+      setNameError('Nome não pode ser vazio.')
+      return
+    }
+    setSavingName(true)
+    try {
+      const error = await renameCommunity(community.id, trimmed)
+      if (error) setNameError(error)
+      else setEditingName(false)
+    } finally {
+      setSavingName(false)
+    }
+  }
+
   async function handleToggleBoard() {
     if (!community) return
     setTogglingBoard(true)
@@ -106,8 +135,52 @@ export default function CommunityPage() {
             <div className={`w-11 h-11 rounded-xl ${typeCfg.bg} border ${typeCfg.border} flex items-center justify-center`}>
               <typeCfg.icon size={18} className={typeCfg.color} />
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-white light:text-zinc-900">{community.name}</h1>
+            <div className="min-w-0">
+              {editingName ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveName()
+                      if (e.key === 'Escape') setEditingName(false)
+                    }}
+                    autoFocus
+                    disabled={savingName}
+                    className="input !w-auto !py-1 text-lg font-bold"
+                  />
+                  <button
+                    onClick={handleSaveName}
+                    disabled={savingName}
+                    title="Salvar"
+                    className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors disabled:opacity-40"
+                  >
+                    <Check size={16} />
+                  </button>
+                  <button
+                    onClick={() => setEditingName(false)}
+                    disabled={savingName}
+                    title="Cancelar"
+                    className="p-1.5 rounded-lg text-zinc-500 hover:bg-white/5 transition-colors disabled:opacity-40"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <h1 className="text-xl font-bold text-white light:text-zinc-900 truncate">{community.name}</h1>
+                  {isCommunityAdmin && (
+                    <button
+                      onClick={startEditingName}
+                      title="Renomear comunidade"
+                      className="p-1 rounded text-zinc-600 hover:text-purple-300 hover:bg-purple-500/10 transition-colors shrink-0"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                  )}
+                </div>
+              )}
+              {nameError && <p className="text-[11px] text-rose-400 mt-0.5">{nameError}</p>}
               <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-zinc-500">
                 <Users size={12} /> {community.memberIds.length} membros
                 <span className={`px-1.5 py-0.5 rounded border ${typeCfg.bg} ${typeCfg.border} ${typeCfg.color} font-medium`}>
