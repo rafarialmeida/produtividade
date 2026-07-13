@@ -44,7 +44,7 @@ export default function TaskCard({
   const [completing, setCompleting] = useState(false)
 
   function handleDelete() {
-    if (window.confirm(`Excluir a tarefa "${task.title}"? Essa ação não pode ser desfeita.`)) {
+    if (window.confirm(`Excluir a tarefa "${task.title}"? Ela vai pra lixeira e dá pra restaurar depois.`)) {
       deleteTask(task.id)
     }
   }

@@ -117,6 +117,8 @@ interface State {
   notifications: Notification[]
   myStats: PublicProfile | null
   onlineUserIds: Set<string>
+  trashedTasks: Task[]
+  trashedCommunities: Community[]
 
   // auth
   signUp: (name: string, email: string, password: string) => Promise<{ error: string | null; needsConfirmation: boolean }>
@@ -135,6 +137,8 @@ interface State {
   joinCommunityWithCode: (code: string) => Promise<{ error: string | null; communityName: string | null }>
   regenerateInviteCode: (communityId: string) => Promise<void>
   deleteCommunity: (communityId: string) => Promise<void>
+  restoreCommunity: (communityId: string) => Promise<void>
+  permanentlyDeleteCommunity: (communityId: string) => Promise<void>
   setCommunityAdmin: (communityId: string, userId: string, isAdmin: boolean) => Promise<string | null>
   setCommunityPiece: (communityId: string, pieceId: string, color: string) => Promise<string | null>
 
@@ -149,6 +153,9 @@ interface State {
   completeTask: (taskId: string, minutes?: CompleteTaskMinutes) => Promise<void>
   reopenTask: (taskId: string) => Promise<void>
   deleteTask: (taskId: string) => Promise<void>
+  restoreTask: (taskId: string) => Promise<void>
+  permanentlyDeleteTask: (taskId: string) => Promise<void>
+  fetchTrash: () => Promise<void>
   rescheduleTask: (taskId: string, deadline: string) => Promise<void>
   checkExpirations: () => Promise<void>
   assignTask: (taskId: string, assigneeId: string) => Promise<string | null>
@@ -207,6 +214,7 @@ function mapTask(row: Record<string, unknown>): Task {
     expired: row.expired as boolean,
     scored: (row.scored as boolean | null) ?? true,
     recurrence: (row.recurrence as Recurrence | null) ?? undefined,
+    deletedAt: (row.deleted_at as string | null) ?? undefined,
     createdAt: row.created_at as string,
   }
 }
@@ -238,6 +246,7 @@ function mapCommunity(
     pieces,
     creatorId: row.creator_id as string,
     boardEnabled: row.board_enabled as boolean,
+    deletedAt: (row.deleted_at as string | null) ?? undefined,
     createdAt: row.created_at as string,
   }
 }
@@ -309,6 +318,8 @@ export const useAppStore = create<State>()((set, get) => ({
   notifications: [],
   myStats: null,
   onlineUserIds: new Set(),
+  trashedTasks: [],
+  trashedCommunities: [],
 
   setOnlineUserIds: (ids) => set({ onlineUserIds: ids }),
 
@@ -352,11 +363,12 @@ export const useAppStore = create<State>()((set, get) => ({
 
     const [profilesRes, communitiesRes, membersRes, tasksRes, macroObjectivesRes, notificationsRes, myStats] = await Promise.all([
       supabase.from('profiles').select('*'),
-      supabase.from('communities').select('*'),
+      supabase.from('communities').select('*').is('deleted_at', null),
       supabase.from('community_members').select('*'),
       supabase
         .from('tasks')
         .select('*, subtasks(*), macro_objectives(title)')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .order('position', { foreignTable: 'subtasks', ascending: true }),
       supabase.from('macro_objectives').select('*').order('created_at', { ascending: false }),
@@ -450,8 +462,19 @@ export const useAppStore = create<State>()((set, get) => ({
   },
 
   deleteCommunity: async (communityId) => {
-    await supabase.from('communities').delete().eq('id', communityId)
+    await supabase.rpc('soft_delete_community', { _community_id: communityId })
     await get().refreshAll()
+  },
+
+  restoreCommunity: async (communityId) => {
+    await supabase.rpc('restore_community', { _community_id: communityId })
+    await get().refreshAll()
+    await get().fetchTrash()
+  },
+
+  permanentlyDeleteCommunity: async (communityId) => {
+    await supabase.from('communities').delete().eq('id', communityId)
+    await get().fetchTrash()
   },
 
   setCommunityAdmin: async (communityId, userId, isAdmin) => {
@@ -656,8 +679,55 @@ export const useAppStore = create<State>()((set, get) => ({
   },
 
   deleteTask: async (taskId) => {
-    await supabase.from('tasks').delete().eq('id', taskId)
+    await supabase.from('tasks').update({ deleted_at: new Date().toISOString() }).eq('id', taskId)
     await get().refreshAll()
+  },
+
+  restoreTask: async (taskId) => {
+    await supabase.from('tasks').update({ deleted_at: null }).eq('id', taskId)
+    await get().refreshAll()
+    await get().fetchTrash()
+  },
+
+  permanentlyDeleteTask: async (taskId) => {
+    await supabase.from('tasks').delete().eq('id', taskId)
+    await get().fetchTrash()
+  },
+
+  fetchTrash: async () => {
+    const authUser = get().authUser
+    if (!authUser) return
+    const [tasksRes, communitiesRes, membersRes] = await Promise.all([
+      supabase
+        .from('tasks')
+        .select('*, subtasks(*), macro_objectives(title)')
+        .eq('user_id', authUser.id)
+        .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false }),
+      supabase.from('communities').select('*').not('deleted_at', 'is', null).order('deleted_at', { ascending: false }),
+      supabase.from('community_members').select('*'),
+    ])
+
+    const members = membersRes.data ?? []
+    const memberIdsByCommunity = new Map<string, string[]>()
+    const adminIdsByCommunity = new Map<string, string[]>()
+    for (const m of members) {
+      const a = memberIdsByCommunity.get(m.community_id) ?? []
+      a.push(m.user_id)
+      memberIdsByCommunity.set(m.community_id, a)
+      if (m.role === 'admin') {
+        const admins = adminIdsByCommunity.get(m.community_id) ?? []
+        admins.push(m.user_id)
+        adminIdsByCommunity.set(m.community_id, admins)
+      }
+    }
+
+    const trashedTasks = (tasksRes.data ?? []).map(mapTask)
+    const trashedCommunities = (communitiesRes.data ?? [])
+      .filter((c) => c.creator_id === authUser.id || authUser.role === 'admin')
+      .map((c) => mapCommunity(c, memberIdsByCommunity.get(c.id) ?? [], adminIdsByCommunity.get(c.id) ?? [], {}))
+
+    set({ trashedTasks, trashedCommunities })
   },
 
   assignTask: async (taskId, assigneeId) => {
@@ -909,6 +979,8 @@ supabase.auth.onAuthStateChange((_event, session) => {
       macroObjectives: [],
       notifications: [],
       onlineUserIds: new Set(),
+      trashedTasks: [],
+      trashedCommunities: [],
     })
   }
 })

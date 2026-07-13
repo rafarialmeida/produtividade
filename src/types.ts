@@ -117,6 +117,7 @@ export interface Community {
   pieces: Record<string, CommunityPiece>
   creatorId: string
   boardEnabled: boolean
+  deletedAt?: string
   createdAt: string
 }
 
@@ -157,6 +158,7 @@ export interface Task {
   expired: boolean
   scored: boolean
   recurrence?: Recurrence
+  deletedAt?: string
   createdAt: string
 }
 

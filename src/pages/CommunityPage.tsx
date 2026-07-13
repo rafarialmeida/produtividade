@@ -69,7 +69,7 @@ export default function CommunityPage() {
 
   async function handleDeleteCommunity() {
     if (!community) return
-    if (window.confirm(`Excluir a comunidade "${community.name}"? Todas as tarefas dela serão perdidas. Essa ação não pode ser desfeita.`)) {
+    if (window.confirm(`Excluir a comunidade "${community.name}"? Ela e as tarefas dela vão pra lixeira e dá pra restaurar depois.`)) {
       await deleteCommunity(community.id)
       navigate('/communities')
     }

@@ -10,6 +10,7 @@ import CommunitiesHub from './pages/CommunitiesHub'
 import GlobalWall from './pages/GlobalWall'
 import AdminDashboard from './pages/AdminDashboard'
 import CommunityPage from './pages/CommunityPage'
+import Trash from './pages/Trash'
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const authUser = useAppStore((s) => s.authUser)
@@ -96,6 +97,14 @@ function App() {
         element={
           <RequireAuth>
             <CommunityPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/trash"
+        element={
+          <RequireAuth>
+            <Trash />
           </RequireAuth>
         }
       />

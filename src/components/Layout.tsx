@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { Briefcase, HelpCircle, LogOut, Moon, Settings2, Skull, Sparkles, Star, Sun, Users, ShieldCheck, Zap } from 'lucide-react'
+import { Briefcase, HelpCircle, LogOut, Moon, Settings2, Skull, Sparkles, Star, Sun, Trash2, Users, ShieldCheck, Zap } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { useExpirationTicker } from '../hooks/useExpirationTicker'
 import { usePresence } from '../hooks/usePresence'
@@ -128,6 +128,13 @@ export default function Layout({ children }: { children: ReactNode }) {
                   className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 light:hover:text-zinc-900 light:hover:bg-black/5 transition-colors"
                 >
                   <HelpCircle size={16} />
+                </button>
+                <button
+                  onClick={() => navigate('/trash')}
+                  title="Lixeira"
+                  className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 light:hover:text-zinc-900 light:hover:bg-black/5 transition-colors"
+                >
+                  <Trash2 size={16} />
                 </button>
                 <button
                   onClick={() => setShowPreferences(true)}
