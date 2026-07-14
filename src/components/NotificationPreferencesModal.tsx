@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom'
-import { BarChart3, BellRing, CheckCircle2, Clock, Settings2, TriangleAlert, X } from 'lucide-react'
+import { BarChart3, Bell, BellOff, BellRing, CheckCircle2, Clock, TriangleAlert, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
+import { usePushSubscription } from '../hooks/usePushSubscription'
 
 function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
@@ -23,19 +24,23 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
   )
 }
 
-export default function NotificationPreferencesModal({ onClose }: { onClose: () => void }) {
+export default function NotificationPreferencesModal({ userId, onClose }: { userId: string; onClose: () => void }) {
   const authUser = useAppStore((s) => s.authUser)
   const updateNotificationPreferences = useAppStore((s) => s.updateNotificationPreferences)
+  const { state: pushState, subscribe, unsubscribe } = usePushSubscription(userId)
 
   if (!authUser) return null
+
+  const pushSupported = pushState !== 'unsupported'
+  const pushSubscribed = pushState === 'subscribed'
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/70 backdrop-blur-sm">
       <div className="glass-panel neon-border-purple rounded-2xl w-full max-w-md my-8">
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
           <div className="flex items-center gap-2.5">
-            <Settings2 size={18} className="text-purple-300" />
-            <h2 className="text-lg font-bold text-white light:text-zinc-900">Preferências de notificação</h2>
+            <Bell size={18} className="text-purple-300" />
+            <h2 className="text-lg font-bold text-white light:text-zinc-900">Notificações</h2>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 light:hover:text-zinc-900 light:hover:bg-black/10">
             <X size={18} />
@@ -43,8 +48,27 @@ export default function NotificationPreferencesModal({ onClose }: { onClose: () 
         </div>
 
         <div className="px-6 py-5 flex flex-col gap-5">
-          <p className="text-xs text-zinc-500 -mt-1">
-            Escolha o que você quer receber como notificação push (fora do app). Isso não afeta os avisos dentro do app.
+          {pushSupported ? (
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex gap-2.5">
+                {pushSubscribed ? (
+                  <BellRing size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+                ) : (
+                  <BellOff size={16} className="text-zinc-500 shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <p className="text-sm font-medium text-white light:text-zinc-900">Notificações push</p>
+                  <p className="text-xs text-zinc-500">Avisos fora do app, mesmo com ele fechado ou em segundo plano.</p>
+                </div>
+              </div>
+              <Toggle checked={pushSubscribed} onChange={(v) => (v ? subscribe() : unsubscribe())} />
+            </div>
+          ) : (
+            <p className="text-xs text-amber-400 -mt-1">Seu navegador não tem suporte a notificações push.</p>
+          )}
+
+          <p className="text-xs text-zinc-500 border-t border-white/5 pt-4 -mb-1">
+            Escolha o que você quer receber como notificação push. Isso não afeta os avisos dentro do app.
           </p>
 
           <div className="flex items-start justify-between gap-3">
@@ -57,6 +81,7 @@ export default function NotificationPreferencesModal({ onClose }: { onClose: () 
             </div>
             <Toggle
               checked={authUser.notifyReminder}
+              disabled={!pushSubscribed}
               onChange={(v) => updateNotificationPreferences({ notifyReminder: v })}
             />
           </div>
@@ -70,7 +95,7 @@ export default function NotificationPreferencesModal({ onClose }: { onClose: () 
             </div>
             <Toggle
               checked={authUser.notifyOnlyUrgent}
-              disabled={!authUser.notifyReminder}
+              disabled={!pushSubscribed || !authUser.notifyReminder}
               onChange={(v) => updateNotificationPreferences({ notifyOnlyUrgent: v })}
             />
           </div>
@@ -85,6 +110,7 @@ export default function NotificationPreferencesModal({ onClose }: { onClose: () 
             </div>
             <Toggle
               checked={authUser.notifyExpired}
+              disabled={!pushSubscribed}
               onChange={(v) => updateNotificationPreferences({ notifyExpired: v })}
             />
           </div>
@@ -99,6 +125,7 @@ export default function NotificationPreferencesModal({ onClose }: { onClose: () 
             </div>
             <Toggle
               checked={authUser.notifyCompleted}
+              disabled={!pushSubscribed}
               onChange={(v) => updateNotificationPreferences({ notifyCompleted: v })}
             />
           </div>
@@ -115,13 +142,10 @@ export default function NotificationPreferencesModal({ onClose }: { onClose: () 
             </div>
             <Toggle
               checked={authUser.notifyWeeklyDigest}
+              disabled={!pushSubscribed}
               onChange={(v) => updateNotificationPreferences({ notifyWeeklyDigest: v })}
             />
           </div>
-
-          <p className="flex items-center gap-1.5 text-[11px] text-zinc-600 border-t border-white/5 pt-4">
-            <BellRing size={11} /> Lembre-se de ativar o sininho no topo para receber qualquer notificação push.
-          </p>
         </div>
       </div>
     </div>,

@@ -6,7 +6,6 @@ import {
   LogOut,
   Moon,
   MoreVertical,
-  Settings2,
   Skull,
   Sparkles,
   Star,
@@ -25,7 +24,6 @@ import NotificationToasts from './NotificationToasts'
 import OnboardingTour from './OnboardingTour'
 import OnlineDot from './OnlineDot'
 import PushToggle from './PushToggle'
-import NotificationPreferencesModal from './NotificationPreferencesModal'
 import ProfileModal from './ProfileModal'
 
 const NAV_ITEMS = [
@@ -42,7 +40,6 @@ export default function Layout({ children }: { children: ReactNode }) {
   const myStats = useAppStore((s) => s.myStats)
   const onlineUserIds = useAppStore((s) => s.onlineUserIds)
   const signOut = useAppStore((s) => s.signOut)
-  const [showPreferences, setShowPreferences] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
   const [showTourAgain, setShowTourAgain] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
@@ -166,13 +163,6 @@ export default function Layout({ children }: { children: ReactNode }) {
                     <Trash2 size={16} />
                   </button>
                   <button
-                    onClick={() => setShowPreferences(true)}
-                    title="Preferências de notificação"
-                    className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 light:hover:text-zinc-900 light:hover:bg-black/5 transition-colors"
-                  >
-                    <Settings2 size={16} />
-                  </button>
-                  <button
                     onClick={async () => {
                       await signOut()
                       navigate('/login')
@@ -211,15 +201,6 @@ export default function Layout({ children }: { children: ReactNode }) {
                         className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-sm text-left text-zinc-300 hover:bg-white/5 light:text-zinc-700 light:hover:bg-black/5 transition-colors"
                       >
                         <Trash2 size={15} /> Lixeira
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowPreferences(true)
-                          setShowMobileMenu(false)
-                        }}
-                        className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-sm text-left text-zinc-300 hover:bg-white/5 light:text-zinc-700 light:hover:bg-black/5 transition-colors"
-                      >
-                        <Settings2 size={15} /> Preferências
                       </button>
                       <button
                         onClick={async () => {
@@ -283,7 +264,6 @@ export default function Layout({ children }: { children: ReactNode }) {
           )}
         </nav>
       )}
-      {showPreferences && <NotificationPreferencesModal onClose={() => setShowPreferences(false)} />}
       {showProfile && user && <ProfileModal userId={user.id} onClose={() => setShowProfile(false)} />}
       {user && (!user.onboardingCompletedAt || showTourAgain) && (
         <OnboardingTour onDismiss={() => setShowTourAgain(false)} />
