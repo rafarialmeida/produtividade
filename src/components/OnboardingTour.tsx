@@ -31,7 +31,7 @@ const STEPS = [
   {
     icon: Globe2,
     color: 'text-rose-300 light:text-rose-600',
-    title: 'Muro Global',
+    title: 'Ranking Geral',
     body: 'Suas tarefas pessoais entram no ranking geral da plataforma, e o Muro da Procrastinação mostra, sem dó, quem mais perdeu prazos. Bora começar?',
   },
 ]

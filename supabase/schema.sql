@@ -127,6 +127,17 @@ create table if not exists public.push_subscriptions (
   created_at timestamptz not null default now()
 );
 
+-- Relatos de bug/melhoria enviados por qualquer usuário. Toda escrita passa
+-- pela função report_bug (security definer).
+create table if not exists public.bug_reports (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  type text not null check (type in ('bug', 'melhoria')),
+  message text not null,
+  page_url text,
+  created_at timestamptz not null default now()
+);
+
 create index if not exists tasks_user_id_idx on public.tasks (user_id);
 create index if not exists tasks_community_id_idx on public.tasks (community_id);
 create index if not exists subtasks_task_id_idx on public.subtasks (task_id);
@@ -137,6 +148,8 @@ create index if not exists community_members_user_id_idx on public.community_mem
 create index if not exists community_join_requests_community_idx on public.community_join_requests (community_id);
 create index if not exists community_join_requests_user_idx on public.community_join_requests (user_id);
 create index if not exists push_subscriptions_user_id_idx on public.push_subscriptions (user_id);
+create index if not exists bug_reports_user_idx on public.bug_reports (user_id);
+create index if not exists bug_reports_created_idx on public.bug_reports (created_at desc);
 create index if not exists tasks_deleted_at_idx on public.tasks (deleted_at);
 create index if not exists communities_deleted_at_idx on public.communities (deleted_at);
 
@@ -1209,6 +1222,43 @@ as $$
   left join ranked r on r.user_id = p.id;
 $$;
 
+-- Qualquer usuário pode reportar um bug ou sugerir uma melhoria. Registra em
+-- bug_reports e notifica todo admin da plataforma dentro do app.
+create or replace function public.report_bug(_type text, _message text, _page_url text default null)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _id uuid;
+  _reporter_name text;
+  _label text;
+begin
+  if _type not in ('bug', 'melhoria') then
+    raise exception 'INVALID_TYPE';
+  end if;
+  if trim(coalesce(_message, '')) = '' then
+    raise exception 'EMPTY_MESSAGE';
+  end if;
+
+  insert into public.bug_reports (user_id, type, message, page_url)
+  values (auth.uid(), _type, trim(_message), _page_url)
+  returning id into _id;
+
+  select name into _reporter_name from public.profiles where id = auth.uid();
+  _label := case when _type = 'bug' then 'um bug' else 'uma melhoria' end;
+
+  insert into public.notifications (user_id, type, message)
+  select p.id, 'info',
+    coalesce(_reporter_name, 'Alguém') || ' reportou ' || _label || ': ' || left(trim(_message), 160)
+  from public.profiles p
+  where p.role = 'admin';
+
+  return _id;
+end;
+$$;
+
 grant execute on function public.is_admin() to authenticated;
 grant execute on function public.is_community_member(uuid) to authenticated;
 grant execute on function public.is_community_creator(uuid) to authenticated;
@@ -1229,6 +1279,7 @@ grant execute on function public.approve_join_request(uuid) to authenticated;
 grant execute on function public.reject_join_request(uuid) to authenticated;
 grant execute on function public.regenerate_invite_code(uuid) to authenticated;
 grant execute on function public.soft_delete_community(uuid) to authenticated;
+grant execute on function public.report_bug(text, text, text) to authenticated;
 grant execute on function public.restore_community(uuid) to authenticated;
 grant execute on function public.global_wall() to authenticated;
 grant execute on function public.get_public_profile(uuid) to authenticated;
@@ -1248,6 +1299,7 @@ alter table public.tasks enable row level security;
 alter table public.subtasks enable row level security;
 alter table public.notifications enable row level security;
 alter table public.push_subscriptions enable row level security;
+alter table public.bug_reports enable row level security;
 
 -- profiles: qualquer pessoa autenticada pode ver nome/avatar de qualquer usuário
 -- (necessário para rankings e listagem de membros). Só o próprio dono edita seu perfil,
@@ -1405,6 +1457,12 @@ create policy "push_subscriptions_insert_own" on public.push_subscriptions for i
 drop policy if exists "push_subscriptions_delete_own" on public.push_subscriptions;
 create policy "push_subscriptions_delete_own" on public.push_subscriptions for delete to authenticated
   using (user_id = auth.uid());
+
+-- bug_reports: quem reportou vê o próprio relato; admins da plataforma veem
+-- todos. Toda escrita passa pela função report_bug (security definer).
+drop policy if exists "bug_reports_select" on public.bug_reports;
+create policy "bug_reports_select" on public.bug_reports for select to authenticated
+  using (user_id = auth.uid() or public.is_admin());
 
 -- ============================================================================
 -- Promover o primeiro administrador

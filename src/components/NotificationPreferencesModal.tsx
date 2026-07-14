@@ -136,7 +136,7 @@ export default function NotificationPreferencesModal({ userId, onClose }: { user
               <div>
                 <p className="text-sm font-medium text-white light:text-zinc-900">Resumo semanal</p>
                 <p className="text-xs text-zinc-500">
-                  Toda semana, quantas tarefas você concluiu (vs a semana anterior) e sua posição no Muro Global.
+                  Toda semana, quantas tarefas você concluiu (vs a semana anterior) e sua posição no Ranking Geral.
                 </p>
               </div>
             </div>

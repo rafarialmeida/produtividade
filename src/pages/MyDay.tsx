@@ -134,7 +134,7 @@ export default function MyDay() {
               <Globe2 size={16} className="text-rose-300 light:text-rose-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-white light:text-zinc-900">Muro Global</p>
+              <p className="text-sm font-medium text-white light:text-zinc-900">Ranking Geral</p>
               <p className="text-xs text-zinc-500">Ranking de negligência de toda a plataforma</p>
             </div>
           </div>

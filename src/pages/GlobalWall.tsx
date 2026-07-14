@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Crown, Flame, Globe2, Loader2, Swords, Timer, Trophy, Users } from 'lucide-react'
+import { Crown, Flame, Loader2, Swords, Timer, Trophy, Users } from 'lucide-react'
 import { useAppStore, type CommunityRankingEntry, type GlobalWallEntry } from '../store/useStore'
 import ProfileModal from '../components/ProfileModal'
 import RankBadge from '../components/RankBadge'
+import PodiumTop3 from '../components/PodiumTop3'
 import { computeCompositeRanking } from '../utils/ranking'
 import { formatDurationHours } from '../utils/date'
 import { formatDisplayName } from '../utils/name'
@@ -65,7 +66,7 @@ export default function GlobalWall() {
     <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-2xl font-bold text-white light:text-zinc-900 flex items-center gap-2.5">
-          <Globe2 className="text-purple-400 light:text-purple-600" size={22} /> Muro Global
+          <Trophy className="text-purple-400 light:text-purple-600" size={22} /> Ranking Geral
         </h1>
         <p className="text-zinc-500 text-sm mt-1">
           Ranking de tarefas gerais de toda a plataforma — clique em alguém para ver o perfil
@@ -112,7 +113,22 @@ export default function GlobalWall() {
               <Loader2 size={20} className="animate-spin" />
             </div>
           ) : (
-            <div className="divide-y divide-white/5">
+            <>
+              {tab === 'positive' && (
+                <PodiumTop3
+                  entries={sorted
+                    .filter((e) => e.personalPositivePoints > 0)
+                    .slice(0, 3)
+                    .map((e) => ({
+                      id: e.userId,
+                      name: e.name,
+                      avatarUrl: e.avatarUrl,
+                      points: e.personalPositivePoints,
+                      onClick: () => setOpenProfileId(e.userId),
+                    }))}
+                />
+              )}
+              <div className="divide-y divide-white/5">
               {sorted.map((entry, i) => {
                 const points = tab === 'positive' ? entry.personalPositivePoints : entry.personalLostPoints
                 const isLeader = i === 0 && points > 0
@@ -187,7 +203,8 @@ export default function GlobalWall() {
               {sorted.length === 0 && (
                 <div className="px-6 py-10 text-center text-sm text-zinc-500">Ninguém na plataforma ainda.</div>
               )}
-            </div>
+              </div>
+            </>
           )}
         </div>
       ) : (

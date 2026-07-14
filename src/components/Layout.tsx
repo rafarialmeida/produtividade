@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import {
   Briefcase,
+  Bug,
   HelpCircle,
   Layers,
   LogOut,
@@ -26,11 +27,12 @@ import OnboardingTour from './OnboardingTour'
 import OnlineDot from './OnlineDot'
 import PushToggle from './PushToggle'
 import ProfileModal from './ProfileModal'
+import ReportBugModal from './ReportBugModal'
 
 const NAV_ITEMS = [
   { to: '/day', label: 'Minhas tarefas', icon: Sparkles },
   { to: '/communities', label: 'Comunidades', icon: Users },
-  { to: '/global-wall', label: 'Muro Global', icon: Skull },
+  { to: '/global-wall', label: 'Ranking Geral', icon: Skull },
 ]
 
 export default function Layout({ children }: { children: ReactNode }) {
@@ -44,6 +46,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const [showProfile, setShowProfile] = useState(false)
   const [showTourAgain, setShowTourAgain] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [showReportBug, setShowReportBug] = useState(false)
   const levelMode = useAppStore((s) => s.levelMode)
   const setLevelMode = useAppStore((s) => s.setLevelMode)
   const activeLevelInfo = myStats
@@ -162,6 +165,13 @@ export default function Layout({ children }: { children: ReactNode }) {
                   <OnlineDot online={onlineUserIds.has(user.id)} className="absolute -bottom-0.5 -right-0.5 border border-black/50 light:border-white/70" />
                 </div>
                 <PushToggle userId={user.id} />
+                <button
+                  onClick={() => setShowReportBug(true)}
+                  title="Reportar bug ou melhoria"
+                  className="p-2 rounded-lg text-zinc-500 hover:text-rose-300 light:hover:text-rose-600 hover:bg-rose-500/10 transition-colors"
+                >
+                  <Bug size={16} />
+                </button>
 
                 {/* Telas maiores: ícones soltos. No mobile eles ficam agrupados no menu "⋮" pra caber tudo sem precisar dar zoom out. */}
                 <div className="hidden sm:flex items-center gap-2">
@@ -282,6 +292,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         </nav>
       )}
       {showProfile && user && <ProfileModal userId={user.id} onClose={() => setShowProfile(false)} />}
+      {showReportBug && <ReportBugModal onClose={() => setShowReportBug(false)} />}
       {user && (!user.onboardingCompletedAt || showTourAgain) && (
         <OnboardingTour onDismiss={() => setShowTourAgain(false)} />
       )}
