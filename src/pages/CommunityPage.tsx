@@ -146,9 +146,9 @@ export default function CommunityPage() {
         <Link to="/day" className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700 mb-3">
           <ArrowLeft size={13} /> Voltar
         </Link>
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
-            <div className={`w-11 h-11 rounded-xl ${typeCfg.bg} border ${typeCfg.border} flex items-center justify-center`}>
+            <div className={`w-11 h-11 rounded-xl ${typeCfg.bg} border ${typeCfg.border} flex items-center justify-center shrink-0`}>
               <typeCfg.icon size={18} className={typeCfg.color} />
             </div>
             <div className="min-w-0">
@@ -208,7 +208,7 @@ export default function CommunityPage() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {canInvite && (
               <button onClick={() => setShowInvite(true)} className="btn-ghost">
                 <UserPlus size={15} /> Convidar

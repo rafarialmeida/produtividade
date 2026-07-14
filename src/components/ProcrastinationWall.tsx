@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Crown, Flame, Skull } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { URGENCY_POINTS } from '../types'
+import { formatDisplayName } from '../utils/name'
 
 export default function ProcrastinationWall({ communityId }: { communityId: string }) {
   const community = useAppStore((s) => s.getCommunityById(communityId))
@@ -53,13 +54,23 @@ export default function ProcrastinationWall({ communityId }: { communityId: stri
                 {isLeader ? <Flame size={15} /> : i + 1}
               </div>
 
-              <div className="w-8 h-8 shrink-0 rounded-full bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 flex items-center justify-center text-xs font-semibold text-white">
-                {entry.user.name.slice(0, 1).toUpperCase()}
-              </div>
+              {entry.user.avatarUrl ? (
+                <img
+                  src={entry.user.avatarUrl}
+                  alt={entry.user.name}
+                  className="w-8 h-8 shrink-0 rounded-full object-cover border border-white/10"
+                />
+              ) : (
+                <div className="w-8 h-8 shrink-0 rounded-full bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 flex items-center justify-center text-xs font-semibold text-white">
+                  {entry.user.name.slice(0, 1).toUpperCase()}
+                </div>
+              )}
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-white light:text-zinc-900 truncate">{entry.user.name}</p>
+                  <p className="text-[13px] sm:text-sm font-medium text-white light:text-zinc-900 truncate">
+                    {formatDisplayName(entry.user.name)}
+                  </p>
                   {entry.user.role === 'admin' && <Crown size={12} className="text-amber-400 shrink-0" />}
                 </div>
                 <div className="mt-1.5 h-1.5 rounded-full bg-white/5 light:bg-black/10 overflow-hidden">

@@ -5,6 +5,7 @@ import ProfileModal from '../components/ProfileModal'
 import RankBadge from '../components/RankBadge'
 import { computeCompositeRanking } from '../utils/ranking'
 import { formatDurationHours } from '../utils/date'
+import { formatDisplayName } from '../utils/name'
 
 type Tab = 'positive' | 'negative' | 'communities'
 
@@ -149,7 +150,7 @@ export default function GlobalWall() {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-white light:text-zinc-900 truncate">{entry.name}</p>
+                        <p className="text-sm font-medium text-white light:text-zinc-900 truncate">{formatDisplayName(entry.name)}</p>
                         {entry.role === 'admin' && <Crown size={12} className="text-amber-400 shrink-0" />}
                         <span className="text-[11px] text-zinc-600">
                           · {entry.communityCount} comunidade{entry.communityCount !== 1 ? 's' : ''}

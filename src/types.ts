@@ -121,6 +121,14 @@ export interface Community {
   createdAt: string
 }
 
+export interface CommunityJoinRequest {
+  id: string
+  communityId: string
+  userId: string
+  status: 'pending' | 'approved' | 'rejected'
+  createdAt: string
+}
+
 export interface SubTask {
   id: string
   text: string

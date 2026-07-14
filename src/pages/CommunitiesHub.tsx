@@ -7,6 +7,7 @@ import InviteModal from '../components/InviteModal'
 import { SEVERITY_LABEL, URGENCY_POINTS } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
+import { formatDisplayName } from '../utils/name'
 
 export default function CommunitiesHub() {
   const user = useAppStore((s) => s.authUser)!
@@ -40,7 +41,7 @@ export default function CommunitiesHub() {
         setJoinError(error ?? 'Código de convite inválido.')
         return
       }
-      setJoinSuccess(`Você entrou em "${communityName}"!`)
+      setJoinSuccess(`Pedido enviado para "${communityName}" — aguarde a aprovação de um admin.`)
       setJoinCode('')
     } finally {
       setJoining(false)
@@ -140,21 +141,31 @@ export default function CommunitiesHub() {
                 <div className="flex items-center gap-2 text-xs text-rose-300 bg-rose-500/[0.06] border border-rose-500/20 rounded-xl px-3 py-2">
                   <Flame size={13} className="shrink-0" />
                   <span className="truncate">
-                    <strong>{leader.user.name}</strong> lidera o muro com -{leader.lost} pts
+                    <strong>{formatDisplayName(leader.user.name)}</strong> lidera o muro com -{leader.lost} pts
                   </span>
                 </div>
               )}
 
               <div className="flex -space-x-2">
-                {members.slice(0, 8).map((m) => (
-                  <div
-                    key={m!.id}
-                    title={m!.name}
-                    className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600/50 to-emerald-500/50 border-2 border-[#0d0e14] light:border-white flex items-center justify-center text-[10px] font-semibold text-white"
-                  >
-                    {m!.name.slice(0, 1).toUpperCase()}
-                  </div>
-                ))}
+                {members.slice(0, 8).map((m) =>
+                  m!.avatarUrl ? (
+                    <img
+                      key={m!.id}
+                      src={m!.avatarUrl}
+                      alt={m!.name}
+                      title={m!.name}
+                      className="w-7 h-7 rounded-full object-cover border-2 border-[#0d0e14] light:border-white"
+                    />
+                  ) : (
+                    <div
+                      key={m!.id}
+                      title={m!.name}
+                      className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600/50 to-emerald-500/50 border-2 border-[#0d0e14] light:border-white flex items-center justify-center text-[10px] font-semibold text-white"
+                    >
+                      {m!.name.slice(0, 1).toUpperCase()}
+                    </div>
+                  ),
+                )}
                 {members.length > 8 && (
                   <div className="w-7 h-7 rounded-full bg-white/10 border-2 border-[#0d0e14] light:border-white light:bg-black/10 flex items-center justify-center text-[10px] font-semibold text-zinc-300 light:text-zinc-600">
                     +{members.length - 8}

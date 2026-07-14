@@ -4,6 +4,7 @@ import { useAppStore } from '../store/useStore'
 import { COMPLEXITY_MULTIPLIER, URGENCY_POINTS } from '../types'
 import type { Task } from '../types'
 import { formatDeadline, formatDurationHours, formatRelative } from '../utils/date'
+import { formatDisplayName } from '../utils/name'
 import { getTaskStatus, TASK_STATUS_CONFIG, type TaskStatus } from '../utils/taskStatus'
 import TaskDetailModal from './TaskDetailModal'
 import MemberHoursModal from './MemberHoursModal'
@@ -280,8 +281,15 @@ export default function CommunityDashboard({
                 <tr key={s.userId} className="border-b border-white/5 last:border-0">
                   <td className="px-4 py-2.5 text-zinc-200 light:text-zinc-800 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1.5">
+                      {s.avatarUrl ? (
+                        <img src={s.avatarUrl} alt={s.name} className="w-5 h-5 rounded-full object-cover border border-white/10 shrink-0" />
+                      ) : (
+                        <div className="w-5 h-5 shrink-0 rounded-full bg-gradient-to-br from-purple-600/50 to-emerald-500/50 flex items-center justify-center text-[9px] font-semibold text-white">
+                          {s.name.slice(0, 1).toUpperCase()}
+                        </div>
+                      )}
                       <OnlineDot online={onlineUserIds.has(s.userId)} />
-                      {s.name}
+                      {formatDisplayName(s.name)}
                     </span>
                   </td>
                   <td className="px-3 py-2.5 text-right text-sky-300 tabular-nums">{s.inProgress}</td>
@@ -319,7 +327,16 @@ export default function CommunityDashboard({
                 onClick={() => setHoursUserId(s.userId)}
                 className="w-full flex items-center justify-between gap-3 px-4 py-2 text-xs text-left hover:bg-white/5 light:hover:bg-black/5 transition-colors"
               >
-                <span className="text-zinc-200 light:text-zinc-800 truncate">{s.name}</span>
+                <span className="flex items-center gap-1.5 min-w-0">
+                  {s.avatarUrl ? (
+                    <img src={s.avatarUrl} alt={s.name} className="w-5 h-5 rounded-full object-cover border border-white/10 shrink-0" />
+                  ) : (
+                    <div className="w-5 h-5 shrink-0 rounded-full bg-gradient-to-br from-purple-600/50 to-emerald-500/50 flex items-center justify-center text-[9px] font-semibold text-white">
+                      {s.name.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  <span className="text-zinc-200 light:text-zinc-800 truncate">{formatDisplayName(s.name)}</span>
+                </span>
                 <span className="text-zinc-400 light:text-zinc-600 tabular-nums shrink-0">{s.hours.toFixed(1)}h</span>
               </button>
             ))}

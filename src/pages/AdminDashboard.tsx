@@ -91,15 +91,25 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="flex -space-x-2 mt-4">
-                  {members.slice(0, 6).map((m) => (
-                    <div
-                      key={m!.id}
-                      title={m!.name}
-                      className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600/50 to-emerald-500/50 border-2 border-[#0d0e14] light:border-white flex items-center justify-center text-[10px] font-semibold text-white"
-                    >
-                      {m!.name.slice(0, 1).toUpperCase()}
-                    </div>
-                  ))}
+                  {members.slice(0, 6).map((m) =>
+                    m!.avatarUrl ? (
+                      <img
+                        key={m!.id}
+                        src={m!.avatarUrl}
+                        alt={m!.name}
+                        title={m!.name}
+                        className="w-7 h-7 rounded-full object-cover border-2 border-[#0d0e14] light:border-white"
+                      />
+                    ) : (
+                      <div
+                        key={m!.id}
+                        title={m!.name}
+                        className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600/50 to-emerald-500/50 border-2 border-[#0d0e14] light:border-white flex items-center justify-center text-[10px] font-semibold text-white"
+                      >
+                        {m!.name.slice(0, 1).toUpperCase()}
+                      </div>
+                    ),
+                  )}
                   {members.length > 6 && (
                     <div className="w-7 h-7 rounded-full bg-white/10 border-2 border-[#0d0e14] light:border-white light:bg-black/10 flex items-center justify-center text-[10px] font-semibold text-zinc-300 light:text-zinc-600">
                       +{members.length - 6}

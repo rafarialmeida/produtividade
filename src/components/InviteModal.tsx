@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, Copy, Crown, RefreshCcw, ShieldMinus, ShieldPlus, UserPlus, X } from 'lucide-react'
+import { Check, Copy, Crown, RefreshCcw, ShieldMinus, ShieldPlus, UserCheck, UserPlus, UserX, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
+import type { CommunityJoinRequest } from '../types'
 import OnlineDot from './OnlineDot'
 import ProfileModal from './ProfileModal'
+import { formatDisplayName } from '../utils/name'
 
 export default function InviteModal({ communityId, onClose }: { communityId: string; onClose: () => void }) {
   const authUser = useAppStore((s) => s.authUser)
@@ -12,19 +14,37 @@ export default function InviteModal({ communityId, onClose }: { communityId: str
   const onlineUserIds = useAppStore((s) => s.onlineUserIds)
   const regenerateInviteCode = useAppStore((s) => s.regenerateInviteCode)
   const setCommunityAdmin = useAppStore((s) => s.setCommunityAdmin)
+  const fetchJoinRequests = useAppStore((s) => s.fetchJoinRequests)
+  const approveJoinRequest = useAppStore((s) => s.approveJoinRequest)
+  const rejectJoinRequest = useAppStore((s) => s.rejectJoinRequest)
 
   const [copied, setCopied] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
   const [openProfileId, setOpenProfileId] = useState<string | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [roleError, setRoleError] = useState('')
+  const [joinRequests, setJoinRequests] = useState<CommunityJoinRequest[]>([])
+  const [resolvingId, setResolvingId] = useState<string | null>(null)
+  const [requestError, setRequestError] = useState('')
+
+  const canManageRoles = Boolean(
+    authUser && community && (authUser.role === 'admin' || community.adminIds.includes(authUser.id)),
+  )
+
+  useEffect(() => {
+    if (!canManageRoles) return
+    let cancelled = false
+    fetchJoinRequests(communityId).then((rows) => {
+      if (!cancelled) setJoinRequests(rows)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [communityId, canManageRoles, fetchJoinRequests])
 
   if (!community) return null
 
   const members = community.memberIds.map((id) => users.find((u) => u.id === id)).filter(Boolean)
-  const canManageRoles = Boolean(
-    authUser && (authUser.role === 'admin' || community.adminIds.includes(authUser.id)),
-  )
 
   async function handleToggleAdmin(memberId: string, makeAdmin: boolean) {
     setRoleError('')
@@ -34,6 +54,21 @@ export default function InviteModal({ communityId, onClose }: { communityId: str
       if (error) setRoleError(error === 'LAST_ADMIN' ? 'Precisa ter pelo menos um admin na comunidade.' : error)
     } finally {
       setTogglingId(null)
+    }
+  }
+
+  async function handleResolveRequest(requestId: string, approve: boolean) {
+    setRequestError('')
+    setResolvingId(requestId)
+    try {
+      const error = approve ? await approveJoinRequest(requestId) : await rejectJoinRequest(requestId)
+      if (error) {
+        setRequestError(error)
+        return
+      }
+      setJoinRequests((prev) => prev.filter((r) => r.id !== requestId))
+    } finally {
+      setResolvingId(null)
     }
   }
 
@@ -85,9 +120,58 @@ export default function InviteModal({ communityId, onClose }: { communityId: str
               </button>
             </div>
             <p className="text-[11px] text-zinc-500 mt-1.5">
-              Compartilhe este código — a pessoa cria a conta (ou já tem uma) e entra na comunidade pela aba "Comunidades".
+              Compartilhe este código — a pessoa cria a conta (ou já tem uma) e pede para entrar pela aba "Comunidades". Um
+              admin precisa aprovar antes de ela virar membro.
             </p>
           </div>
+
+          {canManageRoles && joinRequests.length > 0 && (
+            <div className="border-t border-white/5 pt-5">
+              <p className="text-xs font-medium text-zinc-400 light:text-zinc-600 mb-2">
+                Pedidos pendentes ({joinRequests.length})
+              </p>
+              {requestError && <p className="text-[11px] text-rose-400 mb-2">{requestError}</p>}
+              <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
+                {joinRequests.map((r) => {
+                  const requester = users.find((u) => u.id === r.userId)
+                  if (!requester) return null
+                  return (
+                    <div
+                      key={r.id}
+                      className="flex items-center gap-2.5 py-1.5 rounded-lg -mx-1.5 px-1.5 bg-amber-500/[0.05] border border-amber-500/15"
+                    >
+                      <button onClick={() => setOpenProfileId(requester.id)} className="flex items-center gap-2.5 text-left flex-1 min-w-0">
+                        {requester.avatarUrl ? (
+                          <img src={requester.avatarUrl} alt={requester.name} className="w-7 h-7 rounded-full object-cover border border-white/10 shrink-0" />
+                        ) : (
+                          <div className="w-7 h-7 shrink-0 rounded-full bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 flex items-center justify-center text-[11px] font-semibold text-white">
+                            {requester.name.slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                        <p className="text-sm text-zinc-200 light:text-zinc-800 truncate">{formatDisplayName(requester.name)}</p>
+                      </button>
+                      <button
+                        onClick={() => handleResolveRequest(r.id, true)}
+                        disabled={resolvingId === r.id}
+                        title="Aprovar"
+                        className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors disabled:opacity-40 shrink-0"
+                      >
+                        <UserCheck size={15} />
+                      </button>
+                      <button
+                        onClick={() => handleResolveRequest(r.id, false)}
+                        disabled={resolvingId === r.id}
+                        title="Recusar"
+                        className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-40 shrink-0"
+                      >
+                        <UserX size={15} />
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="border-t border-white/5 pt-5">
             <p className="text-xs font-medium text-zinc-400 light:text-zinc-600 mb-2">Membros ({members.length})</p>
@@ -111,7 +195,7 @@ export default function InviteModal({ communityId, onClose }: { communityId: str
                         )}
                         <OnlineDot online={onlineUserIds.has(m!.id)} className="absolute -bottom-0.5 -right-0.5 border border-zinc-900 light:border-white" />
                       </div>
-                      <p className="text-sm text-zinc-200 light:text-zinc-800 truncate">{m!.name}</p>
+                      <p className="text-sm text-zinc-200 light:text-zinc-800 truncate">{formatDisplayName(m!.name)}</p>
                       {m!.role === 'admin' && <Crown size={12} className="text-amber-400 shrink-0" />}
                       {isCommunityAdmin && (
                         <span className="text-[10px] text-purple-300 border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 rounded shrink-0">

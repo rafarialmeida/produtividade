@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type {
   AuthUser,
   Community,
+  CommunityJoinRequest,
   CommunityPiece,
   CommunityType,
   Complexity,
@@ -140,6 +141,9 @@ interface State {
   setCommunityBoardEnabled: (communityId: string, enabled: boolean) => Promise<string | null>
   renameCommunity: (communityId: string, name: string) => Promise<string | null>
   joinCommunityWithCode: (code: string) => Promise<{ error: string | null; communityName: string | null }>
+  fetchJoinRequests: (communityId: string) => Promise<CommunityJoinRequest[]>
+  approveJoinRequest: (requestId: string) => Promise<string | null>
+  rejectJoinRequest: (requestId: string) => Promise<string | null>
   regenerateInviteCode: (communityId: string) => Promise<void>
   deleteCommunity: (communityId: string) => Promise<void>
   restoreCommunity: (communityId: string) => Promise<void>
@@ -478,9 +482,51 @@ export const useAppStore = create<State>()((set, get) => ({
 
   joinCommunityWithCode: async (code) => {
     const { data, error } = await supabase.rpc('join_community_with_code', { _code: code })
-    if (error || !data) return { error: 'Código de convite inválido.', communityName: null }
+    if (error) {
+      const message =
+        error.message === 'INVALID_CODE'
+          ? 'Código de convite inválido.'
+          : error.message === 'ALREADY_MEMBER'
+            ? 'Você já é membro dessa comunidade.'
+            : error.message === 'ALREADY_PENDING'
+              ? 'Seu pedido para entrar já está aguardando aprovação de um admin.'
+              : error.message
+      return { error: message, communityName: null }
+    }
+    const row = Array.isArray(data) ? data[0] : data
+    if (!row) return { error: 'Código de convite inválido.', communityName: null }
     await get().refreshAll()
-    return { error: null, communityName: (data as { name: string }).name }
+    return { error: null, communityName: (row as { community_name: string }).community_name }
+  },
+
+  fetchJoinRequests: async (communityId) => {
+    const { data, error } = await supabase
+      .from('community_join_requests')
+      .select('*')
+      .eq('community_id', communityId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true })
+    if (error || !data) return []
+    return data.map((r) => ({
+      id: r.id,
+      communityId: r.community_id,
+      userId: r.user_id,
+      status: r.status,
+      createdAt: r.created_at,
+    }))
+  },
+
+  approveJoinRequest: async (requestId) => {
+    const { error } = await supabase.rpc('approve_join_request', { _request_id: requestId })
+    if (error) return error.message
+    await get().refreshAll()
+    return null
+  },
+
+  rejectJoinRequest: async (requestId) => {
+    const { error } = await supabase.rpc('reject_join_request', { _request_id: requestId })
+    if (error) return error.message
+    return null
   },
 
   regenerateInviteCode: async (communityId) => {
