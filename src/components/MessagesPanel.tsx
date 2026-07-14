@@ -32,7 +32,7 @@ export default function MessagesPanel({ userId }: { userId: string }) {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        title="Mensagens"
+        title="Avisos"
         className="relative p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 light:hover:text-zinc-900 light:hover:bg-black/5 transition-colors"
       >
         <MessageCircle size={16} />
@@ -46,7 +46,7 @@ export default function MessagesPanel({ userId }: { userId: string }) {
       {open && (
         <div className="fixed left-2 right-2 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80 glass-panel neon-border-purple rounded-2xl overflow-hidden z-50 flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-            <p className="text-sm font-bold text-white light:text-zinc-900">Mensagens</p>
+            <p className="text-sm font-bold text-white light:text-zinc-900">Avisos</p>
             <button
               onClick={() => setOpen(false)}
               className="p-1 rounded text-zinc-500 hover:text-white hover:bg-white/10 light:hover:text-zinc-900 light:hover:bg-black/10"
@@ -56,7 +56,7 @@ export default function MessagesPanel({ userId }: { userId: string }) {
           </div>
           <div className="max-h-[60vh] overflow-y-auto divide-y divide-white/5">
             {mine.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-zinc-500">Nenhuma mensagem ainda.</p>
+              <p className="px-4 py-8 text-center text-sm text-zinc-500">Nenhum aviso ainda.</p>
             ) : (
               mine.map((n) => (
                 <button
