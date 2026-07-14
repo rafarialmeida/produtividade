@@ -380,7 +380,7 @@ function LevelCard({
         </p>
         <p className="text-xs text-zinc-400 light:text-zinc-600 tabular-nums">{xp} XP</p>
       </div>
-      <div className="mt-2.5 h-1.5 rounded-full bg-white/5 overflow-hidden">
+      <div className="mt-2.5 h-1.5 rounded-full bg-white/5 light:bg-black/10 overflow-hidden">
         <div
           className={`h-full rounded-full ${colors.bar}`}
           style={{ width: `${Math.min(100, Math.max(0, info.progress * 100))}%` }}

@@ -12,11 +12,11 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={`shrink-0 w-10 h-6 rounded-full transition-colors relative disabled:opacity-30 disabled:cursor-not-allowed ${
-        checked ? 'bg-emerald-500/80' : 'bg-white/10'
+        checked ? 'bg-emerald-500/80' : 'bg-white/10 light:bg-black/15'
       }`}
     >
       <span
-        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
+        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white light:shadow-sm transition-transform ${
           checked ? 'translate-x-4' : 'translate-x-0'
         }`}
       />

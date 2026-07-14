@@ -62,7 +62,7 @@ export default function ProcrastinationWall({ communityId }: { communityId: stri
                   <p className="text-sm font-medium text-white light:text-zinc-900 truncate">{entry.user.name}</p>
                   {entry.user.role === 'admin' && <Crown size={12} className="text-amber-400 shrink-0" />}
                 </div>
-                <div className="mt-1.5 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                <div className="mt-1.5 h-1.5 rounded-full bg-white/5 light:bg-black/10 overflow-hidden">
                   <div
                     className={`h-full rounded-full ${isLeader ? 'bg-rose-500' : 'bg-purple-500/70'}`}
                     style={{ width: `${barWidth}%` }}

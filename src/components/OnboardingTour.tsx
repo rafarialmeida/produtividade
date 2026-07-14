@@ -67,7 +67,10 @@ export default function OnboardingTour({ onDismiss }: { onDismiss?: () => void }
 
         <div className="flex items-center justify-center gap-1.5 pb-5">
           {STEPS.map((_, i) => (
-            <span key={i} className={`w-1.5 h-1.5 rounded-full ${i === step ? 'bg-purple-400' : 'bg-white/15'}`} />
+            <span
+              key={i}
+              className={`w-1.5 h-1.5 rounded-full ${i === step ? 'bg-purple-400 light:bg-purple-600' : 'bg-white/15 light:bg-black/15'}`}
+            />
           ))}
         </div>
 

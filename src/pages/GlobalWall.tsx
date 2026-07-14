@@ -155,7 +155,7 @@ export default function GlobalWall() {
                           · {entry.communityCount} comunidade{entry.communityCount !== 1 ? 's' : ''}
                         </span>
                       </div>
-                      <div className="mt-1.5 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                      <div className="mt-1.5 h-1.5 rounded-full bg-white/5 light:bg-black/10 overflow-hidden">
                         <div
                           className={`h-full rounded-full ${
                             isLeader ? (positive ? 'bg-emerald-500' : 'bg-rose-500') : positive ? 'bg-emerald-500/60' : 'bg-rose-500/60'
