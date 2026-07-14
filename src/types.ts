@@ -137,6 +137,8 @@ export interface BugReport {
   type: 'bug' | 'melhoria'
   message: string
   pageUrl: string | null
+  adminReply?: string
+  repliedAt?: string
   createdAt: string
 }
 
@@ -191,6 +193,7 @@ export interface Notification {
   message: string
   type: 'penalty' | 'warning' | 'info' | 'success'
   taskId?: string
+  bugReportId?: string
   createdAt: string
   read: boolean
 }

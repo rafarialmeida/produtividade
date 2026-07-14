@@ -128,15 +128,22 @@ create table if not exists public.push_subscriptions (
 );
 
 -- Relatos de bug/melhoria enviados por qualquer usuário. Toda escrita passa
--- pela função report_bug (security definer).
+-- pela função report_bug (security definer). admin_reply/replied_at guardam
+-- a resposta do dono da plataforma (reply_to_bug_report).
 create table if not exists public.bug_reports (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles (id) on delete cascade,
   type text not null check (type in ('bug', 'melhoria')),
   message text not null,
   page_url text,
+  admin_reply text,
+  replied_at timestamptz,
   created_at timestamptz not null default now()
 );
+
+-- bug_report_id só pode ser adicionado depois que a tabela acima existe
+-- (notifications é criada antes de bug_reports neste arquivo).
+alter table public.notifications add column if not exists bug_report_id uuid references public.bug_reports (id) on delete set null;
 
 create index if not exists tasks_user_id_idx on public.tasks (user_id);
 create index if not exists tasks_community_id_idx on public.tasks (community_id);
@@ -1259,6 +1266,54 @@ begin
 end;
 $$;
 
+-- Responde um relato de bug/melhoria: só o dono da plataforma pode. A
+-- resposta vira uma notificação in-app pra quem reportou.
+create or replace function public.reply_to_bug_report(_report_id uuid, _reply text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _reporter_id uuid;
+begin
+  if (auth.jwt() ->> 'email') <> 'rafael.farialmeida@gmail.com' then
+    raise exception 'NOT_ALLOWED';
+  end if;
+  if trim(coalesce(_reply, '')) = '' then
+    raise exception 'EMPTY_MESSAGE';
+  end if;
+
+  select user_id into _reporter_id from public.bug_reports where id = _report_id;
+  if _reporter_id is null then
+    raise exception 'NOT_FOUND';
+  end if;
+
+  update public.bug_reports
+  set admin_reply = trim(_reply), replied_at = now()
+  where id = _report_id;
+
+  insert into public.notifications (user_id, type, message, bug_report_id)
+  values (_reporter_id, 'info', 'Resposta sobre o seu relato: ' || trim(_reply), _report_id);
+end;
+$$;
+
+-- Exclui um relato de bug/melhoria: só o dono da plataforma pode.
+create or replace function public.delete_bug_report(_report_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if (auth.jwt() ->> 'email') <> 'rafael.farialmeida@gmail.com' then
+    raise exception 'NOT_ALLOWED';
+  end if;
+
+  delete from public.bug_reports where id = _report_id;
+end;
+$$;
+
 grant execute on function public.is_admin() to authenticated;
 grant execute on function public.is_community_member(uuid) to authenticated;
 grant execute on function public.is_community_creator(uuid) to authenticated;
@@ -1280,6 +1335,8 @@ grant execute on function public.reject_join_request(uuid) to authenticated;
 grant execute on function public.regenerate_invite_code(uuid) to authenticated;
 grant execute on function public.soft_delete_community(uuid) to authenticated;
 grant execute on function public.report_bug(text, text, text) to authenticated;
+grant execute on function public.reply_to_bug_report(uuid, text) to authenticated;
+grant execute on function public.delete_bug_report(uuid) to authenticated;
 grant execute on function public.restore_community(uuid) to authenticated;
 grant execute on function public.global_wall() to authenticated;
 grant execute on function public.get_public_profile(uuid) to authenticated;

@@ -155,6 +155,8 @@ interface State {
   leaveCommunity: (communityId: string) => Promise<string | null>
   reportBug: (type: 'bug' | 'melhoria', message: string) => Promise<string | null>
   fetchBugReports: () => Promise<BugReport[]>
+  replyToBugReport: (reportId: string, reply: string) => Promise<string | null>
+  deleteBugReport: (reportId: string) => Promise<string | null>
   setCommunityPiece: (communityId: string, pieceId: string, color: string) => Promise<string | null>
 
   // objetivo macro
@@ -280,6 +282,7 @@ function mapNotification(row: Record<string, unknown>): Notification {
     message: row.message as string,
     type: row.type as Notification['type'],
     taskId: (row.task_id as string | null) ?? undefined,
+    bugReportId: (row.bug_report_id as string | null) ?? undefined,
     createdAt: row.created_at as string,
     read: row.read as boolean,
   }
@@ -620,8 +623,23 @@ export const useAppStore = create<State>()((set, get) => ({
       type: r.type,
       message: r.message,
       pageUrl: r.page_url,
+      adminReply: r.admin_reply ?? undefined,
+      repliedAt: r.replied_at ?? undefined,
       createdAt: r.created_at,
     }))
+  },
+
+  replyToBugReport: async (reportId, reply) => {
+    const { error } = await supabase.rpc('reply_to_bug_report', { _report_id: reportId, _reply: reply })
+    if (error) return error.message
+    await get().refreshAll()
+    return null
+  },
+
+  deleteBugReport: async (reportId) => {
+    const { error } = await supabase.rpc('delete_bug_report', { _report_id: reportId })
+    if (error) return error.message
+    return null
   },
 
   setCommunityPiece: async (communityId, pieceId, color) => {

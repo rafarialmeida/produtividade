@@ -28,6 +28,7 @@ import OnlineDot from './OnlineDot'
 import PushToggle from './PushToggle'
 import ProfileModal from './ProfileModal'
 import ReportBugModal from './ReportBugModal'
+import MessagesPanel from './MessagesPanel'
 
 const NAV_ITEMS = [
   { to: '/day', label: 'Minhas tarefas', icon: Sparkles },
@@ -165,6 +166,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                   <OnlineDot online={onlineUserIds.has(user.id)} className="absolute -bottom-0.5 -right-0.5 border border-black/50 light:border-white/70" />
                 </div>
                 <PushToggle userId={user.id} />
+                <MessagesPanel userId={user.id} />
                 <button
                   onClick={() => setShowReportBug(true)}
                   title="Reportar bug ou melhoria"
