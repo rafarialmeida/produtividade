@@ -22,7 +22,7 @@ export default function GlobalWall() {
     let cancelled = false
     fetchGlobalWall().then((rows) => {
       if (cancelled) return
-      setRanking(rows.filter((r) => r.communityCount > 0))
+      setRanking(rows)
       setLoading(false)
     })
     return () => {
