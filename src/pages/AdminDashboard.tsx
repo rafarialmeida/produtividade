@@ -3,11 +3,15 @@ import { Link } from 'react-router-dom'
 import { ArrowUpRight, Plus, ShieldCheck, TrendingDown, Users } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import CreateCommunityModal from '../components/CreateCommunityModal'
+import BugReportsPanel from '../components/BugReportsPanel'
 import { SEVERITY_LABEL, URGENCY_POINTS } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
 
+const OWNER_EMAIL = 'rafael.farialmeida@gmail.com'
+
 export default function AdminDashboard() {
+  const authUser = useAppStore((s) => s.authUser)
   const communities = useAppStore((s) => s.communities)
   const users = useAppStore((s) => s.users)
   const tasks = useAppStore((s) => s.tasks)
@@ -121,6 +125,8 @@ export default function AdminDashboard() {
           })}
         </div>
       </div>
+
+      {authUser?.email === OWNER_EMAIL && <BugReportsPanel />}
 
       {showCreate && <CreateCommunityModal onClose={() => setShowCreate(false)} />}
     </div>

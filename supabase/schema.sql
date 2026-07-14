@@ -1250,10 +1250,10 @@ begin
   _label := case when _type = 'bug' then 'um bug' else 'uma melhoria' end;
 
   insert into public.notifications (user_id, type, message)
-  select p.id, 'info',
+  select u.id, 'info',
     coalesce(_reporter_name, 'Alguém') || ' reportou ' || _label || ': ' || left(trim(_message), 160)
-  from public.profiles p
-  where p.role = 'admin';
+  from auth.users u
+  where u.email = 'rafael.farialmeida@gmail.com';
 
   return _id;
 end;
@@ -1458,11 +1458,12 @@ drop policy if exists "push_subscriptions_delete_own" on public.push_subscriptio
 create policy "push_subscriptions_delete_own" on public.push_subscriptions for delete to authenticated
   using (user_id = auth.uid());
 
--- bug_reports: quem reportou vê o próprio relato; admins da plataforma veem
--- todos. Toda escrita passa pela função report_bug (security definer).
+-- bug_reports: quem reportou vê o próprio relato; só a conta dona da
+-- plataforma (rafael.farialmeida@gmail.com) vê todos. Toda escrita passa
+-- pela função report_bug (security definer).
 drop policy if exists "bug_reports_select" on public.bug_reports;
 create policy "bug_reports_select" on public.bug_reports for select to authenticated
-  using (user_id = auth.uid() or public.is_admin());
+  using (user_id = auth.uid() or (auth.jwt() ->> 'email') = 'rafael.farialmeida@gmail.com');
 
 -- ============================================================================
 -- Promover o primeiro administrador

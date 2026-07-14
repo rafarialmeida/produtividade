@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import type {
   AuthUser,
+  BugReport,
   Community,
   CommunityJoinRequest,
   CommunityPiece,
@@ -153,6 +154,7 @@ interface State {
   removeCommunityMember: (communityId: string, userId: string) => Promise<string | null>
   leaveCommunity: (communityId: string) => Promise<string | null>
   reportBug: (type: 'bug' | 'melhoria', message: string) => Promise<string | null>
+  fetchBugReports: () => Promise<BugReport[]>
   setCommunityPiece: (communityId: string, pieceId: string, color: string) => Promise<string | null>
 
   // objetivo macro
@@ -603,6 +605,23 @@ export const useAppStore = create<State>()((set, get) => ({
     })
     if (error) return error.message
     return null
+  },
+
+  fetchBugReports: async () => {
+    const { data, error } = await supabase
+      .from('bug_reports')
+      .select('*, profiles(name)')
+      .order('created_at', { ascending: false })
+    if (error || !data) return []
+    return data.map((r) => ({
+      id: r.id,
+      userId: r.user_id,
+      reporterName: (r.profiles as { name?: string } | null)?.name ?? 'Alguém',
+      type: r.type,
+      message: r.message,
+      pageUrl: r.page_url,
+      createdAt: r.created_at,
+    }))
   },
 
   setCommunityPiece: async (communityId, pieceId, color) => {

@@ -130,6 +130,16 @@ export interface CommunityJoinRequest {
   createdAt: string
 }
 
+export interface BugReport {
+  id: string
+  userId: string
+  reporterName: string
+  type: 'bug' | 'melhoria'
+  message: string
+  pageUrl: string | null
+  createdAt: string
+}
+
 export interface SubTask {
   id: string
   text: string
