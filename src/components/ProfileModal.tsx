@@ -60,6 +60,7 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
   const [uploading, setUploading] = useState(false)
   const [removing, setRemoving] = useState(false)
   const [cropSource, setCropSource] = useState<File | string | null>(null)
+  const [avatarError, setAvatarError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [newPassword, setNewPassword] = useState('')
@@ -75,6 +76,7 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    setAvatarError('')
     fetchPublicProfile(userId).then((p) => {
       if (!cancelled) {
         setProfile(p)
@@ -95,18 +97,22 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
 
   async function handleCropConfirm(blob: Blob) {
     setUploading(true)
-    const url = await uploadAvatar(blob)
+    setAvatarError('')
+    const { url, error } = await uploadAvatar(blob)
     setUploading(false)
     setCropSource(null)
-    if (url && profile) setProfile({ ...profile, avatarUrl: url })
+    if (error) setAvatarError(error)
+    else if (url && profile) setProfile({ ...profile, avatarUrl: url })
   }
 
   async function handleRemoveAvatar() {
     if (!window.confirm('Excluir sua foto de perfil?')) return
     setRemoving(true)
-    const ok = await removeAvatar()
+    setAvatarError('')
+    const error = await removeAvatar()
     setRemoving(false)
-    if (ok && profile) setProfile({ ...profile, avatarUrl: undefined })
+    if (error) setAvatarError(error)
+    else if (profile) setProfile({ ...profile, avatarUrl: undefined })
   }
 
   function startEditingName() {
@@ -267,6 +273,7 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
                 </p>
               </div>
             </div>
+            {avatarError && <p className="text-xs text-rose-400 -mt-3">{avatarError}</p>}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <LevelCard label="Nível de Trabalho" icon={Briefcase} xp={profile.workXp} accent="sky" />

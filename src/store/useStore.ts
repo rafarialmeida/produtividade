@@ -178,8 +178,8 @@ interface State {
   // perfil
   updatePassword: (newPassword: string) => Promise<string | null>
   updateName: (name: string) => Promise<string | null>
-  uploadAvatar: (file: Blob) => Promise<string | null>
-  removeAvatar: () => Promise<boolean>
+  uploadAvatar: (file: Blob) => Promise<{ url: string | null; error: string | null }>
+  removeAvatar: () => Promise<string | null>
 
   // selectors
   getUserById: (id: string) => User | undefined
@@ -950,36 +950,43 @@ export const useAppStore = create<State>()((set, get) => ({
 
   uploadAvatar: async (file) => {
     const authUser = get().authUser
-    if (!authUser) return null
+    if (!authUser) return { url: null, error: 'Não autenticado.' }
     const ext = file instanceof File ? (file.name.split('.').pop() ?? 'jpg') : 'jpg'
     const path = `${authUser.id}/avatar.${ext}`
     const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
-    if (uploadError) return null
+    if (uploadError) return { url: null, error: uploadError.message }
 
     const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(path)
     const avatarUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`
 
-    const { error: updateError } = await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', authUser.id)
-    if (updateError) return null
+    const { error: updateError, data: updated } = await supabase
+      .from('profiles')
+      .update({ avatar_url: avatarUrl })
+      .eq('id', authUser.id)
+      .select('id')
+    if (updateError) return { url: null, error: updateError.message }
+    if (!updated || updated.length === 0) {
+      return { url: null, error: 'Perfil não encontrado — o upload da imagem funcionou, mas a atualização do perfil não afetou nenhuma linha.' }
+    }
 
     set({
       authUser: { ...authUser, avatarUrl },
       users: get().users.map((u) => (u.id === authUser.id ? { ...u, avatarUrl } : u)),
     })
-    return avatarUrl
+    return { url: avatarUrl, error: null }
   },
 
   removeAvatar: async () => {
     const authUser = get().authUser
-    if (!authUser) return false
+    if (!authUser) return 'Não autenticado.'
     const { error } = await supabase.from('profiles').update({ avatar_url: null }).eq('id', authUser.id)
-    if (error) return false
+    if (error) return error.message
 
     set({
       authUser: { ...authUser, avatarUrl: undefined },
       users: get().users.map((u) => (u.id === authUser.id ? { ...u, avatarUrl: undefined } : u)),
     })
-    return true
+    return null
   },
 
   getUserById: (id) => get().users.find((u) => u.id === id),
