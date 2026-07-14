@@ -1,14 +1,16 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Crown, Flame, Skull } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { URGENCY_POINTS } from '../types'
 import { formatDisplayName } from '../utils/name'
+import ProfileModal from './ProfileModal'
 
 export default function ProcrastinationWall({ communityId }: { communityId: string }) {
   const community = useAppStore((s) => s.getCommunityById(communityId))
   const users = useAppStore((s) => s.users)
   const allTasks = useAppStore((s) => s.tasks)
   const tasks = useMemo(() => allTasks.filter((t) => t.communityId === communityId), [allTasks, communityId])
+  const [openProfileId, setOpenProfileId] = useState<string | null>(null)
 
   if (!community) return null
 
@@ -43,7 +45,11 @@ export default function ProcrastinationWall({ communityId }: { communityId: stri
           const isLeader = i === 0 && entry.lostPoints > 0
           const barWidth = entry.lostPoints === 0 ? 0 : Math.max(6, (entry.lostPoints / maxPoints) * 100)
           return (
-            <div key={entry.user.id} className={`px-6 py-4 flex items-center gap-4 ${isLeader ? 'bg-rose-500/[0.06]' : ''}`}>
+            <button
+              key={entry.user.id}
+              onClick={() => setOpenProfileId(entry.user.id)}
+              className={`w-full px-4 sm:px-6 py-4 flex items-center gap-2.5 sm:gap-4 text-left hover:bg-white/[0.03] light:hover:bg-black/[0.02] transition-colors ${isLeader ? 'bg-rose-500/[0.06]' : ''}`}
+            >
               <div
                 className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-bold text-sm ${
                   isLeader
@@ -68,7 +74,7 @@ export default function ProcrastinationWall({ communityId }: { communityId: stri
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-[13px] sm:text-sm font-medium text-white light:text-zinc-900 truncate">
+                  <p className="text-[13px] sm:text-sm font-medium text-white light:text-zinc-900 break-words">
                     {formatDisplayName(entry.user.name)}
                   </p>
                   {entry.user.role === 'admin' && <Crown size={12} className="text-amber-400 shrink-0" />}
@@ -89,13 +95,14 @@ export default function ProcrastinationWall({ communityId }: { communityId: stri
                   {entry.expiredCount} tarefa{entry.expiredCount !== 1 ? 's' : ''} perdida{entry.expiredCount !== 1 ? 's' : ''}
                 </p>
               </div>
-            </div>
+            </button>
           )
         })}
         {ranking.length === 0 && (
           <div className="px-6 py-10 text-center text-sm text-zinc-500">Nenhum membro nesta comunidade ainda.</div>
         )}
       </div>
+      {openProfileId && <ProfileModal userId={openProfileId} onClose={() => setOpenProfileId(null)} />}
     </div>
   )
 }

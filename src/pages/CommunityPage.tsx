@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Check, Dices, Loader2, Pencil, Plus, Trash2, UserPlus, Users, X } from 'lucide-react'
+import { ArrowLeft, Check, Dices, Loader2, Lock, LockOpen, Pencil, Plus, Trash2, UserPlus, Users, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import ProcrastinationWall from '../components/ProcrastinationWall'
 import TaskCard from '../components/TaskCard'
@@ -25,6 +25,7 @@ export default function CommunityPage() {
   const users = useAppStore((s) => s.users)
   const deleteCommunity = useAppStore((s) => s.deleteCommunity)
   const setCommunityBoardEnabled = useAppStore((s) => s.setCommunityBoardEnabled)
+  const setCommunityClosed = useAppStore((s) => s.setCommunityClosed)
   const renameCommunity = useAppStore((s) => s.renameCommunity)
   const allTasks = useAppStore((s) => s.tasks)
   const tasks = useMemo(() => allTasks.filter((t) => t.communityId === id), [allTasks, id])
@@ -35,6 +36,7 @@ export default function CommunityPage() {
   const [historyUserId, setHistoryUserId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'tasks' | 'members' | 'dashboard' | 'board' | 'ranking'>('tasks')
   const [togglingBoard, setTogglingBoard] = useState(false)
+  const [togglingClosed, setTogglingClosed] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [savingName, setSavingName] = useState(false)
@@ -132,6 +134,16 @@ export default function CommunityPage() {
     }
   }
 
+  async function handleToggleClosed() {
+    if (!community) return
+    setTogglingClosed(true)
+    try {
+      await setCommunityClosed(community.id, !community.closed)
+    } finally {
+      setTogglingClosed(false)
+    }
+  }
+
   const filtered = tasks
     .filter((t) => {
       if (userFilter !== 'all' && t.userId !== userFilter) return false
@@ -207,6 +219,11 @@ export default function CommunityPage() {
                 <span className={`px-1.5 py-0.5 rounded border ${cfg.bg} ${cfg.border} ${cfg.color} font-medium`}>
                   Gravidade {SEVERITY_LABEL[community.severity]}
                 </span>
+                {community.closed && (
+                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-zinc-500/30 bg-zinc-500/10 text-zinc-400 font-medium">
+                    <Lock size={10} /> Fechada
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -231,6 +248,24 @@ export default function CommunityPage() {
                 }`}
               >
                 <Dices size={15} />
+              </button>
+            )}
+            {isCommunityAdmin && (
+              <button
+                onClick={handleToggleClosed}
+                disabled={togglingClosed}
+                title={
+                  community.closed
+                    ? 'Reabrir comunidade — voltar a aceitar pedidos de entrada'
+                    : 'Fechar comunidade — pedidos de entrada param de chegar, mesmo com o código'
+                }
+                className={`p-2.5 rounded-xl border transition-colors disabled:opacity-50 ${
+                  community.closed
+                    ? 'border-zinc-500/30 bg-zinc-500/10 text-zinc-300 hover:bg-zinc-500/20'
+                    : 'border-white/10 bg-white/5 text-zinc-500 hover:text-zinc-300 hover:bg-white/10 light:border-black/10 light:bg-black/[0.03]'
+                }`}
+              >
+                {community.closed ? <Lock size={15} /> : <LockOpen size={15} />}
               </button>
             )}
             {canDelete && (

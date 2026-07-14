@@ -33,6 +33,7 @@ create table if not exists public.communities (
   invite_code text not null unique,
   creator_id uuid not null references public.profiles (id) on delete cascade,
   board_enabled boolean not null default true,
+  closed boolean not null default false,
   deleted_at timestamptz,
   created_at timestamptz not null default now()
 );
@@ -320,6 +321,25 @@ begin
 end;
 $$;
 
+-- Fecha/reabre uma comunidade para novos pedidos de entrada (só admin da
+-- comunidade ou admin da plataforma). Com a comunidade fechada,
+-- join_community_with_code recusa o pedido antes mesmo de criar a
+-- solicitação ou notificar os admins.
+create or replace function public.set_community_closed(_community_id uuid, _closed boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not (public.is_community_admin(_community_id) or public.is_admin()) then
+    raise exception 'NOT_ALLOWED';
+  end if;
+
+  update public.communities set closed = _closed where id = _community_id;
+end;
+$$;
+
 -- Renomeia uma comunidade (admin da comunidade, promovido ou criador, ou admin da plataforma).
 create or replace function public.rename_community(_community_id uuid, _name text)
 returns void
@@ -463,6 +483,10 @@ begin
   select * into _community from public.communities where upper(invite_code) = upper(_code);
   if not found then
     raise exception 'INVALID_CODE';
+  end if;
+
+  if _community.closed then
+    raise exception 'COMMUNITY_CLOSED';
   end if;
 
   if exists (
@@ -1164,6 +1188,7 @@ grant execute on function public.set_community_admin(uuid, uuid, boolean) to aut
 grant execute on function public.remove_community_member(uuid, uuid) to authenticated;
 grant execute on function public.set_community_piece(uuid, text, text) to authenticated;
 grant execute on function public.set_community_board_enabled(uuid, boolean) to authenticated;
+grant execute on function public.set_community_closed(uuid, boolean) to authenticated;
 grant execute on function public.rename_community(uuid, text) to authenticated;
 grant execute on function public.assign_task(uuid, uuid) to authenticated;
 grant execute on function public.assign_subtask(uuid, uuid) to authenticated;

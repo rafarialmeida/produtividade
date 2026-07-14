@@ -9,6 +9,7 @@ import { getTaskStatus, TASK_STATUS_CONFIG, type TaskStatus } from '../utils/tas
 import TaskDetailModal from './TaskDetailModal'
 import MemberHoursModal from './MemberHoursModal'
 import OnlineDot from './OnlineDot'
+import ProfileModal from './ProfileModal'
 import TaskListModal from './TaskListModal'
 
 const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000
@@ -49,6 +50,7 @@ export default function CommunityDashboard({
   const [showAllCompleted, setShowAllCompleted] = useState(false)
   const [hoursUserId, setHoursUserId] = useState<string | null>(null)
   const [listModal, setListModal] = useState<{ title: string; tasks: Task[] } | null>(null)
+  const [openProfileId, setOpenProfileId] = useState<string | null>(null)
 
   const communityTasks = useMemo(() => allTasks.filter((t) => t.communityId === communityId), [allTasks, communityId])
 
@@ -207,6 +209,7 @@ export default function CommunityDashboard({
               label="Entregando mais"
               name={mostDelivering.name}
               detail={`${mostDelivering.completed} concluída${mostDelivering.completed !== 1 ? 's' : ''}`}
+              onClick={() => setOpenProfileId(mostDelivering.userId)}
             />
           )}
           {mostDemand && mostDemand.inProgress + mostDemand.notStarted > 0 && (
@@ -216,6 +219,7 @@ export default function CommunityDashboard({
               label="Mais demanda"
               name={mostDemand.name}
               detail={`${mostDemand.inProgress + mostDemand.notStarted} pendente${mostDemand.inProgress + mostDemand.notStarted !== 1 ? 's' : ''}`}
+              onClick={() => setOpenProfileId(mostDemand.userId)}
             />
           )}
           {lowestProductivity && (
@@ -225,6 +229,7 @@ export default function CommunityDashboard({
               label="Menor produtividade"
               name={lowestProductivity.name}
               detail={`${lowestProductivity.positivePoints.toFixed(1)} pt${lowestProductivity.positivePoints !== 1 ? 's' : ''} positivos`}
+              onClick={() => setOpenProfileId(lowestProductivity.userId)}
             />
           )}
         </div>
@@ -410,6 +415,7 @@ export default function CommunityDashboard({
       {listModal && (
         <TaskListModal title={listModal.title} tasks={listModal.tasks} showOwner onClose={() => setListModal(null)} />
       )}
+      {openProfileId && <ProfileModal userId={openProfileId} onClose={() => setOpenProfileId(null)} />}
     </div>
   )
 }
@@ -468,12 +474,14 @@ function HighlightCard({
   label,
   name,
   detail,
+  onClick,
 }: {
   icon: typeof TrendingUp
   color: 'emerald' | 'purple' | 'rose'
   label: string
   name: string
   detail: string
+  onClick?: () => void
 }) {
   const styles = {
     emerald: { bg: 'bg-emerald-500/[0.06]', border: 'border-emerald-500/25', text: 'text-emerald-300' },
@@ -481,12 +489,15 @@ function HighlightCard({
     rose: { bg: 'bg-rose-500/[0.06]', border: 'border-rose-500/25', text: 'text-rose-300' },
   }[color]
   return (
-    <div className={`rounded-xl border ${styles.border} ${styles.bg} px-4 py-3`}>
+    <button
+      onClick={onClick}
+      className={`w-full text-left rounded-xl border ${styles.border} ${styles.bg} px-4 py-3 transition-colors hover:brightness-125`}
+    >
       <p className={`flex items-center gap-1.5 text-[11px] font-medium ${styles.text}`}>
         <Icon size={12} /> {label}
       </p>
       <p className="text-sm font-semibold text-white light:text-zinc-900 mt-1 truncate">{name}</p>
       <p className="text-[11px] text-zinc-500">{detail}</p>
-    </div>
+    </button>
   )
 }

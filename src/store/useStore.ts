@@ -139,6 +139,7 @@ interface State {
   // community actions
   createCommunity: (name: string, severity: Severity, type: CommunityType, boardEnabled?: boolean) => Promise<string | null>
   setCommunityBoardEnabled: (communityId: string, enabled: boolean) => Promise<string | null>
+  setCommunityClosed: (communityId: string, closed: boolean) => Promise<string | null>
   renameCommunity: (communityId: string, name: string) => Promise<string | null>
   joinCommunityWithCode: (code: string) => Promise<{ error: string | null; communityName: string | null }>
   fetchJoinRequests: (communityId: string) => Promise<CommunityJoinRequest[]>
@@ -262,6 +263,7 @@ function mapCommunity(
     pieces,
     creatorId: row.creator_id as string,
     boardEnabled: row.board_enabled as boolean,
+    closed: (row.closed as boolean | null) ?? false,
     deletedAt: (row.deleted_at as string | null) ?? undefined,
     createdAt: row.created_at as string,
   }
@@ -474,6 +476,16 @@ export const useAppStore = create<State>()((set, get) => ({
     return null
   },
 
+  setCommunityClosed: async (communityId, closed) => {
+    const { error } = await supabase.rpc('set_community_closed', {
+      _community_id: communityId,
+      _closed: closed,
+    })
+    if (error) return error.message
+    await get().refreshAll()
+    return null
+  },
+
   renameCommunity: async (communityId, name) => {
     const { error } = await supabase.rpc('rename_community', { _community_id: communityId, _name: name })
     if (error) return error.message
@@ -491,7 +503,9 @@ export const useAppStore = create<State>()((set, get) => ({
             ? 'Você já é membro dessa comunidade.'
             : error.message === 'ALREADY_PENDING'
               ? 'Seu pedido para entrar já está aguardando aprovação de um admin.'
-              : error.message
+              : error.message === 'COMMUNITY_CLOSED'
+                ? 'Esta comunidade está fechada para novos pedidos no momento.'
+                : error.message
       return { error: message, communityName: null }
     }
     const row = Array.isArray(data) ? data[0] : data

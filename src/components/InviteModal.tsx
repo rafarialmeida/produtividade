@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, Copy, RefreshCcw, UserPlus, X } from 'lucide-react'
+import { Check, Copy, Lock, RefreshCcw, UserPlus, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 
 export default function InviteModal({ communityId, onClose }: { communityId: string; onClose: () => void }) {
@@ -63,6 +63,12 @@ export default function InviteModal({ communityId, onClose }: { communityId: str
               Compartilhe este código — a pessoa cria a conta (ou já tem uma) e pede para entrar pela aba "Comunidades". Um
               admin precisa aprovar na aba "Membros" antes de ela virar membro.
             </p>
+            {community.closed && (
+              <p className="flex items-center gap-1.5 text-[11px] text-amber-300 bg-amber-500/[0.06] border border-amber-500/20 rounded-lg px-2.5 py-1.5 mt-2">
+                <Lock size={11} className="shrink-0" /> Comunidade fechada — mesmo com o código, ninguém consegue pedir para
+                entrar agora.
+              </p>
+            )}
           </div>
         </div>
       </div>
