@@ -47,9 +47,14 @@ export default function Layout({ children }: { children: ReactNode }) {
   const levelMode = useAppStore((s) => s.levelMode)
   const setLevelMode = useAppStore((s) => s.setLevelMode)
   const activeLevelInfo = myStats
-    ? getLevelInfo(
-        levelMode === 'work' ? myStats.workXp : levelMode === 'personal' ? myStats.personalXp : myStats.workXp + myStats.personalXp,
-      )
+    ? (() => {
+        const workLevel = getLevelInfo(myStats.workXp)
+        const personalLevel = getLevelInfo(myStats.personalXp)
+        if (levelMode === 'work') return workLevel
+        if (levelMode === 'personal') return personalLevel
+        // Nível Total: soma dos dois níveis (não o nível derivado da soma dos XPs).
+        return { level: workLevel.level + personalLevel.level, xp: myStats.workXp + myStats.personalXp }
+      })()
     : null
   const { theme, toggleTheme } = useTheme()
   const mobileMenuRef = useRef<HTMLDivElement>(null)
@@ -118,8 +123,8 @@ export default function Layout({ children }: { children: ReactNode }) {
                       levelMode === 'work'
                         ? 'Nível de Trabalho — filtrando tarefas de trabalho em Minhas tarefas. Clique para ver o nível de tarefas gerais'
                         : levelMode === 'personal'
-                          ? 'Nível de tarefas gerais — filtrando tarefas gerais em Minhas tarefas. Clique para ver todas as tarefas'
-                          : 'Todas as tarefas — sem filtro em Minhas tarefas. Clique para ver o nível de Trabalho'
+                          ? 'Nível de tarefas gerais — filtrando tarefas gerais em Minhas tarefas. Clique para ver o Nível Total'
+                          : 'Nível Total (nível de Trabalho + nível de tarefas gerais) — sem filtro em Minhas tarefas. Clique para ver o nível de Trabalho'
                     }
                     className={`flex items-center gap-1 text-xs font-bold px-2 sm:px-2.5 py-1 rounded-full border transition-colors shrink-0 ${
                       activeLevelInfo.level >= 1
