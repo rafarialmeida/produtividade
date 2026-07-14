@@ -28,7 +28,7 @@ import PushToggle from './PushToggle'
 import ProfileModal from './ProfileModal'
 
 const NAV_ITEMS = [
-  { to: '/day', label: 'Meu dia', icon: Sparkles },
+  { to: '/day', label: 'Minhas tarefas', icon: Sparkles },
   { to: '/communities', label: 'Comunidades', icon: Users },
   { to: '/global-wall', label: 'Muro Global', icon: Skull },
 ]
@@ -116,10 +116,10 @@ export default function Layout({ children }: { children: ReactNode }) {
                     }
                     title={
                       levelMode === 'work'
-                        ? 'Nível de Trabalho — filtrando tarefas de trabalho em Meu dia. Clique para ver o nível de tarefas gerais'
+                        ? 'Nível de Trabalho — filtrando tarefas de trabalho em Minhas tarefas. Clique para ver o nível de tarefas gerais'
                         : levelMode === 'personal'
-                          ? 'Nível de tarefas gerais — filtrando tarefas gerais em Meu dia. Clique para ver todas as tarefas'
-                          : 'Todas as tarefas — sem filtro em Meu dia. Clique para ver o nível de Trabalho'
+                          ? 'Nível de tarefas gerais — filtrando tarefas gerais em Minhas tarefas. Clique para ver todas as tarefas'
+                          : 'Todas as tarefas — sem filtro em Minhas tarefas. Clique para ver o nível de Trabalho'
                     }
                     className={`flex items-center gap-1 text-xs font-bold px-2 sm:px-2.5 py-1 rounded-full border transition-colors shrink-0 ${
                       activeLevelInfo.level >= 1

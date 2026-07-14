@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Circle, Globe2, Play, Plus, TrendingDown, Users } from 'lucide-react'
+import { Circle, Globe2, Play, Plus, Tag, TrendingDown, Users } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import TaskForm from '../components/TaskForm'
 import TaskCard from '../components/TaskCard'
@@ -23,13 +23,14 @@ export default function MyDay() {
 
   const [showForm, setShowForm] = useState(false)
   const [listModal, setListModal] = useState<{ title: string; tasks: Task[] } | null>(null)
+  const [categoryFilter, setCategoryFilter] = useState('all')
 
   const workCommunityIds = useMemo(
     () => new Set(allCommunities.filter((c) => c.type === 'trabalho').map((c) => c.id)),
     [allCommunities],
   )
 
-  const myTasks = useMemo(() => {
+  const levelFiltered = useMemo(() => {
     const mine = allTasks.filter((t) => t.userId === user.id)
     if (levelMode === 'all') return mine
     return mine.filter((t) => {
@@ -37,6 +38,20 @@ export default function MyDay() {
       return levelMode === 'work' ? isWork : !isWork
     })
   }, [allTasks, user.id, levelMode, workCommunityIds])
+
+  const availableCategories = useMemo(
+    () => Array.from(new Set(levelFiltered.map((t) => t.category))).sort((a, b) => a.localeCompare(b)),
+    [levelFiltered],
+  )
+
+  useEffect(() => {
+    if (categoryFilter !== 'all' && !availableCategories.includes(categoryFilter)) setCategoryFilter('all')
+  }, [availableCategories, categoryFilter])
+
+  const myTasks = useMemo(
+    () => (categoryFilter === 'all' ? levelFiltered : levelFiltered.filter((t) => t.category === categoryFilter)),
+    [levelFiltered, categoryFilter],
+  )
 
   const active = myTasks.filter((t) => !t.completed && !t.expired).sort((a, b) => a.deadline.localeCompare(b.deadline))
   const notStarted = active.filter((t) => !t.started)
@@ -66,6 +81,24 @@ export default function MyDay() {
           <Plus size={16} /> Nova Tarefa
         </button>
       </div>
+
+      {availableCategories.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Tag size={13} className="text-purple-400 shrink-0" />
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="input !w-auto !py-1.5 !text-xs"
+          >
+            <option value="all">Todas as categorias</option>
+            {availableCategories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard
