@@ -1,6 +1,21 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { Briefcase, HelpCircle, LogOut, Moon, Settings2, Skull, Sparkles, Star, Sun, Trash2, Users, ShieldCheck, Zap } from 'lucide-react'
+import {
+  Briefcase,
+  HelpCircle,
+  LogOut,
+  Moon,
+  MoreVertical,
+  Settings2,
+  Skull,
+  Sparkles,
+  Star,
+  Sun,
+  Trash2,
+  Users,
+  ShieldCheck,
+  Zap,
+} from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { useExpirationTicker } from '../hooks/useExpirationTicker'
 import { usePresence } from '../hooks/usePresence'
@@ -30,15 +45,26 @@ export default function Layout({ children }: { children: ReactNode }) {
   const [showPreferences, setShowPreferences] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
   const [showTourAgain, setShowTourAgain] = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [levelMode, setLevelMode] = useState<'work' | 'personal'>('work')
   const activeLevelInfo = myStats ? getLevelInfo(levelMode === 'work' ? myStats.workXp : myStats.personalXp) : null
   const { theme, toggleTheme } = useTheme()
+  const mobileMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!showMobileMenu) return
+    function handleClickOutside(e: MouseEvent) {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) setShowMobileMenu(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showMobileMenu])
 
   return (
     <div className="min-h-screen flex flex-col">
       {user && <NotificationToasts userId={user.id} />}
       <header className="border-b border-white/5 light:border-black/10 sticky top-0 z-40 backdrop-blur-md bg-black/30 light:bg-white/70">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-1.5 sm:gap-4">
           <Link to="/day" className="flex items-center gap-2 group shrink-0">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-emerald-400 flex items-center justify-center shadow-[0_0_16px_rgba(168,85,247,0.5)]">
               <Zap size={16} className="text-black" strokeWidth={2.5} />
@@ -79,7 +105,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                   </NavLink>
                 )}
               </nav>
-              <div className="flex items-center gap-2 pl-3 border-l border-white/10 light:border-black/10 shrink-0">
+              <div className="flex items-center gap-1 sm:gap-2 pl-2 sm:pl-3 border-l border-white/10 light:border-black/10 shrink-0">
                 {activeLevelInfo && (
                   <button
                     onClick={() => setLevelMode((m) => (m === 'work' ? 'personal' : 'work'))}
@@ -88,7 +114,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                         ? 'Nível de Trabalho — clique para ver o nível de tarefas gerais'
                         : 'Nível de tarefas gerais — clique para ver o nível de Trabalho'
                     }
-                    className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border transition-colors ${
+                    className={`flex items-center gap-1 text-xs font-bold px-2 sm:px-2.5 py-1 rounded-full border transition-colors shrink-0 ${
                       activeLevelInfo.level >= 1
                         ? levelMode === 'work'
                           ? 'border-sky-500/30 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 light:text-sky-600'
@@ -111,7 +137,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                   <button
                     onClick={() => setShowProfile(true)}
                     title="Meu perfil"
-                    className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 light:border-black/10 hover:border-purple-400/60 flex items-center justify-center text-xs font-semibold text-white transition-colors"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-gradient-to-br from-purple-600/40 to-emerald-500/40 border border-white/10 light:border-black/10 hover:border-purple-400/60 flex items-center justify-center text-xs font-semibold text-white transition-colors"
                   >
                     {user.avatarUrl ? (
                       <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
@@ -122,37 +148,92 @@ export default function Layout({ children }: { children: ReactNode }) {
                   <OnlineDot online={onlineUserIds.has(user.id)} className="absolute -bottom-0.5 -right-0.5 border border-black/50 light:border-white/70" />
                 </div>
                 <PushToggle userId={user.id} />
-                <button
-                  onClick={() => setShowTourAgain(true)}
-                  title="Ver tutorial de boas-vindas novamente"
-                  className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 light:hover:text-zinc-900 light:hover:bg-black/5 transition-colors"
-                >
-                  <HelpCircle size={16} />
-                </button>
-                <button
-                  onClick={() => navigate('/trash')}
-                  title="Lixeira"
-                  className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 light:hover:text-zinc-900 light:hover:bg-black/5 transition-colors"
-                >
-                  <Trash2 size={16} />
-                </button>
-                <button
-                  onClick={() => setShowPreferences(true)}
-                  title="Preferências de notificação"
-                  className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 light:hover:text-zinc-900 light:hover:bg-black/5 transition-colors"
-                >
-                  <Settings2 size={16} />
-                </button>
-                <button
-                  onClick={async () => {
-                    await signOut()
-                    navigate('/login')
-                  }}
-                  title="Sair"
-                  className="p-2 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                >
-                  <LogOut size={16} />
-                </button>
+
+                {/* Telas maiores: ícones soltos. No mobile eles ficam agrupados no menu "⋮" pra caber tudo sem precisar dar zoom out. */}
+                <div className="hidden sm:flex items-center gap-2">
+                  <button
+                    onClick={() => setShowTourAgain(true)}
+                    title="Ver tutorial de boas-vindas novamente"
+                    className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 light:hover:text-zinc-900 light:hover:bg-black/5 transition-colors"
+                  >
+                    <HelpCircle size={16} />
+                  </button>
+                  <button
+                    onClick={() => navigate('/trash')}
+                    title="Lixeira"
+                    className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 light:hover:text-zinc-900 light:hover:bg-black/5 transition-colors"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                  <button
+                    onClick={() => setShowPreferences(true)}
+                    title="Preferências de notificação"
+                    className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 light:hover:text-zinc-900 light:hover:bg-black/5 transition-colors"
+                  >
+                    <Settings2 size={16} />
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await signOut()
+                      navigate('/login')
+                    }}
+                    title="Sair"
+                    className="p-2 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                  >
+                    <LogOut size={16} />
+                  </button>
+                </div>
+
+                <div className="relative sm:hidden" ref={mobileMenuRef}>
+                  <button
+                    onClick={() => setShowMobileMenu((v) => !v)}
+                    title="Mais opções"
+                    className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 light:hover:text-zinc-900 light:hover:bg-black/5 transition-colors"
+                  >
+                    <MoreVertical size={16} />
+                  </button>
+                  {showMobileMenu && (
+                    <div className="absolute right-0 top-full mt-2 w-48 glass-panel rounded-xl overflow-hidden z-50 py-1">
+                      <button
+                        onClick={() => {
+                          setShowTourAgain(true)
+                          setShowMobileMenu(false)
+                        }}
+                        className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-sm text-left text-zinc-300 hover:bg-white/5 light:text-zinc-700 light:hover:bg-black/5 transition-colors"
+                      >
+                        <HelpCircle size={15} /> Tutorial
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigate('/trash')
+                          setShowMobileMenu(false)
+                        }}
+                        className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-sm text-left text-zinc-300 hover:bg-white/5 light:text-zinc-700 light:hover:bg-black/5 transition-colors"
+                      >
+                        <Trash2 size={15} /> Lixeira
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowPreferences(true)
+                          setShowMobileMenu(false)
+                        }}
+                        className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-sm text-left text-zinc-300 hover:bg-white/5 light:text-zinc-700 light:hover:bg-black/5 transition-colors"
+                      >
+                        <Settings2 size={15} /> Preferências
+                      </button>
+                      <button
+                        onClick={async () => {
+                          setShowMobileMenu(false)
+                          await signOut()
+                          navigate('/login')
+                        }}
+                        className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-sm text-left text-rose-400 hover:bg-rose-500/10 transition-colors"
+                      >
+                        <LogOut size={15} /> Sair
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}
@@ -160,7 +241,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <button
             onClick={toggleTheme}
             title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
-            className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 light:hover:text-zinc-900 light:hover:bg-black/5 transition-colors shrink-0"
+            className="p-1.5 sm:p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 light:hover:text-zinc-900 light:hover:bg-black/5 transition-colors shrink-0"
           >
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
