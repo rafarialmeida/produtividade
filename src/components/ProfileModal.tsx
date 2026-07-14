@@ -369,7 +369,7 @@ function LevelCard({
   const positive = info.level >= 1
   const colors = positive
     ? accent === 'sky'
-      ? { border: 'border-sky-500/30', bg: 'bg-sky-500/[0.06]', text: 'text-sky-300', bar: 'bg-sky-500' }
+      ? { border: 'border-sky-500/30', bg: 'bg-sky-500/[0.06]', text: 'text-sky-300 light:text-sky-700', bar: 'bg-sky-500' }
       : { border: 'border-purple-500/30', bg: 'bg-purple-500/[0.06]', text: 'text-purple-300 light:text-purple-600', bar: 'bg-purple-500' }
     : { border: 'border-rose-500/30', bg: 'bg-rose-500/[0.06]', text: 'text-rose-400 light:text-rose-600', bar: 'bg-rose-500' }
   return (

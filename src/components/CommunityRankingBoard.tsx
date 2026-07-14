@@ -35,7 +35,7 @@ export default function CommunityRankingBoard({ communityId }: { communityId: st
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2.5">
-        <Swords size={16} className="text-sky-400" />
+        <Swords size={16} className="text-sky-400 light:text-sky-700" />
         <h2 className="text-sm font-semibold text-zinc-300 light:text-zinc-700">Ranking entre Comunidades de Trabalho</h2>
       </div>
       <p className="text-xs text-zinc-500">
@@ -56,7 +56,7 @@ export default function CommunityRankingBoard({ communityId }: { communityId: st
                   <RankBadge rank={compositeRank} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className={`text-sm font-medium truncate ${isCurrent ? 'text-sky-300' : 'text-white light:text-zinc-900'}`}>
+                      <p className={`text-sm font-medium truncate ${isCurrent ? 'text-sky-300 light:text-sky-700' : 'text-white light:text-zinc-900'}`}>
                         {community.name}
                         {isCurrent && ' (sua comunidade)'}
                       </p>

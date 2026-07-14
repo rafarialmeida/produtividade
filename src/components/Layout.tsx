@@ -129,7 +129,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                     className={`flex items-center gap-1 text-xs font-bold px-2 sm:px-2.5 py-1 rounded-full border transition-colors shrink-0 ${
                       activeLevelInfo.level >= 1
                         ? levelMode === 'work'
-                          ? 'border-sky-500/30 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 light:text-sky-600'
+                          ? 'border-sky-500/30 bg-sky-500/10 text-sky-300 light:text-sky-700 hover:bg-sky-500/20 light:text-sky-600'
                           : levelMode === 'personal'
                             ? 'border-purple-500/30 bg-purple-500/10 text-purple-300 light:text-purple-600 hover:bg-purple-500/20 light:text-purple-600'
                             : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 light:text-emerald-600 hover:bg-emerald-500/20 light:text-emerald-600'

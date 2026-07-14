@@ -97,7 +97,7 @@ export default function GlobalWall() {
           onClick={() => setTab('communities')}
           className={`flex items-center gap-1.5 text-sm px-3.5 py-1.5 rounded-lg transition-colors ${
             tab === 'communities'
-              ? 'bg-sky-500/15 text-sky-300 border border-sky-500/30'
+              ? 'bg-sky-500/15 text-sky-300 light:text-sky-700 border border-sky-500/30'
               : 'text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700'
           }`}
         >

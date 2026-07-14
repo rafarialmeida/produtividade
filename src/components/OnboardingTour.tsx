@@ -18,7 +18,7 @@ const STEPS = [
   },
   {
     icon: Briefcase,
-    color: 'text-sky-300',
+    color: 'text-sky-300 light:text-sky-700',
     title: 'Comunidades de Trabalho e Competição',
     body: 'Comunidades de Trabalho têm dashboard de equipe e XP de trabalho separado. Comunidades de Competição são só pra disputar ranking com amigos, sem misturar com seu desempenho profissional.',
   },

@@ -185,7 +185,7 @@ export default function MyDay() {
       </Section>
 
       {inProgress.length > 0 && (
-        <Section title="Em andamento" icon={<Play size={14} className="text-sky-300" />}>
+        <Section title="Em andamento" icon={<Play size={14} className="text-sky-300 light:text-sky-700" />}>
           {inProgress.map((t) => (
             <TaskCard key={t.id} task={t} showCommunity={multiCommunity} />
           ))}

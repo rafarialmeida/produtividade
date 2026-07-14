@@ -297,7 +297,7 @@ export default function CommunityDashboard({
                       {formatDisplayName(s.name)}
                     </span>
                   </td>
-                  <td className="px-3 py-2.5 text-right text-sky-300 tabular-nums">{s.inProgress}</td>
+                  <td className="px-3 py-2.5 text-right text-sky-300 light:text-sky-700 tabular-nums">{s.inProgress}</td>
                   <td className="px-3 py-2.5 text-right text-zinc-400 light:text-zinc-600 tabular-nums">{s.notStarted}</td>
                   <td className="px-3 py-2.5 text-right text-emerald-400 light:text-emerald-600 tabular-nums">{s.completed}</td>
                   <td className="px-3 py-2.5 text-right text-rose-400 light:text-rose-600 tabular-nums">{s.expired}</td>
@@ -455,7 +455,7 @@ function StatCard({
   accent: 'purple' | 'amber' | 'rose' | 'sky'
   onClick?: () => void
 }) {
-  const colors = { purple: 'text-purple-300 light:text-purple-600', amber: 'text-amber-300 light:text-amber-600', rose: 'text-rose-400 light:text-rose-600', sky: 'text-sky-300' }
+  const colors = { purple: 'text-purple-300 light:text-purple-600', amber: 'text-amber-300 light:text-amber-600', rose: 'text-rose-400 light:text-rose-600', sky: 'text-sky-300 light:text-sky-700' }
   return (
     <button
       onClick={onClick}

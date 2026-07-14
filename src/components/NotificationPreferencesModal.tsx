@@ -132,7 +132,7 @@ export default function NotificationPreferencesModal({ userId, onClose }: { user
 
           <div className="flex items-start justify-between gap-3 border-t border-white/5 pt-5">
             <div className="flex gap-2.5">
-              <BarChart3 size={16} className="text-sky-300 shrink-0 mt-0.5" />
+              <BarChart3 size={16} className="text-sky-300 light:text-sky-700 shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-white light:text-zinc-900">Resumo semanal</p>
                 <p className="text-xs text-zinc-500">

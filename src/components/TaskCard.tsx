@@ -153,7 +153,7 @@ export default function TaskCard({
             <button
               onClick={() => setAssigning(true)}
               title="Atribuir responsável"
-              className="p-1.5 rounded-lg text-zinc-600 hover:text-sky-300 hover:bg-sky-500/10 transition-colors"
+              className="p-1.5 rounded-lg text-zinc-600 hover:text-sky-300 light:hover:text-sky-700 hover:bg-sky-500/10 transition-colors"
             >
               <UserCog size={13} />
             </button>
@@ -207,7 +207,7 @@ export default function TaskCard({
               )}
               <span className={`text-sm ${st.done ? 'text-zinc-500 line-through' : 'text-zinc-300 light:text-zinc-700'}`}>{st.text}</span>
               {subtaskAssignee && (
-                <span className="text-[10px] text-sky-300 bg-sky-500/10 border border-sky-500/30 rounded px-1.5 py-0.5 shrink-0">
+                <span className="text-[10px] text-sky-300 light:text-sky-700 bg-sky-500/10 border border-sky-500/30 rounded px-1.5 py-0.5 shrink-0">
                   {subtaskAssignee.name}
                 </span>
               )}
@@ -247,7 +247,7 @@ export default function TaskCard({
             {taskStatus === 'nao_iniciada' && (
               <button
                 onClick={() => setTaskStarted(task.id, true)}
-                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-sky-500/15 text-sky-300 border border-sky-500/30 hover:bg-sky-500/25 transition-colors"
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-sky-500/15 text-sky-300 light:text-sky-700 border border-sky-500/30 hover:bg-sky-500/25 transition-colors"
               >
                 <Play size={12} /> Iniciar
               </button>
