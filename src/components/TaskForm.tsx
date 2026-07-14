@@ -115,6 +115,7 @@ export default function TaskForm({
   const isWorkCommunity = community?.type === 'trabalho'
 
   const [macroObjectiveId, setMacroObjectiveId] = useState(task?.macroObjectiveId ?? '')
+  const [showMacroList, setShowMacroList] = useState(false)
   const [addingMacro, setAddingMacro] = useState(false)
   const [newMacro, setNewMacro] = useState('')
   const [creatingMacro, setCreatingMacro] = useState(false)
@@ -344,8 +345,8 @@ export default function TaskForm({
             <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
               <Target size={13} className="text-purple-400" /> Objetivo Macro
             </label>
-            <div className="flex flex-wrap gap-1.5">
-              {scopedMacroObjectives.map((m) => {
+            <div className="flex flex-wrap gap-1.5 items-center">
+              {(showMacroList ? scopedMacroObjectives : scopedMacroObjectives.filter((m) => m.id === macroObjectiveId)).map((m) => {
                 const active = macroObjectiveId === m.id
                 return (
                   <button
@@ -389,6 +390,16 @@ export default function TaskForm({
                   className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-dashed border-white/15 text-zinc-500 hover:text-purple-300 hover:border-purple-500/40 transition-colors light:border-black/15"
                 >
                   <Plus size={12} /> Novo objetivo
+                </button>
+              )}
+              {scopedMacroObjectives.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowMacroList((v) => !v)}
+                  title={showMacroList ? 'Ocultar objetivos já criados' : 'Ver todos os objetivos já criados'}
+                  className="p-1.5 rounded-lg border border-white/10 text-zinc-500 hover:text-purple-300 hover:border-purple-500/40 transition-colors light:border-black/15"
+                >
+                  <ChevronDown size={14} className={`transition-transform ${showMacroList ? 'rotate-180' : ''}`} />
                 </button>
               )}
             </div>

@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import {
   Briefcase,
   HelpCircle,
+  Layers,
   LogOut,
   Moon,
   MoreVertical,
@@ -43,8 +44,13 @@ export default function Layout({ children }: { children: ReactNode }) {
   const [showProfile, setShowProfile] = useState(false)
   const [showTourAgain, setShowTourAgain] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
-  const [levelMode, setLevelMode] = useState<'work' | 'personal'>('work')
-  const activeLevelInfo = myStats ? getLevelInfo(levelMode === 'work' ? myStats.workXp : myStats.personalXp) : null
+  const levelMode = useAppStore((s) => s.levelMode)
+  const setLevelMode = useAppStore((s) => s.setLevelMode)
+  const activeLevelInfo = myStats
+    ? getLevelInfo(
+        levelMode === 'work' ? myStats.workXp : levelMode === 'personal' ? myStats.personalXp : myStats.workXp + myStats.personalXp,
+      )
+    : null
   const { theme, toggleTheme } = useTheme()
   const mobileMenuRef = useRef<HTMLDivElement>(null)
 
@@ -105,21 +111,27 @@ export default function Layout({ children }: { children: ReactNode }) {
               <div className="flex items-center gap-1 sm:gap-2 pl-2 sm:pl-3 border-l border-white/10 light:border-black/10 shrink-0">
                 {activeLevelInfo && (
                   <button
-                    onClick={() => setLevelMode((m) => (m === 'work' ? 'personal' : 'work'))}
+                    onClick={() =>
+                      setLevelMode(levelMode === 'work' ? 'personal' : levelMode === 'personal' ? 'all' : 'work')
+                    }
                     title={
                       levelMode === 'work'
-                        ? 'Nível de Trabalho — clique para ver o nível de tarefas gerais'
-                        : 'Nível de tarefas gerais — clique para ver o nível de Trabalho'
+                        ? 'Nível de Trabalho — filtrando tarefas de trabalho em Meu dia. Clique para ver o nível de tarefas gerais'
+                        : levelMode === 'personal'
+                          ? 'Nível de tarefas gerais — filtrando tarefas gerais em Meu dia. Clique para ver todas as tarefas'
+                          : 'Todas as tarefas — sem filtro em Meu dia. Clique para ver o nível de Trabalho'
                     }
                     className={`flex items-center gap-1 text-xs font-bold px-2 sm:px-2.5 py-1 rounded-full border transition-colors shrink-0 ${
                       activeLevelInfo.level >= 1
                         ? levelMode === 'work'
                           ? 'border-sky-500/30 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 light:text-sky-600'
-                          : 'border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 light:text-purple-600'
+                          : levelMode === 'personal'
+                            ? 'border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 light:text-purple-600'
+                            : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 light:text-emerald-600'
                         : 'border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 light:text-rose-600'
                     }`}
                   >
-                    {levelMode === 'work' ? <Briefcase size={11} /> : <Star size={11} />}
+                    {levelMode === 'work' ? <Briefcase size={11} /> : levelMode === 'personal' ? <Star size={11} /> : <Layers size={11} />}
                     Nv {activeLevelInfo.level}
                     <span className="hidden sm:inline text-zinc-400 light:text-zinc-500 font-normal">· {activeLevelInfo.xp} XP</span>
                   </button>

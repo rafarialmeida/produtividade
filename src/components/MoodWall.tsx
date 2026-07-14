@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import type { Task } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { formatDeadline, formatRelative } from '../utils/date'
+import TaskDetailModal from './TaskDetailModal'
 
 const ZONES = [
   {
@@ -42,6 +44,7 @@ function zoneFor(deadline: string): (typeof ZONES)[number]['key'] {
 
 export default function MoodWall({ tasks }: { tasks: Task[] }) {
   const active = tasks.filter((t) => !t.completed && !t.expired)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
 
   return (
     <div>
@@ -70,7 +73,11 @@ export default function MoodWall({ tasks }: { tasks: Task[] }) {
                   zoneTasks.map((t) => {
                     const cfg = URGENCY_CONFIG[t.urgency]
                     return (
-                      <div key={t.id} className="rounded-xl bg-white/[0.03] border border-white/5 px-3 py-2 light:bg-black/[0.02] light:border-black/5">
+                      <button
+                        key={t.id}
+                        onClick={() => setSelectedTaskId(t.id)}
+                        className="text-left rounded-xl bg-white/[0.03] border border-white/5 px-3 py-2 light:bg-black/[0.02] light:border-black/5 hover:bg-white/[0.06] light:hover:bg-black/[0.04] transition-colors"
+                      >
                         <p className="text-xs font-medium text-white light:text-zinc-900 truncate">{t.title}</p>
                         <div className="flex items-center justify-between gap-2 mt-1">
                           <span className={`text-[10px] px-1.5 py-0.5 rounded border ${cfg.bg} ${cfg.border} ${cfg.color}`}>
@@ -80,7 +87,7 @@ export default function MoodWall({ tasks }: { tasks: Task[] }) {
                             {formatRelative(t.deadline)}
                           </span>
                         </div>
-                      </div>
+                      </button>
                     )
                   })
                 )}
@@ -89,6 +96,7 @@ export default function MoodWall({ tasks }: { tasks: Task[] }) {
           )
         })}
       </div>
+      {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} />}
     </div>
   )
 }

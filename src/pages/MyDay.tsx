@@ -19,11 +19,24 @@ export default function MyDay() {
     [allCommunities, user.id],
   )
   const allTasks = useAppStore((s) => s.tasks)
+  const levelMode = useAppStore((s) => s.levelMode)
 
   const [showForm, setShowForm] = useState(false)
   const [listModal, setListModal] = useState<{ title: string; tasks: Task[] } | null>(null)
 
-  const myTasks = useMemo(() => allTasks.filter((t) => t.userId === user.id), [allTasks, user.id])
+  const workCommunityIds = useMemo(
+    () => new Set(allCommunities.filter((c) => c.type === 'trabalho').map((c) => c.id)),
+    [allCommunities],
+  )
+
+  const myTasks = useMemo(() => {
+    const mine = allTasks.filter((t) => t.userId === user.id)
+    if (levelMode === 'all') return mine
+    return mine.filter((t) => {
+      const isWork = !!t.communityId && workCommunityIds.has(t.communityId)
+      return levelMode === 'work' ? isWork : !isWork
+    })
+  }, [allTasks, user.id, levelMode, workCommunityIds])
 
   const active = myTasks.filter((t) => !t.completed && !t.expired).sort((a, b) => a.deadline.localeCompare(b.deadline))
   const notStarted = active.filter((t) => !t.started)
@@ -41,7 +54,13 @@ export default function MyDay() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white light:text-zinc-900">Olá, {user.name.split(' ')[0]} 👋</h1>
-          <p className="text-zinc-500 text-sm mt-1">Seu painel pessoal de execução, todas as comunidades reunidas</p>
+          <p className="text-zinc-500 text-sm mt-1">
+            {levelMode === 'work'
+              ? 'Mostrando tarefas de trabalho — clique no seu nível no topo para trocar o filtro'
+              : levelMode === 'personal'
+                ? 'Mostrando tarefas gerais — clique no seu nível no topo para trocar o filtro'
+                : 'Mostrando todas as tarefas — clique no seu nível no topo para trocar o filtro'}
+          </p>
         </div>
         <button onClick={() => setShowForm(true)} className="btn-secondary !w-auto px-4">
           <Plus size={16} /> Nova Tarefa

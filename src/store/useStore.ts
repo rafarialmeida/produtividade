@@ -120,6 +120,8 @@ interface State {
   onlineUserIds: Set<string>
   trashedTasks: Task[]
   trashedCommunities: Community[]
+  levelMode: 'work' | 'personal' | 'all'
+  setLevelMode: (mode: 'work' | 'personal' | 'all') => void
 
   // auth
   signUp: (name: string, email: string, password: string) => Promise<{ error: string | null; needsConfirmation: boolean }>
@@ -329,8 +331,10 @@ export const useAppStore = create<State>()((set, get) => ({
   onlineUserIds: new Set(),
   trashedTasks: [],
   trashedCommunities: [],
+  levelMode: 'work',
 
   setOnlineUserIds: (ids) => set({ onlineUserIds: ids }),
+  setLevelMode: (mode) => set({ levelMode: mode }),
 
   signUp: async (name, email, password) => {
     const { data, error } = await supabase.auth.signUp({
@@ -1035,6 +1039,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
       onlineUserIds: new Set(),
       trashedTasks: [],
       trashedCommunities: [],
+      levelMode: 'work',
     })
   }
 })
