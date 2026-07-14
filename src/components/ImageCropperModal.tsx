@@ -20,16 +20,24 @@ export default function ImageCropperModal({
   const [zoom, setZoom] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const dragRef = useRef<{ startX: number; startY: number; offsetX: number; offsetY: number } | null>(null)
 
-  const src = typeof source === 'string' ? source : URL.createObjectURL(source)
+  // Criado e revogado dentro do mesmo efeito (nunca no corpo do componente):
+  // gerar um object URL novo a cada render fazia a <img> recarregar sem
+  // parar (o navegador trata como uma imagem nova), o que resetava
+  // zoom/posição sozinho e podia travar a aba no "Usar essa foto".
+  const [src, setSrc] = useState<string | undefined>(() => (typeof source === 'string' ? source : undefined))
 
   useEffect(() => {
-    return () => {
-      if (typeof source !== 'string') URL.revokeObjectURL(src)
+    if (typeof source === 'string') {
+      setSrc(source)
+      return
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    const url = URL.createObjectURL(source)
+    setSrc(url)
+    return () => URL.revokeObjectURL(url)
+  }, [source])
 
   function handleImgLoad() {
     const img = imgRef.current
@@ -83,6 +91,7 @@ export default function ImageCropperModal({
     const img = imgRef.current
     if (!img || !naturalSize) return
     setSaving(true)
+    setError('')
     try {
       const imgLeft = VIEWPORT / 2 - dw / 2 + offset.x
       const imgTop = VIEWPORT / 2 - dh / 2 + offset.y
@@ -99,6 +108,8 @@ export default function ImageCropperModal({
 
       const blob: Blob | null = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.92))
       if (blob) await onConfirm(blob)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não deu pra processar essa imagem.')
     } finally {
       setSaving(false)
     }
@@ -153,6 +164,7 @@ export default function ImageCropperModal({
           </div>
 
           <p className="text-[11px] text-zinc-500 text-center">Arraste para posicionar e use o zoom para enquadrar.</p>
+          {error && <p className="text-xs text-rose-400 text-center">{error}</p>}
 
           <button onClick={handleConfirm} disabled={saving || !naturalSize} className="btn-primary disabled:opacity-50">
             {saving ? <Loader2 size={14} className="animate-spin" /> : <><Check size={15} /> Usar essa foto</>}
