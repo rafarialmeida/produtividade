@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Crown, Flame, Loader2, Swords, Timer, Trophy, Users } from 'lucide-react'
+import { Crown, Flame, Loader2, Podium, Swords, Timer, Trophy, Users } from 'lucide-react'
 import { useAppStore, type CommunityRankingEntry, type GlobalWallEntry } from '../store/useStore'
 import ProfileModal from '../components/ProfileModal'
 import RankBadge from '../components/RankBadge'
@@ -66,7 +66,7 @@ export default function GlobalWall() {
     <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-2xl font-bold text-white light:text-zinc-900 flex items-center gap-2.5">
-          <Trophy className="text-purple-400 light:text-purple-600" size={22} /> Ranking Geral
+          <Podium className="text-purple-400 light:text-purple-600" size={22} /> Ranking Geral
         </h1>
         <p className="text-zinc-500 text-sm mt-1">
           Ranking de tarefas gerais de toda a plataforma — clique em alguém para ver o perfil

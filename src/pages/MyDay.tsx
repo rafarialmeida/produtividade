@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Circle, Globe2, Play, Plus, Tag, TrendingDown, Users } from 'lucide-react'
+import { Circle, Play, Plus, Podium, Tag, TrendingDown, Users } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import TaskForm from '../components/TaskForm'
 import TaskCard from '../components/TaskCard'
@@ -131,7 +131,7 @@ export default function MyDay() {
         >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center">
-              <Globe2 size={16} className="text-rose-300 light:text-rose-600" />
+              <Podium size={16} className="text-rose-300 light:text-rose-600" />
             </div>
             <div>
               <p className="text-sm font-medium text-white light:text-zinc-900">Ranking Geral</p>

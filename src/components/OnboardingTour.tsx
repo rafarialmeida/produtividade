@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Briefcase, CheckSquare, Dices, Globe2, Sparkles } from 'lucide-react'
+import { Briefcase, CheckSquare, Dices, Podium, Sparkles } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 
 const STEPS = [
@@ -29,7 +29,7 @@ const STEPS = [
     body: 'Comunidades de Trabalho podem ativar um tabuleiro 3D: cada tarefa concluída sobe um degrau. Um ranking à parte pondera tarefas, subtarefas, complexidade, lead time e cycle time — os 3 primeiros ganham medalha. Você também vê quem está online no app.',
   },
   {
-    icon: Globe2,
+    icon: Podium,
     color: 'text-rose-300 light:text-rose-600',
     title: 'Ranking Geral',
     body: 'Suas tarefas pessoais entram no ranking geral da plataforma, e o Muro da Procrastinação mostra, sem dó, quem mais perdeu prazos. Bora começar?',

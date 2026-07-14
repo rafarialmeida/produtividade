@@ -8,7 +8,7 @@ import {
   LogOut,
   Moon,
   MoreVertical,
-  Skull,
+  Podium,
   Sparkles,
   Star,
   Sun,
@@ -32,7 +32,7 @@ import ReportBugModal from './ReportBugModal'
 const NAV_ITEMS = [
   { to: '/day', label: 'Minhas tarefas', icon: Sparkles },
   { to: '/communities', label: 'Comunidades', icon: Users },
-  { to: '/global-wall', label: 'Ranking Geral', icon: Skull },
+  { to: '/global-wall', label: 'Ranking Geral', icon: Podium },
 ]
 
 export default function Layout({ children }: { children: ReactNode }) {
