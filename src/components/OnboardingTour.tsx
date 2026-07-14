@@ -6,13 +6,13 @@ import { useAppStore } from '../store/useStore'
 const STEPS = [
   {
     icon: Sparkles,
-    color: 'text-purple-300',
+    color: 'text-purple-300 light:text-purple-600',
     title: 'Bem-vindo(a) ao Flawless!',
     body: 'Aqui você organiza suas tarefas pessoais e de trabalho em um só lugar. Vamos mostrar rapidinho as principais áreas do app — leva menos de um minuto.',
   },
   {
     icon: CheckSquare,
-    color: 'text-emerald-300',
+    color: 'text-emerald-300 light:text-emerald-600',
     title: 'Tarefas, subtarefas e complexidade',
     body: 'Cada tarefa tem urgência e complexidade, e pode ter subtarefas com responsáveis próprios. Complexidade mais alta vale mais pontos — e pesa mais nos rankings.',
   },
@@ -24,13 +24,13 @@ const STEPS = [
   },
   {
     icon: Dices,
-    color: 'text-amber-300',
+    color: 'text-amber-300 light:text-amber-600',
     title: 'Tabuleiro, ranking e presença',
     body: 'Comunidades de Trabalho podem ativar um tabuleiro 3D: cada tarefa concluída sobe um degrau. Um ranking à parte pondera tarefas, subtarefas, complexidade, lead time e cycle time — os 3 primeiros ganham medalha. Você também vê quem está online no app.',
   },
   {
     icon: Globe2,
-    color: 'text-rose-300',
+    color: 'text-rose-300 light:text-rose-600',
     title: 'Muro Global',
     body: 'Suas tarefas pessoais entram no ranking geral da plataforma, e o Muro da Procrastinação mostra, sem dó, quem mais perdeu prazos. Bora começar?',
   },

@@ -108,7 +108,7 @@ export default function CommunityBoard({ communityId }: { communityId: string })
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <Dices size={16} className="text-emerald-300" />
+          <Dices size={16} className="text-emerald-300 light:text-emerald-600" />
           <h2 className="text-sm font-semibold text-zinc-300 light:text-zinc-700">Tabuleiro da Equipe</h2>
         </div>
         {myPiece && (

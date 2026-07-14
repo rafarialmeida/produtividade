@@ -131,9 +131,9 @@ export default function Layout({ children }: { children: ReactNode }) {
                         ? levelMode === 'work'
                           ? 'border-sky-500/30 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 light:text-sky-600'
                           : levelMode === 'personal'
-                            ? 'border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 light:text-purple-600'
-                            : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 light:text-emerald-600'
-                        : 'border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 light:text-rose-600'
+                            ? 'border-purple-500/30 bg-purple-500/10 text-purple-300 light:text-purple-600 hover:bg-purple-500/20 light:text-purple-600'
+                            : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 light:text-emerald-600 hover:bg-emerald-500/20 light:text-emerald-600'
+                        : 'border-rose-500/30 bg-rose-500/10 text-rose-400 light:text-rose-600 hover:bg-rose-500/20 light:text-rose-600'
                     }`}
                   >
                     {levelMode === 'work' ? <Briefcase size={11} /> : levelMode === 'personal' ? <Star size={11} /> : <Layers size={11} />}
@@ -185,7 +185,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                       navigate('/login')
                     }}
                     title="Sair"
-                    className="p-2 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                    className="p-2 rounded-lg text-zinc-500 hover:text-rose-400 light:hover:text-rose-600 hover:bg-rose-500/10 transition-colors"
                   >
                     <LogOut size={16} />
                   </button>
@@ -225,7 +225,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                           await signOut()
                           navigate('/login')
                         }}
-                        className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-sm text-left text-rose-400 hover:bg-rose-500/10 transition-colors"
+                        className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-sm text-left text-rose-400 light:text-rose-600 hover:bg-rose-500/10 transition-colors"
                       >
                         <LogOut size={15} /> Sair
                       </button>

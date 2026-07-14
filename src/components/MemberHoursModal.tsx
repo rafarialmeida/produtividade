@@ -21,7 +21,7 @@ export default function MemberHoursModal({
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5">
-              <Clock size={18} className="text-purple-300 shrink-0" />
+              <Clock size={18} className="text-purple-300 light:text-purple-600 shrink-0" />
               <h2 className="text-lg font-bold text-white light:text-zinc-900 truncate">Horas gastas — {name}</h2>
             </div>
             <p className="text-xs text-zinc-500 mt-0.5">Total: {(totalMinutes / 60).toFixed(1)}h</p>
@@ -39,7 +39,7 @@ export default function MemberHoursModal({
               <div key={t.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5 light:border-black/10 light:bg-black/[0.02]">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-medium text-zinc-200 light:text-zinc-800 truncate">{t.title}</p>
-                  <span className="text-xs font-semibold text-purple-300 shrink-0 tabular-nums">
+                  <span className="text-xs font-semibold text-purple-300 light:text-purple-600 shrink-0 tabular-nums">
                     {((t.minutesSpent ?? 0) / 60).toFixed(1)}h
                   </span>
                 </div>

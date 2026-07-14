@@ -117,7 +117,7 @@ export default function MyDay() {
         >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center">
-              <Users size={16} className="text-purple-300" />
+              <Users size={16} className="text-purple-300 light:text-purple-600" />
             </div>
             <div>
               <p className="text-sm font-medium text-white light:text-zinc-900">Minhas comunidades</p>
@@ -131,7 +131,7 @@ export default function MyDay() {
         >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center">
-              <Globe2 size={16} className="text-rose-300" />
+              <Globe2 size={16} className="text-rose-300 light:text-rose-600" />
             </div>
             <div>
               <p className="text-sm font-medium text-white light:text-zinc-900">Muro Global</p>
@@ -142,14 +142,14 @@ export default function MyDay() {
       </div>
 
       {nearCount > 0 && (
-        <div className="flex items-center gap-2 text-xs text-amber-300 bg-amber-500/[0.06] border border-amber-500/25 rounded-xl px-4 py-2.5">
+        <div className="flex items-center gap-2 text-xs text-amber-300 light:text-amber-600 bg-amber-500/[0.06] border border-amber-500/25 rounded-xl px-4 py-2.5">
           <TrendingDown size={14} className="shrink-0" />
           {nearCount} tarefa{nearCount !== 1 ? 's' : ''} perto do prazo — evite perder pontos.
         </div>
       )}
 
       {expired.length > 0 && (
-        <Section title="Expiradas — penalizadas" icon={<TrendingDown size={16} className="text-rose-400" />}>
+        <Section title="Expiradas — penalizadas" icon={<TrendingDown size={16} className="text-rose-400 light:text-rose-600" />}>
           {expired.map((t) => (
             <TaskCard key={t.id} task={t} showCommunity={multiCommunity} />
           ))}
@@ -158,7 +158,7 @@ export default function MyDay() {
 
       {availableCategories.length > 0 && (
         <div className="flex items-center gap-2">
-          <Tag size={13} className="text-purple-400 shrink-0" />
+          <Tag size={13} className="text-purple-400 light:text-purple-600 shrink-0" />
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
@@ -253,9 +253,9 @@ function StatCard({
   onClick?: () => void
 }) {
   const colors = {
-    purple: 'text-purple-300',
-    amber: 'text-amber-300',
-    rose: 'text-rose-400',
+    purple: 'text-purple-300 light:text-purple-600',
+    amber: 'text-amber-300 light:text-amber-600',
+    rose: 'text-rose-400 light:text-rose-600',
   }
   return (
     <button

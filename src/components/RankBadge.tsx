@@ -1,7 +1,7 @@
 import { Medal } from 'lucide-react'
 
 const MEDAL_STYLE: Record<number, string> = {
-  1: 'bg-amber-400/20 text-amber-300 border-amber-400/50',
+  1: 'bg-amber-400/20 text-amber-300 light:text-amber-600 border-amber-400/50',
   2: 'bg-slate-400/20 text-slate-200 border-slate-400/50 light:bg-black/[0.04] light:text-slate-600 light:border-black/15',
   3: 'bg-orange-700/20 text-orange-300 border-orange-700/50',
 }

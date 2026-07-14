@@ -112,7 +112,7 @@ export default function LoginPage() {
           </div>
           <h1 className="text-2xl font-bold text-white light:text-zinc-900 tracking-tight">Flawless</h1>
           <p className="text-zinc-500 text-sm mt-1 text-center">
-            Execução estratégica. Sem desculpas. <span className="text-emerald-400">Sem procrastinação.</span>
+            Execução estratégica. Sem desculpas. <span className="text-emerald-400 light:text-emerald-600">Sem procrastinação.</span>
           </p>
         </div>
 
@@ -145,8 +145,8 @@ export default function LoginPage() {
                 />
               </div>
 
-              {forgotError && <p className="text-xs text-rose-400">{forgotError}</p>}
-              {forgotMessage && <p className="text-xs text-emerald-400">{forgotMessage}</p>}
+              {forgotError && <p className="text-xs text-rose-400 light:text-rose-600">{forgotError}</p>}
+              {forgotMessage && <p className="text-xs text-emerald-400 light:text-emerald-600">{forgotMessage}</p>}
 
               <button type="submit" disabled={forgotSubmitting} className="btn-primary mt-1">
                 {forgotSubmitting ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
@@ -223,7 +223,7 @@ export default function LoginPage() {
                       <button
                         type="button"
                         onClick={openForgotPassword}
-                        className="text-xs text-purple-300 hover:text-purple-200 light:text-purple-600 light:hover:text-purple-700"
+                        className="text-xs text-purple-300 light:text-purple-600 hover:text-purple-200 light:text-purple-600 light:hover:text-purple-700"
                       >
                         Esqueceu a senha?
                       </button>
@@ -239,8 +239,8 @@ export default function LoginPage() {
                   />
                 </div>
 
-                {error && <p className="text-xs text-rose-400">{error}</p>}
-                {confirmationMessage && <p className="text-xs text-emerald-400">{confirmationMessage}</p>}
+                {error && <p className="text-xs text-rose-400 light:text-rose-600">{error}</p>}
+                {confirmationMessage && <p className="text-xs text-emerald-400 light:text-emerald-600">{confirmationMessage}</p>}
 
                 <button type="submit" disabled={submitting} className="btn-primary mt-1">
                   {submitting ? (

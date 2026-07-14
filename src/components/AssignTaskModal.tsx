@@ -57,7 +57,7 @@ export default function AssignTaskModal({ task, onClose }: { task: Task; onClose
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5">
-              <UserCog size={18} className="text-purple-300 shrink-0" />
+              <UserCog size={18} className="text-purple-300 light:text-purple-600 shrink-0" />
               <h2 className="text-lg font-bold text-white light:text-zinc-900 truncate">Atribuir responsável</h2>
             </div>
             <p className="text-xs text-zinc-500 mt-0.5 truncate">{task.title}</p>
@@ -104,7 +104,7 @@ export default function AssignTaskModal({ task, onClose }: { task: Task; onClose
             </div>
           )}
 
-          {error && <p className="text-xs text-rose-400">{error}</p>}
+          {error && <p className="text-xs text-rose-400 light:text-rose-600">{error}</p>}
 
           <button onClick={handleSave} disabled={saving} className="btn-primary disabled:opacity-50">
             {saving ? <Loader2 size={14} className="animate-spin" /> : 'Salvar responsáveis'}

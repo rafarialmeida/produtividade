@@ -51,7 +51,7 @@ export default function TaskHistoryModal({
       <div className="glass-panel neon-border-purple rounded-2xl w-full max-w-lg my-8">
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
           <div className="flex items-center gap-2.5 min-w-0">
-            <History size={18} className="text-purple-300 shrink-0" />
+            <History size={18} className="text-purple-300 light:text-purple-600 shrink-0" />
             <div className="min-w-0">
               <h2 className="text-lg font-bold text-white light:text-zinc-900 truncate">
                 Histórico{user ? ` — ${user.name}` : ''}
@@ -74,7 +74,7 @@ export default function TaskHistoryModal({
               onClick={() => setFilter(f)}
               className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
                 filter === f
-                  ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                  ? 'bg-purple-500/15 text-purple-300 light:text-purple-600 border border-purple-500/30'
                   : 'text-zinc-500 border border-transparent hover:bg-white/5'
               }`}
             >
@@ -93,11 +93,11 @@ export default function TaskHistoryModal({
                 const content = (
                   <>
                     {t.completed ? (
-                      <CheckCircle2 size={15} className="text-emerald-400 shrink-0 mt-0.5" />
+                      <CheckCircle2 size={15} className="text-emerald-400 light:text-emerald-600 shrink-0 mt-0.5" />
                     ) : isActive ? (
                       <Clock size={15} className="text-zinc-400 shrink-0 mt-0.5" />
                     ) : (
-                      <TriangleAlert size={15} className="text-rose-400 shrink-0 mt-0.5" />
+                      <TriangleAlert size={15} className="text-rose-400 light:text-rose-600 shrink-0 mt-0.5" />
                     )}
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-zinc-200 light:text-zinc-800 truncate">{t.title}</p>

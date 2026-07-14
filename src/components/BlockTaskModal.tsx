@@ -28,7 +28,7 @@ export default function BlockTaskModal({ task, onClose }: { task: Task; onClose:
       <div className="glass-panel neon-border-purple rounded-2xl w-full max-w-md my-8">
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
           <div className="flex items-center gap-2.5 min-w-0">
-            <Lock size={18} className="text-amber-300 shrink-0" />
+            <Lock size={18} className="text-amber-300 light:text-amber-600 shrink-0" />
             <h2 className="text-lg font-bold text-white light:text-zinc-900 truncate">Bloquear tarefa</h2>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 light:hover:text-zinc-900 light:hover:bg-black/10 shrink-0">
@@ -53,7 +53,7 @@ export default function BlockTaskModal({ task, onClose }: { task: Task; onClose:
             />
           </div>
 
-          {error && <p className="text-xs text-rose-400">{error}</p>}
+          {error && <p className="text-xs text-rose-400 light:text-rose-600">{error}</p>}
 
           <button onClick={handleConfirm} disabled={!reason.trim() || submitting} className="btn-secondary disabled:opacity-50">
             {submitting ? <Loader2 size={14} className="animate-spin" /> : 'Bloquear tarefa'}

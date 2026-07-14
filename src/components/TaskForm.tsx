@@ -322,7 +322,7 @@ export default function TaskForm({
           {!fixedCommunityId && (
             <div>
               <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
-                <Layers size={13} className="text-purple-400" /> Comunidade (opcional)
+                <Layers size={13} className="text-purple-400 light:text-purple-600" /> Comunidade (opcional)
               </label>
               <select
                 value={selectedCommunityId}
@@ -343,7 +343,7 @@ export default function TaskForm({
 
           <div>
             <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
-              <Target size={13} className="text-purple-400" /> Objetivo Macro
+              <Target size={13} className="text-purple-400 light:text-purple-600" /> Objetivo Macro
             </label>
             <div className="flex flex-wrap gap-1.5 items-center">
               {!showMacroList &&
@@ -383,7 +383,7 @@ export default function TaskForm({
                 <button
                   type="button"
                   onClick={() => setAddingMacro(true)}
-                  className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-dashed border-white/15 text-zinc-500 hover:text-purple-300 hover:border-purple-500/40 transition-colors light:border-black/15"
+                  className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-dashed border-white/15 text-zinc-500 hover:text-purple-300 light:hover:text-purple-600 hover:border-purple-500/40 transition-colors light:border-black/15"
                 >
                   <Plus size={12} /> Novo objetivo
                 </button>
@@ -393,7 +393,7 @@ export default function TaskForm({
                   type="button"
                   onClick={() => setShowMacroList((v) => !v)}
                   title={showMacroList ? 'Ocultar objetivos já criados' : 'Ver todos os objetivos já criados'}
-                  className="p-1.5 rounded-lg border border-white/10 text-zinc-500 hover:text-purple-300 hover:border-purple-500/40 transition-colors light:border-black/15"
+                  className="p-1.5 rounded-lg border border-white/10 text-zinc-500 hover:text-purple-300 light:hover:text-purple-600 hover:border-purple-500/40 transition-colors light:border-black/15"
                 >
                   <ChevronDown size={14} className={`transition-transform ${showMacroList ? 'rotate-180' : ''}`} />
                 </button>
@@ -436,7 +436,7 @@ export default function TaskForm({
 
           <div>
             <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
-              <Tag size={13} className="text-purple-400" /> Categoria
+              <Tag size={13} className="text-purple-400 light:text-purple-600" /> Categoria
             </label>
             <div className="flex flex-wrap gap-1.5">
               {categories.map((c) => {
@@ -479,7 +479,7 @@ export default function TaskForm({
                 <button
                   type="button"
                   onClick={() => setAddingCategory(true)}
-                  className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-dashed border-white/15 text-zinc-500 hover:text-purple-300 hover:border-purple-500/40 transition-colors light:border-black/15"
+                  className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-dashed border-white/15 text-zinc-500 hover:text-purple-300 light:hover:text-purple-600 hover:border-purple-500/40 transition-colors light:border-black/15"
                 >
                   <Plus size={12} /> Nova
                 </button>
@@ -489,7 +489,7 @@ export default function TaskForm({
 
           <div>
             <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
-              <ListChecks size={13} className="text-emerald-400" /> Plano de Execução — o "como" (checklist obrigatório, prazo por item é opcional)
+              <ListChecks size={13} className="text-emerald-400 light:text-emerald-600" /> Plano de Execução — o "como" (checklist obrigatório, prazo por item é opcional)
             </label>
             <div className="flex flex-col gap-2">
               {subtasks.map((s, i) => (
@@ -506,7 +506,7 @@ export default function TaskForm({
                       type="button"
                       onClick={() => removeSubtaskField(i)}
                       disabled={subtasks.length === 1}
-                      className="p-2 rounded-lg text-zinc-600 hover:text-rose-400 hover:bg-rose-500/10 disabled:opacity-30"
+                      className="p-2 rounded-lg text-zinc-600 hover:text-rose-400 light:hover:text-rose-600 hover:bg-rose-500/10 disabled:opacity-30"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -525,7 +525,7 @@ export default function TaskForm({
                       <button
                         type="button"
                         onClick={() => updateSubtaskDate(i, '')}
-                        className="text-[10px] text-zinc-500 hover:text-rose-400 shrink-0"
+                        className="text-[10px] text-zinc-500 hover:text-rose-400 light:hover:text-rose-600 shrink-0"
                       >
                         Remover prazo
                       </button>
@@ -537,7 +537,7 @@ export default function TaskForm({
             <button
               type="button"
               onClick={addSubtaskField}
-              className="mt-2 flex items-center gap-1 text-xs text-purple-300 hover:text-purple-200"
+              className="mt-2 flex items-center gap-1 text-xs text-purple-300 light:text-purple-600 hover:text-purple-200"
             >
               <Plus size={13} /> Adicionar subtarefa
             </button>
@@ -556,7 +556,7 @@ export default function TaskForm({
 
           <div>
             <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
-              <Repeat size={13} className="text-purple-400" /> Recorrência (opcional)
+              <Repeat size={13} className="text-purple-400 light:text-purple-600" /> Recorrência (opcional)
             </label>
             <button
               type="button"
@@ -564,7 +564,7 @@ export default function TaskForm({
               className="w-full flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/5 px-3.5 py-2.5 text-sm transition-colors light:border-black/10 light:bg-black/[0.02] light:hover:bg-black/5"
             >
               <span className="flex items-center gap-2 text-zinc-200 light:text-zinc-800">
-                <CalendarClock size={15} className="text-purple-400 shrink-0" />
+                <CalendarClock size={15} className="text-purple-400 light:text-purple-600 shrink-0" />
                 {customMode
                   ? `Personalizado (${customDates.size} data${customDates.size !== 1 ? 's' : ''} extra${customDates.size !== 1 ? 's' : ''})`
                   : recurrence
@@ -681,7 +681,7 @@ export default function TaskForm({
                 <button
                   type="button"
                   onClick={() => selectRecurrence(null)}
-                  className="text-[11px] text-zinc-500 hover:text-rose-400 mt-2"
+                  className="text-[11px] text-zinc-500 hover:text-rose-400 light:hover:text-rose-600 mt-2"
                 >
                   Cancelar seleção personalizada
                 </button>
@@ -767,7 +767,7 @@ export default function TaskForm({
             <CheckCircle2 size={16} /> {submitting ? 'Salvando…' : isEditing ? 'Salvar Alterações' : 'Salvar Tarefa'}
           </button>
           {submitError && (
-            <p className="text-[11px] text-center text-rose-400 -mt-2">Erro ao salvar: {submitError}</p>
+            <p className="text-[11px] text-center text-rose-400 light:text-rose-600 -mt-2">Erro ao salvar: {submitError}</p>
           )}
           {!isValid && (
             <p className="text-[11px] text-center text-zinc-600 -mt-2">

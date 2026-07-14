@@ -91,7 +91,7 @@ export default function TaskCalendar({ tasks }: { tasks: Task[] }) {
     <div className="glass-panel rounded-2xl overflow-hidden">
       <div className="px-6 py-5 border-b border-white/5 light:border-black/5 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <CalendarDays className="text-purple-400" size={20} />
+          <CalendarDays className="text-purple-400 light:text-purple-600" size={20} />
           <div>
             <h2 className="font-bold text-white light:text-zinc-900 text-lg capitalize">{monthLabel}</h2>
             <p className="text-xs text-zinc-500">Clique numa tarefa para ver os detalhes, ou arraste para outro dia</p>

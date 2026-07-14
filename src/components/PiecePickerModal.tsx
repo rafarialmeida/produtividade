@@ -78,7 +78,7 @@ export default function PiecePickerModal({
                   onClick={() => setPieceId(c.id)}
                   className={`text-left text-xs px-2.5 py-1.5 rounded-lg border transition-colors truncate ${
                     pieceId === c.id
-                      ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
+                      ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300 light:text-emerald-600'
                       : 'border-white/10 bg-white/[0.02] text-zinc-400 hover:border-white/25 light:border-black/10'
                   }`}
                 >
@@ -87,7 +87,7 @@ export default function PiecePickerModal({
               ))}
             </div>
 
-            <p className="text-xs font-medium text-amber-400/80 mt-3 mb-2">Exclusivos de administradores</p>
+            <p className="text-xs font-medium text-amber-400/80 light:text-amber-600/80 mt-3 mb-2">Exclusivos de administradores</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
               {exclusive.map((c) => {
                 const locked = !isCommunityAdmin
@@ -99,13 +99,13 @@ export default function PiecePickerModal({
                     onClick={() => setPieceId(c.id)}
                     className={`relative flex items-center justify-between gap-1 text-left text-xs px-2.5 py-1.5 rounded-lg border ring-1 ring-amber-500/25 transition-colors truncate ${
                       selected
-                        ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
+                        ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300 light:text-emerald-600'
                         : 'border-white/10 bg-white/[0.02] text-zinc-400 hover:border-white/25 light:border-black/10'
                     } ${locked ? 'opacity-40 cursor-not-allowed' : ''}`}
                   >
                     <span className="truncate">{c.label}</span>
                     {locked && <Lock size={11} className="shrink-0" />}
-                    {selected && !locked && <Check size={11} className="text-emerald-400 shrink-0" />}
+                    {selected && !locked && <Check size={11} className="text-emerald-400 light:text-emerald-600 shrink-0" />}
                   </button>
                 )
               })}
@@ -129,7 +129,7 @@ export default function PiecePickerModal({
             </div>
           </div>
 
-          {error && <p className="text-xs text-rose-400">{error}</p>}
+          {error && <p className="text-xs text-rose-400 light:text-rose-600">{error}</p>}
 
           <button onClick={handleSave} disabled={saving} className="btn-primary disabled:opacity-50">
             {saving ? 'Salvando...' : 'Salvar personagem'}

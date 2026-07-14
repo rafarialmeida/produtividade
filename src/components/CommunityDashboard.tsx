@@ -152,7 +152,7 @@ export default function CommunityDashboard({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-2.5">
-        <LayoutDashboard size={16} className="text-purple-400" />
+        <LayoutDashboard size={16} className="text-purple-400 light:text-purple-600" />
         <h2 className="text-sm font-semibold text-zinc-300 light:text-zinc-700">Dashboard da Equipe</h2>
       </div>
 
@@ -299,17 +299,17 @@ export default function CommunityDashboard({
                   </td>
                   <td className="px-3 py-2.5 text-right text-sky-300 tabular-nums">{s.inProgress}</td>
                   <td className="px-3 py-2.5 text-right text-zinc-400 light:text-zinc-600 tabular-nums">{s.notStarted}</td>
-                  <td className="px-3 py-2.5 text-right text-emerald-400 tabular-nums">{s.completed}</td>
-                  <td className="px-3 py-2.5 text-right text-rose-400 tabular-nums">{s.expired}</td>
+                  <td className="px-3 py-2.5 text-right text-emerald-400 light:text-emerald-600 tabular-nums">{s.completed}</td>
+                  <td className="px-3 py-2.5 text-right text-rose-400 light:text-rose-600 tabular-nums">{s.expired}</td>
                   <td className="px-3 py-2.5 text-right text-zinc-400 light:text-zinc-600 tabular-nums">{s.perWeek.toFixed(1)}</td>
                   <td className="px-3 py-2.5 text-right text-zinc-400 light:text-zinc-600 tabular-nums">{s.hours.toFixed(1)}h</td>
-                  <td className="px-3 py-2.5 text-right text-emerald-300 tabular-nums">+{s.positivePoints.toFixed(1)}</td>
-                  <td className="px-3 py-2.5 text-right text-rose-300 tabular-nums">-{s.lostPoints.toFixed(1)}</td>
+                  <td className="px-3 py-2.5 text-right text-emerald-300 light:text-emerald-600 tabular-nums">+{s.positivePoints.toFixed(1)}</td>
+                  <td className="px-3 py-2.5 text-right text-rose-300 light:text-rose-600 tabular-nums">-{s.lostPoints.toFixed(1)}</td>
                   <td className="px-3 py-2.5 text-right">
                     <button
                       onClick={() => onViewHistory(s.userId)}
                       title="Ver histórico"
-                      className="p-1 rounded text-zinc-500 hover:text-purple-300 hover:bg-purple-500/10 transition-colors"
+                      className="p-1 rounded text-zinc-500 hover:text-purple-300 light:hover:text-purple-600 hover:bg-purple-500/10 transition-colors"
                     >
                       <History size={13} />
                     </button>
@@ -455,7 +455,7 @@ function StatCard({
   accent: 'purple' | 'amber' | 'rose' | 'sky'
   onClick?: () => void
 }) {
-  const colors = { purple: 'text-purple-300', amber: 'text-amber-300', rose: 'text-rose-400', sky: 'text-sky-300' }
+  const colors = { purple: 'text-purple-300 light:text-purple-600', amber: 'text-amber-300 light:text-amber-600', rose: 'text-rose-400 light:text-rose-600', sky: 'text-sky-300' }
   return (
     <button
       onClick={onClick}
@@ -484,9 +484,9 @@ function HighlightCard({
   onClick?: () => void
 }) {
   const styles = {
-    emerald: { bg: 'bg-emerald-500/[0.06]', border: 'border-emerald-500/25', text: 'text-emerald-300' },
-    purple: { bg: 'bg-purple-500/[0.06]', border: 'border-purple-500/25', text: 'text-purple-300' },
-    rose: { bg: 'bg-rose-500/[0.06]', border: 'border-rose-500/25', text: 'text-rose-300' },
+    emerald: { bg: 'bg-emerald-500/[0.06]', border: 'border-emerald-500/25', text: 'text-emerald-300 light:text-emerald-600' },
+    purple: { bg: 'bg-purple-500/[0.06]', border: 'border-purple-500/25', text: 'text-purple-300 light:text-purple-600' },
+    rose: { bg: 'bg-rose-500/[0.06]', border: 'border-rose-500/25', text: 'text-rose-300 light:text-rose-600' },
   }[color]
   return (
     <button

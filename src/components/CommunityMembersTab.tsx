@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Crown, ShieldMinus, ShieldPlus, UserCheck, Users, UserX } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Crown, LogOut, ShieldMinus, ShieldPlus, UserCheck, Users, UserX } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import type { CommunityJoinRequest } from '../types'
 import OnlineDot from './OnlineDot'
@@ -7,12 +8,14 @@ import ProfileModal from './ProfileModal'
 import { formatDisplayName } from '../utils/name'
 
 export default function CommunityMembersTab({ communityId }: { communityId: string }) {
+  const navigate = useNavigate()
   const authUser = useAppStore((s) => s.authUser)
   const community = useAppStore((s) => s.getCommunityById(communityId))
   const users = useAppStore((s) => s.users)
   const onlineUserIds = useAppStore((s) => s.onlineUserIds)
   const setCommunityAdmin = useAppStore((s) => s.setCommunityAdmin)
   const removeCommunityMember = useAppStore((s) => s.removeCommunityMember)
+  const leaveCommunity = useAppStore((s) => s.leaveCommunity)
   const fetchJoinRequests = useAppStore((s) => s.fetchJoinRequests)
   const approveJoinRequest = useAppStore((s) => s.approveJoinRequest)
   const rejectJoinRequest = useAppStore((s) => s.rejectJoinRequest)
@@ -22,6 +25,8 @@ export default function CommunityMembersTab({ communityId }: { communityId: stri
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [roleError, setRoleError] = useState('')
+  const [leaving, setLeaving] = useState(false)
+  const [leaveError, setLeaveError] = useState('')
   const [joinRequests, setJoinRequests] = useState<CommunityJoinRequest[]>([])
   const [resolvingId, setResolvingId] = useState<string | null>(null)
   const [requestError, setRequestError] = useState('')
@@ -74,6 +79,22 @@ export default function CommunityMembersTab({ communityId }: { communityId: stri
     }
   }
 
+  async function handleLeave() {
+    if (!window.confirm('Sair desta comunidade? Você vai perder acesso às tarefas e ao histórico dela.')) return
+    setLeaveError('')
+    setLeaving(true)
+    try {
+      const error = await leaveCommunity(communityId)
+      if (error) {
+        setLeaveError(error === 'LAST_ADMIN' ? 'Você é o único admin — promova outra pessoa antes de sair.' : error)
+        return
+      }
+      navigate('/communities')
+    } finally {
+      setLeaving(false)
+    }
+  }
+
   async function handleResolveRequest(requestId: string, approve: boolean) {
     setRequestError('')
     setResolvingId(requestId)
@@ -93,14 +114,14 @@ export default function CommunityMembersTab({ communityId }: { communityId: stri
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold text-zinc-300 light:text-zinc-700">
-          <Users size={15} className="text-purple-400" /> Membros ({members.length})
+          <Users size={15} className="text-purple-400 light:text-purple-600" /> Membros ({members.length})
         </h2>
         <button
           type="button"
           onClick={() => setOnlyOnline((v) => !v)}
           className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
             onlyOnline
-              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300 light:text-emerald-600'
               : 'border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/5 light:border-black/10 light:bg-black/[0.02] light:text-zinc-600 light:hover:bg-black/5'
           }`}
         >
@@ -109,7 +130,8 @@ export default function CommunityMembersTab({ communityId }: { communityId: stri
         </button>
       </div>
 
-      {roleError && <p className="text-[11px] text-rose-400">{roleError}</p>}
+      {roleError && <p className="text-[11px] text-rose-400 light:text-rose-600">{roleError}</p>}
+      {leaveError && <p className="text-[11px] text-rose-400 light:text-rose-600">{leaveError}</p>}
 
       <div className="glass-panel rounded-2xl overflow-hidden divide-y divide-white/5">
         {members.length === 0 ? (
@@ -136,10 +158,11 @@ export default function CommunityMembersTab({ communityId }: { communityId: stri
                     <OnlineDot online={onlineUserIds.has(m.id)} className="absolute -bottom-0.5 -right-0.5 border border-zinc-900 light:border-white" />
                   </div>
                   <p className="text-sm text-zinc-200 light:text-zinc-800 truncate">{formatDisplayName(m.name)}</p>
-                  {m.role === 'admin' && <Crown size={12} className="text-amber-400 shrink-0" />}
+                  {m.role === 'admin' && <Crown size={12} className="text-amber-400 light:text-amber-600 shrink-0" />}
                   {isCommunityAdmin && (
-                    <span className="text-[10px] text-purple-300 border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 rounded shrink-0">
-                      admin da comunidade
+                    <span className="text-[10px] text-purple-300 light:text-purple-600 border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 rounded shrink-0">
+                      <span className="sm:hidden">admin</span>
+                      <span className="hidden sm:inline">admin da comunidade</span>
                     </span>
                   )}
                 </button>
@@ -149,7 +172,7 @@ export default function CommunityMembersTab({ communityId }: { communityId: stri
                       onClick={() => handleToggleAdmin(m.id, !isCommunityAdmin)}
                       disabled={togglingId === m.id || removingId === m.id}
                       title={isCommunityAdmin ? 'Remover admin da comunidade' : 'Tornar admin da comunidade'}
-                      className="p-1.5 rounded-lg text-zinc-500 hover:text-purple-300 hover:bg-purple-500/10 transition-colors disabled:opacity-40"
+                      className="p-1.5 rounded-lg text-zinc-500 hover:text-purple-300 light:hover:text-purple-600 hover:bg-purple-500/10 transition-colors disabled:opacity-40"
                     >
                       {isCommunityAdmin ? <ShieldMinus size={14} /> : <ShieldPlus size={14} />}
                     </button>
@@ -157,11 +180,21 @@ export default function CommunityMembersTab({ communityId }: { communityId: stri
                       onClick={() => handleRemove(m.id, m.name)}
                       disabled={togglingId === m.id || removingId === m.id}
                       title="Excluir membro"
-                      className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-40"
+                      className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 light:hover:text-rose-600 hover:bg-rose-500/10 transition-colors disabled:opacity-40"
                     >
                       <UserX size={14} />
                     </button>
                   </div>
+                )}
+                {authUser?.id === m.id && (
+                  <button
+                    onClick={handleLeave}
+                    disabled={leaving}
+                    title="Sair da comunidade"
+                    className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 light:hover:text-rose-600 hover:bg-rose-500/10 transition-colors disabled:opacity-40 shrink-0"
+                  >
+                    <LogOut size={14} />
+                  </button>
                 )}
               </div>
             )
@@ -172,7 +205,7 @@ export default function CommunityMembersTab({ communityId }: { communityId: stri
       {canManageMembers && joinRequests.length > 0 && (
         <div>
           <p className="text-xs font-medium text-zinc-400 light:text-zinc-600 mb-2">Pedidos pendentes ({joinRequests.length})</p>
-          {requestError && <p className="text-[11px] text-rose-400 mb-2">{requestError}</p>}
+          {requestError && <p className="text-[11px] text-rose-400 light:text-rose-600 mb-2">{requestError}</p>}
           <div className="glass-panel rounded-2xl overflow-hidden divide-y divide-amber-500/10">
             {joinRequests.map((r) => {
               const requester = users.find((u) => u.id === r.userId)
@@ -197,7 +230,7 @@ export default function CommunityMembersTab({ communityId }: { communityId: stri
                     onClick={() => handleResolveRequest(r.id, true)}
                     disabled={resolvingId === r.id}
                     title="Aprovar"
-                    className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors disabled:opacity-40 shrink-0"
+                    className="p-1.5 rounded-lg text-emerald-400 light:text-emerald-600 hover:bg-emerald-500/10 transition-colors disabled:opacity-40 shrink-0"
                   >
                     <UserCheck size={15} />
                   </button>
@@ -205,7 +238,7 @@ export default function CommunityMembersTab({ communityId }: { communityId: stri
                     onClick={() => handleResolveRequest(r.id, false)}
                     disabled={resolvingId === r.id}
                     title="Recusar"
-                    className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-40 shrink-0"
+                    className="p-1.5 rounded-lg text-rose-400 light:text-rose-600 hover:bg-rose-500/10 transition-colors disabled:opacity-40 shrink-0"
                   >
                     <UserX size={15} />
                   </button>

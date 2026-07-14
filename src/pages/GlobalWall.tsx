@@ -65,7 +65,7 @@ export default function GlobalWall() {
     <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-2xl font-bold text-white light:text-zinc-900 flex items-center gap-2.5">
-          <Globe2 className="text-purple-400" size={22} /> Muro Global
+          <Globe2 className="text-purple-400 light:text-purple-600" size={22} /> Muro Global
         </h1>
         <p className="text-zinc-500 text-sm mt-1">
           Ranking de tarefas gerais de toda a plataforma — clique em alguém para ver o perfil
@@ -77,7 +77,7 @@ export default function GlobalWall() {
           onClick={() => setTab('positive')}
           className={`flex items-center gap-1.5 text-sm px-3.5 py-1.5 rounded-lg transition-colors ${
             tab === 'positive'
-              ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+              ? 'bg-emerald-500/15 text-emerald-300 light:text-emerald-600 border border-emerald-500/30'
               : 'text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700'
           }`}
         >
@@ -87,7 +87,7 @@ export default function GlobalWall() {
           onClick={() => setTab('negative')}
           className={`flex items-center gap-1.5 text-sm px-3.5 py-1.5 rounded-lg transition-colors ${
             tab === 'negative'
-              ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+              ? 'bg-rose-500/15 text-rose-300 light:text-rose-600 border border-rose-500/30'
               : 'text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700'
           }`}
         >
@@ -132,7 +132,7 @@ export default function GlobalWall() {
                       <div
                         className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-bold text-sm ${
                           isLeader
-                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                            ? 'bg-rose-500/20 text-rose-300 light:text-rose-600 border border-rose-500/40'
                             : 'bg-white/5 text-zinc-400 border border-white/10 light:bg-black/[0.03] light:text-zinc-600 light:border-black/10'
                         }`}
                       >
@@ -151,7 +151,7 @@ export default function GlobalWall() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium text-white light:text-zinc-900 truncate">{formatDisplayName(entry.name)}</p>
-                        {entry.role === 'admin' && <Crown size={12} className="text-amber-400 shrink-0" />}
+                        {entry.role === 'admin' && <Crown size={12} className="text-amber-400 light:text-amber-600 shrink-0" />}
                         <span className="text-[11px] text-zinc-600">
                           · {entry.communityCount} comunidade{entry.communityCount !== 1 ? 's' : ''}
                         </span>
@@ -169,7 +169,7 @@ export default function GlobalWall() {
                     <div className="text-right shrink-0">
                       <p
                         className={`text-lg font-bold tabular-nums ${
-                          isLeader ? (positive ? 'text-emerald-400' : 'text-rose-400') : 'text-white light:text-zinc-900'
+                          isLeader ? (positive ? 'text-emerald-400 light:text-emerald-600' : 'text-rose-400 light:text-rose-600') : 'text-white light:text-zinc-900'
                         }`}
                       >
                         {positive ? '+' : '-'}

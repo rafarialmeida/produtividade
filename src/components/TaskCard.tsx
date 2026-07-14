@@ -97,7 +97,7 @@ export default function TaskCard({
     <div className={`glass-panel rounded-2xl p-5 border ${statusStyles[cardStatus]}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-1.5 text-[11px] text-purple-300/80 mb-1.5">
+          <div className="flex items-center gap-1.5 text-[11px] text-purple-300/80 light:text-purple-600/80 mb-1.5">
             <Target size={11} />
             <span className="truncate">{task.macroObjective}</span>
           </div>
@@ -111,7 +111,7 @@ export default function TaskCard({
             {task.recurrence && (
               <span
                 title="Tarefa recorrente"
-                className="inline-flex items-center gap-1 text-[10px] font-medium text-purple-300 bg-purple-500/10 border border-purple-500/30 rounded px-1.5 py-0.5"
+                className="inline-flex items-center gap-1 text-[10px] font-medium text-purple-300 light:text-purple-600 bg-purple-500/10 border border-purple-500/30 rounded px-1.5 py-0.5"
               >
                 <Repeat size={9} /> {RECURRENCE_LABEL[task.recurrence]}
               </span>
@@ -162,7 +162,7 @@ export default function TaskCard({
             <button
               onClick={() => (task.blocked ? handleUnblock() : setBlocking(true))}
               title={task.blocked ? 'Desbloquear tarefa' : 'Bloquear tarefa (pausa o prazo)'}
-              className="p-1.5 rounded-lg text-zinc-600 hover:text-amber-300 hover:bg-amber-500/10 transition-colors"
+              className="p-1.5 rounded-lg text-zinc-600 hover:text-amber-300 light:hover:text-amber-600 hover:bg-amber-500/10 transition-colors"
             >
               {task.blocked ? <Unlock size={13} /> : <Lock size={13} />}
             </button>
@@ -172,14 +172,14 @@ export default function TaskCard({
               <button
                 onClick={() => setEditing(true)}
                 title="Editar tarefa"
-                className="p-1.5 rounded-lg text-zinc-600 hover:text-purple-300 hover:bg-purple-500/10 transition-colors"
+                className="p-1.5 rounded-lg text-zinc-600 hover:text-purple-300 light:hover:text-purple-600 hover:bg-purple-500/10 transition-colors"
               >
                 <Pencil size={13} />
               </button>
               <button
                 onClick={handleDelete}
                 title="Excluir tarefa"
-                className="p-1.5 rounded-lg text-zinc-600 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                className="p-1.5 rounded-lg text-zinc-600 hover:text-rose-400 light:hover:text-rose-600 hover:bg-rose-500/10 transition-colors"
               >
                 <Trash2 size={13} />
               </button>
@@ -201,7 +201,7 @@ export default function TaskCard({
               className="flex items-center gap-2 text-left group"
             >
               {st.done ? (
-                <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
+                <CheckCircle2 size={15} className="text-emerald-400 light:text-emerald-600 shrink-0" />
               ) : (
                 <Circle size={15} className="text-zinc-600 shrink-0 group-hover:text-zinc-400" />
               )}
@@ -214,7 +214,7 @@ export default function TaskCard({
               {st.dueDate && !st.done && (
                 <span
                   className={`flex items-center gap-1 text-[10px] shrink-0 ${
-                    subtaskOverdue ? 'text-rose-400' : subtaskNear ? 'text-amber-400' : 'text-zinc-600'
+                    subtaskOverdue ? 'text-rose-400 light:text-rose-600' : subtaskNear ? 'text-amber-400 light:text-amber-600' : 'text-zinc-600'
                   }`}
                 >
                   <CalendarClock size={10} /> {formatRelative(st.dueDate)}
@@ -228,15 +228,15 @@ export default function TaskCard({
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 text-xs">
           {task.completed ? (
-            <span className="flex items-center gap-1 text-emerald-400">
+            <span className="flex items-center gap-1 text-emerald-400 light:text-emerald-600">
               <CheckCircle2 size={13} /> Concluída{task.completedAt && ` em ${formatDeadline(task.completedAt)}`}
             </span>
           ) : task.expired ? (
-            <span className="flex items-center gap-1 text-rose-400 font-medium">
+            <span className="flex items-center gap-1 text-rose-400 light:text-rose-600 font-medium">
               <TriangleAlert size={13} /> Expirada · -{cfg.points} pt{cfg.points > 1 ? 's' : ''}
             </span>
           ) : (
-            <span className={`flex items-center gap-1 ${near ? 'text-amber-400 font-medium' : 'text-zinc-500'}`}>
+            <span className={`flex items-center gap-1 ${near ? 'text-amber-400 light:text-amber-600 font-medium' : 'text-zinc-500'}`}>
               <Clock size={13} /> {formatDeadline(task.deadline)} ({formatRelative(task.deadline)})
             </span>
           )}
@@ -265,7 +265,7 @@ export default function TaskCard({
               onClick={handleComplete}
               disabled={!allSubtasksDone}
               title={!allSubtasksDone ? 'Conclua todas as subtarefas do plano de execução primeiro' : ''}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-300 light:text-emerald-600 border border-emerald-500/30 hover:bg-emerald-500/25 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               Concluir
             </button>

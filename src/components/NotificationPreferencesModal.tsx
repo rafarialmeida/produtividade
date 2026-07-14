@@ -39,7 +39,7 @@ export default function NotificationPreferencesModal({ userId, onClose }: { user
       <div className="glass-panel neon-border-purple rounded-2xl w-full max-w-md my-8">
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
           <div className="flex items-center gap-2.5">
-            <Bell size={18} className="text-purple-300" />
+            <Bell size={18} className="text-purple-300 light:text-purple-600" />
             <h2 className="text-lg font-bold text-white light:text-zinc-900">Notificações</h2>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 light:hover:text-zinc-900 light:hover:bg-black/10">
@@ -52,7 +52,7 @@ export default function NotificationPreferencesModal({ userId, onClose }: { user
             <div className="flex items-start justify-between gap-3">
               <div className="flex gap-2.5">
                 {pushSubscribed ? (
-                  <BellRing size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+                  <BellRing size={16} className="text-emerald-400 light:text-emerald-600 shrink-0 mt-0.5" />
                 ) : (
                   <BellOff size={16} className="text-zinc-500 shrink-0 mt-0.5" />
                 )}
@@ -64,7 +64,7 @@ export default function NotificationPreferencesModal({ userId, onClose }: { user
               <Toggle checked={pushSubscribed} onChange={(v) => (v ? subscribe() : unsubscribe())} />
             </div>
           ) : (
-            <p className="text-xs text-amber-400 -mt-1">Seu navegador não tem suporte a notificações push.</p>
+            <p className="text-xs text-amber-400 light:text-amber-600 -mt-1">Seu navegador não tem suporte a notificações push.</p>
           )}
 
           <p className="text-xs text-zinc-500 border-t border-white/5 pt-4 -mb-1">
@@ -73,7 +73,7 @@ export default function NotificationPreferencesModal({ userId, onClose }: { user
 
           <div className="flex items-start justify-between gap-3">
             <div className="flex gap-2.5">
-              <Clock size={16} className="text-amber-400 shrink-0 mt-0.5" />
+              <Clock size={16} className="text-amber-400 light:text-amber-600 shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-white light:text-zinc-900">Prazo chegando perto</p>
                 <p className="text-xs text-zinc-500">Aviso quando faltam poucas horas para o prazo.</p>
@@ -102,7 +102,7 @@ export default function NotificationPreferencesModal({ userId, onClose }: { user
 
           <div className="flex items-start justify-between gap-3 border-t border-white/5 pt-5">
             <div className="flex gap-2.5">
-              <TriangleAlert size={16} className="text-rose-400 shrink-0 mt-0.5" />
+              <TriangleAlert size={16} className="text-rose-400 light:text-rose-600 shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-white light:text-zinc-900">Tarefa expirada</p>
                 <p className="text-xs text-zinc-500">Aviso quando você perder pontos por não cumprir um prazo.</p>
@@ -117,7 +117,7 @@ export default function NotificationPreferencesModal({ userId, onClose }: { user
 
           <div className="flex items-start justify-between gap-3 border-t border-white/5 pt-5">
             <div className="flex gap-2.5">
-              <CheckCircle2 size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+              <CheckCircle2 size={16} className="text-emerald-400 light:text-emerald-600 shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-white light:text-zinc-900">Tarefa concluída</p>
                 <p className="text-xs text-zinc-500">Um parabéns quando você fechar uma tarefa.</p>

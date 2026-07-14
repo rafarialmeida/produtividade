@@ -239,7 +239,7 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
                       onClick={handleSaveName}
                       disabled={savingName}
                       title="Salvar"
-                      className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors disabled:opacity-40 shrink-0"
+                      className="p-1.5 rounded-lg text-emerald-400 light:text-emerald-600 hover:bg-emerald-500/10 transition-colors disabled:opacity-40 shrink-0"
                     >
                       <Check size={14} />
                     </button>
@@ -255,25 +255,25 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
                 ) : (
                   <div className="flex items-center gap-1.5">
                     <p className="font-semibold text-white light:text-zinc-900 truncate">{profile.name}</p>
-                    {profile.role === 'admin' && <Crown size={13} className="text-amber-400 shrink-0" />}
+                    {profile.role === 'admin' && <Crown size={13} className="text-amber-400 light:text-amber-600 shrink-0" />}
                     {isOwn && (
                       <button
                         onClick={startEditingName}
                         title="Editar nome"
-                        className="p-1 rounded text-zinc-600 hover:text-purple-300 hover:bg-purple-500/10 transition-colors shrink-0"
+                        className="p-1 rounded text-zinc-600 hover:text-purple-300 light:hover:text-purple-600 hover:bg-purple-500/10 transition-colors shrink-0"
                       >
                         <Pencil size={12} />
                       </button>
                     )}
                   </div>
                 )}
-                {nameError && <p className="text-[11px] text-rose-400 mt-0.5">{nameError}</p>}
+                {nameError && <p className="text-[11px] text-rose-400 light:text-rose-600 mt-0.5">{nameError}</p>}
                 <p className="text-xs text-zinc-500 mt-0.5">
                   {profile.communityCount} comunidade{profile.communityCount !== 1 ? 's' : ''}
                 </p>
               </div>
             </div>
-            {avatarError && <p className="text-xs text-rose-400 -mt-3">{avatarError}</p>}
+            {avatarError && <p className="text-xs text-rose-400 light:text-rose-600 -mt-3">{avatarError}</p>}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <LevelCard label="Nível de Trabalho" icon={Briefcase} xp={profile.workXp} accent="sky" />
@@ -335,7 +335,7 @@ export default function ProfileModal({ userId, onClose }: { userId: string; onCl
                   className="input"
                 />
                 {passwordMsg && (
-                  <p className={`text-xs ${passwordMsg.ok ? 'text-emerald-400' : 'text-rose-400'}`}>{passwordMsg.text}</p>
+                  <p className={`text-xs ${passwordMsg.ok ? 'text-emerald-400 light:text-emerald-600' : 'text-rose-400 light:text-rose-600'}`}>{passwordMsg.text}</p>
                 )}
                 <button type="submit" disabled={savingPassword} className="btn-secondary !w-auto self-start px-4 disabled:opacity-50">
                   {savingPassword ? <Loader2 size={14} className="animate-spin" /> : 'Salvar nova senha'}
@@ -370,8 +370,8 @@ function LevelCard({
   const colors = positive
     ? accent === 'sky'
       ? { border: 'border-sky-500/30', bg: 'bg-sky-500/[0.06]', text: 'text-sky-300', bar: 'bg-sky-500' }
-      : { border: 'border-purple-500/30', bg: 'bg-purple-500/[0.06]', text: 'text-purple-300', bar: 'bg-purple-500' }
-    : { border: 'border-rose-500/30', bg: 'bg-rose-500/[0.06]', text: 'text-rose-400', bar: 'bg-rose-500' }
+      : { border: 'border-purple-500/30', bg: 'bg-purple-500/[0.06]', text: 'text-purple-300 light:text-purple-600', bar: 'bg-purple-500' }
+    : { border: 'border-rose-500/30', bg: 'bg-rose-500/[0.06]', text: 'text-rose-400 light:text-rose-600', bar: 'bg-rose-500' }
   return (
     <div className={`rounded-xl border p-4 ${colors.border} ${colors.bg}`}>
       <div className="flex items-center justify-between">
@@ -408,7 +408,7 @@ function StatBox({
   value: number
   prefix?: string
 }) {
-  const colors = { emerald: 'text-emerald-300', rose: 'text-rose-400', purple: 'text-purple-300' }
+  const colors = { emerald: 'text-emerald-300 light:text-emerald-600', rose: 'text-rose-400 light:text-rose-600', purple: 'text-purple-300 light:text-purple-600' }
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 light:border-black/10 light:bg-black/[0.02]">
       <p className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${colors[color]}`}>

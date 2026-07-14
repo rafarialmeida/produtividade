@@ -4,10 +4,10 @@ import { useAppStore } from '../store/useStore'
 import type { Notification } from '../types'
 
 const TOAST_CONFIG: Record<Notification['type'], { icon: typeof AlertTriangle; border: string; title: string; titleColor: string }> = {
-  penalty: { icon: AlertTriangle, border: 'border-rose-500/50', title: 'Penalidade aplicada', titleColor: 'text-rose-300' },
-  warning: { icon: Clock, border: 'border-amber-500/50', title: 'Prazo chegando', titleColor: 'text-amber-300' },
-  success: { icon: PartyPopper, border: 'border-emerald-500/50', title: 'Boa!', titleColor: 'text-emerald-300' },
-  info: { icon: Info, border: 'border-purple-500/50', title: 'Aviso', titleColor: 'text-purple-300' },
+  penalty: { icon: AlertTriangle, border: 'border-rose-500/50', title: 'Penalidade aplicada', titleColor: 'text-rose-300 light:text-rose-600' },
+  warning: { icon: Clock, border: 'border-amber-500/50', title: 'Prazo chegando', titleColor: 'text-amber-300 light:text-amber-600' },
+  success: { icon: PartyPopper, border: 'border-emerald-500/50', title: 'Boa!', titleColor: 'text-emerald-300 light:text-emerald-600' },
+  info: { icon: Info, border: 'border-purple-500/50', title: 'Aviso', titleColor: 'text-purple-300 light:text-purple-600' },
 }
 
 export default function NotificationToasts({ userId }: { userId: string }) {

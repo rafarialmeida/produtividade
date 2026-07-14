@@ -100,7 +100,7 @@ export default function Trash() {
                       onClick={() => handleRestoreTask(t.id)}
                       disabled={busyId === t.id}
                       title="Restaurar"
-                      className="p-2 rounded-lg text-zinc-500 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors disabled:opacity-40"
+                      className="p-2 rounded-lg text-zinc-500 hover:text-emerald-300 light:hover:text-emerald-600 hover:bg-emerald-500/10 transition-colors disabled:opacity-40"
                     >
                       <RotateCcw size={15} />
                     </button>
@@ -108,7 +108,7 @@ export default function Trash() {
                       onClick={() => handleDeleteTaskForever(t.id, t.title)}
                       disabled={busyId === t.id}
                       title="Excluir definitivamente"
-                      className="p-2 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-40"
+                      className="p-2 rounded-lg text-zinc-500 hover:text-rose-400 light:hover:text-rose-600 hover:bg-rose-500/10 transition-colors disabled:opacity-40"
                     >
                       <X size={15} />
                     </button>
@@ -146,7 +146,7 @@ export default function Trash() {
                         onClick={() => handleRestoreCommunity(c.id)}
                         disabled={busyId === c.id}
                         title="Restaurar"
-                        className="p-2 rounded-lg text-zinc-500 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors disabled:opacity-40"
+                        className="p-2 rounded-lg text-zinc-500 hover:text-emerald-300 light:hover:text-emerald-600 hover:bg-emerald-500/10 transition-colors disabled:opacity-40"
                       >
                         <RotateCcw size={15} />
                       </button>
@@ -154,7 +154,7 @@ export default function Trash() {
                         onClick={() => handleDeleteCommunityForever(c.id, c.name)}
                         disabled={busyId === c.id}
                         title="Excluir definitivamente"
-                        className="p-2 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-40"
+                        className="p-2 rounded-lg text-zinc-500 hover:text-rose-400 light:hover:text-rose-600 hover:bg-rose-500/10 transition-colors disabled:opacity-40"
                       >
                         <X size={15} />
                       </button>

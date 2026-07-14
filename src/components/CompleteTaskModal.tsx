@@ -42,7 +42,7 @@ export default function CompleteTaskModal({ task, onClose }: { task: Task; onClo
       <div className="glass-panel neon-border-green rounded-2xl w-full max-w-md my-8">
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
           <div className="flex items-center gap-2.5 min-w-0">
-            <Clock size={18} className="text-emerald-300 shrink-0" />
+            <Clock size={18} className="text-emerald-300 light:text-emerald-600 shrink-0" />
             <h2 className="text-lg font-bold text-white light:text-zinc-900 truncate">Concluir tarefa</h2>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 light:hover:text-zinc-900 light:hover:bg-black/10 shrink-0">

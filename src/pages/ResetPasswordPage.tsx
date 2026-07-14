@@ -49,7 +49,7 @@ export default function ResetPasswordPage() {
         <div className="glass-panel rounded-2xl p-6 sm:p-7 flex flex-col gap-5">
           {done ? (
             <div className="flex flex-col items-center gap-3 py-4 text-center">
-              <div className="w-11 h-11 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-400">
+              <div className="w-11 h-11 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-400 light:text-emerald-600">
                 <Check size={20} />
               </div>
               <p className="text-sm text-zinc-300 light:text-zinc-700">Senha redefinida com sucesso!</p>
@@ -62,7 +62,7 @@ export default function ResetPasswordPage() {
               <Loader2 size={20} className="animate-spin" />
             </div>
           ) : !authUser ? (
-            <p className="text-sm text-rose-400 text-center py-4">
+            <p className="text-sm text-rose-400 light:text-rose-600 text-center py-4">
               Link de redefinição inválido ou expirado. Solicite um novo link na tela de login.
             </p>
           ) : (
@@ -95,7 +95,7 @@ export default function ResetPasswordPage() {
                 />
               </div>
 
-              {error && <p className="text-xs text-rose-400">{error}</p>}
+              {error && <p className="text-xs text-rose-400 light:text-rose-600">{error}</p>}
 
               <button type="submit" disabled={submitting} className="btn-primary mt-1">
                 {submitting ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}

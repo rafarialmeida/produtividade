@@ -26,7 +26,7 @@ export default function AdminDashboard() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center">
-            <ShieldCheck size={18} className="text-purple-300" />
+            <ShieldCheck size={18} className="text-purple-300 light:text-purple-600" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white light:text-zinc-900">Admin Dashboard</h1>
@@ -73,7 +73,7 @@ export default function AdminDashboard() {
                       </p>
                     </div>
                   </div>
-                  <ArrowUpRight size={16} className="text-zinc-600 group-hover:text-purple-300 transition-colors shrink-0" />
+                  <ArrowUpRight size={16} className="text-zinc-600 group-hover:text-purple-300 light:group-hover:text-purple-600 transition-colors shrink-0" />
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 mt-4">
@@ -84,7 +84,7 @@ export default function AdminDashboard() {
                     Gravidade {SEVERITY_LABEL[c.severity]}
                   </span>
                   {expiredCount > 0 && (
-                    <span className="text-[11px] font-medium px-2 py-0.5 rounded border border-rose-500/40 bg-rose-500/10 text-rose-300 flex items-center gap-1">
+                    <span className="text-[11px] font-medium px-2 py-0.5 rounded border border-rose-500/40 bg-rose-500/10 text-rose-300 light:text-rose-600 flex items-center gap-1">
                       <TrendingDown size={11} /> {expiredCount} penalidade{expiredCount !== 1 ? 's' : ''}
                     </span>
                   )}
@@ -141,9 +141,9 @@ function StatCard({
   suffix?: string
 }) {
   const colors = {
-    purple: 'text-purple-300',
-    emerald: 'text-emerald-300',
-    rose: 'text-rose-400',
+    purple: 'text-purple-300 light:text-purple-600',
+    emerald: 'text-emerald-300 light:text-emerald-600',
+    rose: 'text-rose-400 light:text-rose-600',
   }
   return (
     <div className="glass-panel rounded-2xl p-4">

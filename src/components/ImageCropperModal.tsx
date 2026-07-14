@@ -164,7 +164,7 @@ export default function ImageCropperModal({
           </div>
 
           <p className="text-[11px] text-zinc-500 text-center">Arraste para posicionar e use o zoom para enquadrar.</p>
-          {error && <p className="text-xs text-rose-400 text-center">{error}</p>}
+          {error && <p className="text-xs text-rose-400 light:text-rose-600 text-center">{error}</p>}
 
           <button onClick={handleConfirm} disabled={saving || !naturalSize} className="btn-primary disabled:opacity-50">
             {saving ? <Loader2 size={14} className="animate-spin" /> : <><Check size={15} /> Usar essa foto</>}

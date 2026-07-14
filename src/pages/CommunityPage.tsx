@@ -68,7 +68,7 @@ export default function CommunityPage() {
     return (
       <div className="text-center py-20">
         <p className="text-zinc-400 light:text-zinc-600">Comunidade não encontrada.</p>
-        <Link to="/day" className="text-purple-300 text-sm mt-2 inline-block">
+        <Link to="/day" className="text-purple-300 light:text-purple-600 text-sm mt-2 inline-block">
           Voltar ao meu dia
         </Link>
       </div>
@@ -157,7 +157,7 @@ export default function CommunityPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <Link to="/day" className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700 mb-3">
+        <Link to="/communities" className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700 mb-3">
           <ArrowLeft size={13} /> Voltar
         </Link>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
@@ -183,7 +183,7 @@ export default function CommunityPage() {
                     onClick={handleSaveName}
                     disabled={savingName}
                     title="Salvar"
-                    className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors disabled:opacity-40"
+                    className="p-1.5 rounded-lg text-emerald-400 light:text-emerald-600 hover:bg-emerald-500/10 transition-colors disabled:opacity-40"
                   >
                     <Check size={16} />
                   </button>
@@ -203,14 +203,14 @@ export default function CommunityPage() {
                     <button
                       onClick={startEditingName}
                       title="Renomear comunidade"
-                      className="p-1 rounded text-zinc-600 hover:text-purple-300 hover:bg-purple-500/10 transition-colors shrink-0"
+                      className="p-1 rounded text-zinc-600 hover:text-purple-300 light:hover:text-purple-600 hover:bg-purple-500/10 transition-colors shrink-0"
                     >
                       <Pencil size={13} />
                     </button>
                   )}
                 </div>
               )}
-              {nameError && <p className="text-[11px] text-rose-400 mt-0.5">{nameError}</p>}
+              {nameError && <p className="text-[11px] text-rose-400 light:text-rose-600 mt-0.5">{nameError}</p>}
               <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-zinc-500">
                 <Users size={12} /> {community.memberIds.length} membros
                 <span className={`px-1.5 py-0.5 rounded border ${typeCfg.bg} ${typeCfg.border} ${typeCfg.color} font-medium`}>
@@ -243,7 +243,7 @@ export default function CommunityPage() {
                 title={community.boardEnabled ? 'Desativar tabuleiro gamificado' : 'Ativar tabuleiro gamificado'}
                 className={`p-2.5 rounded-xl border transition-colors disabled:opacity-50 ${
                   community.boardEnabled
-                    ? 'border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
+                    ? 'border-purple-500/30 bg-purple-500/10 text-purple-300 light:text-purple-600 hover:bg-purple-500/20'
                     : 'border-white/10 bg-white/5 text-zinc-500 hover:text-zinc-300 hover:bg-white/10 light:border-black/10 light:bg-black/[0.03]'
                 }`}
               >
@@ -272,7 +272,7 @@ export default function CommunityPage() {
               <button
                 onClick={handleDeleteCommunity}
                 title="Excluir comunidade"
-                className="p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-rose-500/10 hover:border-rose-500/30 text-zinc-500 hover:text-rose-400 transition-colors light:border-black/10 light:bg-black/[0.03]"
+                className="p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-rose-500/10 hover:border-rose-500/30 text-zinc-500 hover:text-rose-400 light:hover:text-rose-600 transition-colors light:border-black/10 light:bg-black/[0.03]"
               >
                 <Trash2 size={15} />
               </button>

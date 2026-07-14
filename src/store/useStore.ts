@@ -151,6 +151,7 @@ interface State {
   permanentlyDeleteCommunity: (communityId: string) => Promise<void>
   setCommunityAdmin: (communityId: string, userId: string, isAdmin: boolean) => Promise<string | null>
   removeCommunityMember: (communityId: string, userId: string) => Promise<string | null>
+  leaveCommunity: (communityId: string) => Promise<string | null>
   setCommunityPiece: (communityId: string, pieceId: string, color: string) => Promise<string | null>
 
   // objetivo macro
@@ -581,6 +582,13 @@ export const useAppStore = create<State>()((set, get) => ({
       _community_id: communityId,
       _user_id: userId,
     })
+    if (error) return error.message
+    await get().refreshAll()
+    return null
+  },
+
+  leaveCommunity: async (communityId) => {
+    const { error } = await supabase.rpc('leave_community', { _community_id: communityId })
     if (error) return error.message
     await get().refreshAll()
     return null

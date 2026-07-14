@@ -36,7 +36,7 @@ export default function CreateCommunityModal({ onClose }: { onClose: () => void 
       <div className="glass-panel neon-border-purple rounded-2xl w-full max-w-md my-8">
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
           <div className="flex items-center gap-2.5">
-            <Layers size={18} className="text-purple-300" />
+            <Layers size={18} className="text-purple-300 light:text-purple-600" />
             <h2 className="text-lg font-bold text-white light:text-zinc-900">Criar Nova Comunidade</h2>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 light:hover:text-zinc-900 light:hover:bg-black/10">
@@ -112,7 +112,7 @@ export default function CreateCommunityModal({ onClose }: { onClose: () => void 
                 className="mt-0.5 accent-purple-500"
               />
               <span className="flex items-start gap-2.5">
-                <Dices size={16} className="shrink-0 mt-0.5 text-purple-300" />
+                <Dices size={16} className="shrink-0 mt-0.5 text-purple-300 light:text-purple-600" />
                 <span>
                   <span className="block text-sm font-semibold text-zinc-300 light:text-zinc-700">Incluir tabuleiro gamificado</span>
                   <span className="block text-xs text-zinc-500 mt-0.5">

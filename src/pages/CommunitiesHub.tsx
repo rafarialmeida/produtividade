@@ -81,8 +81,8 @@ export default function CommunitiesHub() {
         <button type="submit" disabled={joining} className="btn-secondary !w-auto px-5">
           {joining ? 'Entrando…' : 'Entrar'}
         </button>
-        {joinError && <p className="text-xs text-rose-400 sm:ml-3">{joinError}</p>}
-        {joinSuccess && <p className="text-xs text-emerald-400 sm:ml-3">{joinSuccess}</p>}
+        {joinError && <p className="text-xs text-rose-400 light:text-rose-600 sm:ml-3">{joinError}</p>}
+        {joinSuccess && <p className="text-xs text-emerald-400 light:text-emerald-600 sm:ml-3">{joinSuccess}</p>}
       </form>
 
       <div className="grid sm:grid-cols-2 gap-4">
@@ -121,7 +121,7 @@ export default function CommunitiesHub() {
                   <button
                     onClick={() => handleDelete(c.id, c.name)}
                     title="Excluir comunidade"
-                    className="shrink-0 p-1.5 rounded-lg text-zinc-600 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                    className="shrink-0 p-1.5 rounded-lg text-zinc-600 hover:text-rose-400 light:hover:text-rose-600 hover:bg-rose-500/10 transition-colors"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -138,7 +138,7 @@ export default function CommunitiesHub() {
               </div>
 
               {leader && leader.lost > 0 && (
-                <div className="flex items-center gap-2 text-xs text-rose-300 bg-rose-500/[0.06] border border-rose-500/20 rounded-xl px-3 py-2">
+                <div className="flex items-center gap-2 text-xs text-rose-300 light:text-rose-600 bg-rose-500/[0.06] border border-rose-500/20 rounded-xl px-3 py-2">
                   <Flame size={13} className="shrink-0" />
                   <span className="truncate">
                     <strong>{formatDisplayName(leader.user.name)}</strong> lidera o muro com -{leader.lost} pts

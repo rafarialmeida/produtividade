@@ -32,7 +32,7 @@ export default function InviteModal({ communityId, onClose }: { communityId: str
       <div className="glass-panel neon-border-green rounded-2xl w-full max-w-md my-8">
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
           <div className="flex items-center gap-2.5">
-            <UserPlus size={18} className="text-emerald-300" />
+            <UserPlus size={18} className="text-emerald-300 light:text-emerald-600" />
             <h2 className="text-lg font-bold text-white light:text-zinc-900">Convidar Membros</h2>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 light:hover:text-zinc-900 light:hover:bg-black/10">
@@ -44,11 +44,11 @@ export default function InviteModal({ communityId, onClose }: { communityId: str
           <div>
             <label className="text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5 block">Código de convite</label>
             <div className="flex items-center gap-2">
-              <div className="input font-mono tracking-[0.3em] text-center text-emerald-300 !w-auto flex-1">
+              <div className="input font-mono tracking-[0.3em] text-center text-emerald-300 light:text-emerald-600 !w-auto flex-1">
                 {community.inviteCode}
               </div>
               <button onClick={handleCopy} className="btn-ghost !w-auto px-3" title="Copiar código">
-                {copied ? <Check size={15} className="text-emerald-400" /> : <Copy size={15} />}
+                {copied ? <Check size={15} className="text-emerald-400 light:text-emerald-600" /> : <Copy size={15} />}
               </button>
               <button
                 onClick={handleRegenerate}
@@ -64,7 +64,7 @@ export default function InviteModal({ communityId, onClose }: { communityId: str
               admin precisa aprovar na aba "Membros" antes de ela virar membro.
             </p>
             {community.closed && (
-              <p className="flex items-center gap-1.5 text-[11px] text-amber-300 bg-amber-500/[0.06] border border-amber-500/20 rounded-lg px-2.5 py-1.5 mt-2">
+              <p className="flex items-center gap-1.5 text-[11px] text-amber-300 light:text-amber-600 bg-amber-500/[0.06] border border-amber-500/20 rounded-lg px-2.5 py-1.5 mt-2">
                 <Lock size={11} className="shrink-0" /> Comunidade fechada — mesmo com o código, ninguém consegue pedir para
                 entrar agora.
               </p>
