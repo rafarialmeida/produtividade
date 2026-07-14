@@ -346,23 +346,19 @@ export default function TaskForm({
               <Target size={13} className="text-purple-400" /> Objetivo Macro
             </label>
             <div className="flex flex-wrap gap-1.5 items-center">
-              {(showMacroList ? scopedMacroObjectives : scopedMacroObjectives.filter((m) => m.id === macroObjectiveId)).map((m) => {
-                const active = macroObjectiveId === m.id
-                return (
-                  <button
-                    type="button"
-                    key={m.id}
-                    onClick={() => setMacroObjectiveId(m.id)}
-                    className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
-                      active
-                        ? 'bg-purple-500/15 border-purple-500/40 text-purple-200 light:bg-purple-500/10 light:text-purple-700'
-                        : 'border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/5 light:border-black/10 light:bg-black/[0.02] light:text-zinc-600 light:hover:bg-black/5'
-                    }`}
-                  >
-                    {m.title}
-                  </button>
-                )
-              })}
+              {!showMacroList &&
+                scopedMacroObjectives
+                  .filter((m) => m.id === macroObjectiveId)
+                  .map((m) => (
+                    <button
+                      type="button"
+                      key={m.id}
+                      onClick={() => setShowMacroList(true)}
+                      className="text-xs font-medium px-2.5 py-1.5 rounded-lg border bg-purple-500/15 border-purple-500/40 text-purple-200 transition-colors light:bg-purple-500/10 light:text-purple-700"
+                    >
+                      {m.title}
+                    </button>
+                  ))}
               {addingMacro ? (
                 <input
                   autoFocus
@@ -403,6 +399,26 @@ export default function TaskForm({
                 </button>
               )}
             </div>
+            {showMacroList && scopedMacroObjectives.length > 0 && (
+              <select
+                autoFocus
+                value={macroObjectiveId}
+                onChange={(e) => {
+                  setMacroObjectiveId(e.target.value)
+                  setShowMacroList(false)
+                }}
+                className="input mt-1.5"
+              >
+                <option value="" style={optionStyle}>
+                  Selecione um objetivo
+                </option>
+                {scopedMacroObjectives.map((m) => (
+                  <option key={m.id} value={m.id} style={optionStyle}>
+                    {m.title}
+                  </option>
+                ))}
+              </select>
+            )}
             {scopedMacroObjectives.length === 0 && !addingMacro && (
               <p className="text-[11px] text-zinc-500 mt-1.5">Nenhum objetivo macro ainda — crie um pra vincular essa tarefa.</p>
             )}

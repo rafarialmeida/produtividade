@@ -82,24 +82,6 @@ export default function MyDay() {
         </button>
       </div>
 
-      {availableCategories.length > 0 && (
-        <div className="flex items-center gap-2">
-          <Tag size={13} className="text-purple-400 shrink-0" />
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="input !w-auto !py-1.5 !text-xs"
-          >
-            <option value="all">Todas as categorias</option>
-            {availableCategories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard
           label="Vencem em 24h"
@@ -172,6 +154,24 @@ export default function MyDay() {
             <TaskCard key={t.id} task={t} showCommunity={multiCommunity} />
           ))}
         </Section>
+      )}
+
+      {availableCategories.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Tag size={13} className="text-purple-400 shrink-0" />
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="input !w-auto !py-1.5 !text-xs"
+          >
+            <option value="all">Todas as categorias</option>
+            {availableCategories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
       )}
 
       <Section title="Não iniciadas" icon={<Circle size={14} className="text-zinc-400" />}>
