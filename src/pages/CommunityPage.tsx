@@ -21,6 +21,7 @@ export default function CommunityPage() {
   const currentUser = useAppStore((s) => s.authUser)!
   const currentUserId = currentUser.id
   const community = useAppStore((s) => (id ? s.getCommunityById(id) : undefined))
+  const users = useAppStore((s) => s.users)
   const deleteCommunity = useAppStore((s) => s.deleteCommunity)
   const setCommunityBoardEnabled = useAppStore((s) => s.setCommunityBoardEnabled)
   const renameCommunity = useAppStore((s) => s.renameCommunity)
@@ -29,6 +30,7 @@ export default function CommunityPage() {
   const [showForm, setShowForm] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
   const [filter, setFilter] = useState<'all' | 'active' | 'expired' | 'completed'>('all')
+  const [userFilter, setUserFilter] = useState<string>('all')
   const [historyUserId, setHistoryUserId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'tasks' | 'dashboard' | 'board' | 'ranking'>('tasks')
   const [togglingBoard, setTogglingBoard] = useState(false)
@@ -45,6 +47,19 @@ export default function CommunityPage() {
     if (activeTab === 'ranking' && !boardOk) setActiveTab('tasks')
     if (activeTab === 'dashboard' && !dashboardOk) setActiveTab('tasks')
   }, [community, activeTab, currentUser, currentUserId])
+
+  useEffect(() => {
+    setUserFilter('all')
+  }, [id])
+
+  const members = useMemo(
+    () =>
+      (community?.memberIds ?? [])
+        .map((memberId) => users.find((u) => u.id === memberId))
+        .filter((u): u is NonNullable<typeof u> => Boolean(u))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [community, users],
+  )
 
   if (!community) {
     return (
@@ -117,6 +132,7 @@ export default function CommunityPage() {
 
   const filtered = tasks
     .filter((t) => {
+      if (userFilter !== 'all' && t.userId !== userFilter) return false
       if (filter === 'active') return !t.completed && !t.expired
       if (filter === 'expired') return t.expired && !t.completed
       if (filter === 'completed') return t.completed
@@ -262,22 +278,36 @@ export default function CommunityPage() {
 
       {activeTab === 'tasks' && (
         <div>
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h2 className="text-sm font-semibold text-zinc-300 light:text-zinc-700">Tarefas da comunidade</h2>
-            <div className="flex gap-1">
-              {(['all', 'active', 'expired', 'completed'] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${
-                    filter === f
-                      ? 'bg-white/10 text-white light:bg-black/[0.06] light:text-zinc-900'
-                      : 'text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700'
-                  }`}
-                >
-                  {{ all: 'Todas', active: 'Ativas', expired: 'Expiradas', completed: 'Concluídas' }[f]}
-                </button>
-              ))}
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={userFilter}
+                onChange={(e) => setUserFilter(e.target.value)}
+                className="input !w-auto !py-1 !text-xs"
+              >
+                <option value="all">Todos os membros</option>
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+              <div className="flex gap-1">
+                {(['all', 'active', 'expired', 'completed'] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${
+                      filter === f
+                        ? 'bg-white/10 text-white light:bg-black/[0.06] light:text-zinc-900'
+                        : 'text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700'
+                    }`}
+                  >
+                    {{ all: 'Todas', active: 'Ativas', expired: 'Expiradas', completed: 'Concluídas' }[f]}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
