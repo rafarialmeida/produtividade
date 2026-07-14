@@ -6,6 +6,7 @@ import ProcrastinationWall from '../components/ProcrastinationWall'
 import TaskCard from '../components/TaskCard'
 import TaskForm from '../components/TaskForm'
 import InviteModal from '../components/InviteModal'
+import CommunityMembersTab from '../components/CommunityMembersTab'
 import CommunityDashboard from '../components/CommunityDashboard'
 import CommunityRankingBoard from '../components/CommunityRankingBoard'
 import TaskHistoryModal from '../components/TaskHistoryModal'
@@ -32,7 +33,7 @@ export default function CommunityPage() {
   const [filter, setFilter] = useState<'all' | 'active' | 'expired' | 'completed'>('all')
   const [userFilter, setUserFilter] = useState<string>('all')
   const [historyUserId, setHistoryUserId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'tasks' | 'dashboard' | 'board' | 'ranking'>('tasks')
+  const [activeTab, setActiveTab] = useState<'tasks' | 'members' | 'dashboard' | 'board' | 'ranking'>('tasks')
   const [togglingBoard, setTogglingBoard] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
@@ -82,6 +83,7 @@ export default function CommunityPage() {
   const canToggleBoard = community.type === 'trabalho' && isCommunityAdmin
   const tabs = [
     { key: 'tasks' as const, label: 'Tarefas' },
+    { key: 'members' as const, label: 'Membros' },
     ...(showDashboard ? [{ key: 'dashboard' as const, label: 'Dashboard' }] : []),
     ...(showBoard ? [{ key: 'board' as const, label: 'Tabuleiro' }] : []),
     ...(showBoard ? [{ key: 'ranking' as const, label: 'Ranking' }] : []),
@@ -263,6 +265,8 @@ export default function CommunityPage() {
           ))}
         </div>
       )}
+
+      {activeTab === 'members' && <CommunityMembersTab communityId={community.id} />}
 
       {activeTab === 'dashboard' && showDashboard && (
         <CommunityDashboard communityId={community.id} onViewHistory={setHistoryUserId} />

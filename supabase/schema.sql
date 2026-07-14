@@ -370,6 +370,34 @@ begin
 end;
 $$;
 
+-- Remove um membro da comunidade (admin da comunidade ou admin da
+-- plataforma). Mesma guarda de "último admin" que set_community_admin, pra
+-- não deixar a comunidade sem nenhum admin.
+create or replace function public.remove_community_member(_community_id uuid, _user_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not (public.is_community_admin(_community_id) or public.is_admin()) then
+    raise exception 'NOT_ALLOWED';
+  end if;
+
+  if not exists (select 1 from public.community_members where community_id = _community_id and user_id = _user_id) then
+    raise exception 'NOT_A_MEMBER';
+  end if;
+
+  if (select count(*) from public.community_members where community_id = _community_id and role = 'admin') <= 1
+     and exists (select 1 from public.community_members where community_id = _community_id and user_id = _user_id and role = 'admin')
+  then
+    raise exception 'LAST_ADMIN';
+  end if;
+
+  delete from public.community_members where community_id = _community_id and user_id = _user_id;
+end;
+$$;
+
 -- Escolhe a peça (boneco) e a cor do usuário no tabuleiro gamificado da
 -- comunidade. Peças exclusivas só podem ser escolhidas por admins da
 -- comunidade (ou admin da plataforma).
@@ -1133,6 +1161,7 @@ grant execute on function public.is_community_creator(uuid) to authenticated;
 grant execute on function public.is_community_admin(uuid) to authenticated;
 grant execute on function public.create_community(text, text, text, boolean) to authenticated;
 grant execute on function public.set_community_admin(uuid, uuid, boolean) to authenticated;
+grant execute on function public.remove_community_member(uuid, uuid) to authenticated;
 grant execute on function public.set_community_piece(uuid, text, text) to authenticated;
 grant execute on function public.set_community_board_enabled(uuid, boolean) to authenticated;
 grant execute on function public.rename_community(uuid, text) to authenticated;
