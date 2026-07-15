@@ -1,14 +1,21 @@
 import { useMemo, useState } from 'react'
-import { Dices } from 'lucide-react'
+import { Dices, Store } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { COMPLEXITY_MULTIPLIER } from '../types'
 import { BOARD_COLORS, CHARACTERS, CHARACTER_MAP, type CharacterRecipe } from '../utils/boardPieces'
 import { computeCompositeRanking } from '../utils/ranking'
+import { getLevelInfo } from '../utils/level'
+import { SHOP_ITEM_MAP } from '../utils/shopItems'
 import BoardMemberModal from './BoardMemberModal'
 import CommunityBoard3D from './CommunityBoard3D'
 import OnlineDot from './OnlineDot'
 import PiecePickerModal from './PiecePickerModal'
 import RankBadge from './RankBadge'
+import ShopModal from './ShopModal'
+
+// Nível do personagem + moedas/loja: por enquanto só ativo pra conta do dono
+// da plataforma, até testarmos antes de liberar pra todo mundo.
+const OWNER_EMAIL = 'rafael.farialmeida@gmail.com'
 
 function hashString(s: string): number {
   let h = 0
@@ -35,8 +42,11 @@ export default function CommunityBoard({ communityId }: { communityId: string })
   const users = useAppStore((s) => s.users)
   const allTasks = useAppStore((s) => s.tasks)
   const onlineUserIds = useAppStore((s) => s.onlineUserIds)
+  const myStats = useAppStore((s) => s.myStats)
   const [showPicker, setShowPicker] = useState(false)
+  const [showShop, setShowShop] = useState(false)
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
+  const isOwner = authUser?.email === OWNER_EMAIL
 
   const members = useMemo(() => {
     if (!community) return []
@@ -114,12 +124,19 @@ export default function CommunityBoard({ communityId }: { communityId: string })
           <Dices size={16} className="text-emerald-300 light:text-emerald-600" />
           <h2 className="text-sm font-semibold text-zinc-300 light:text-zinc-700">Tabuleiro da Equipe</h2>
         </div>
-        {myPiece && (
-          <button onClick={() => setShowPicker(true)} className="btn-ghost !w-auto px-3 flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: myPiece.color }} />
-            Escolher meu personagem ({myPiece.recipe.label})
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {myPiece && (
+            <button onClick={() => setShowPicker(true)} className="btn-ghost !w-auto px-3 flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: myPiece.color }} />
+              Escolher meu personagem ({myPiece.recipe.label})
+            </button>
+          )}
+          {isOwner && myPiece && (
+            <button onClick={() => setShowShop(true)} className="btn-ghost !w-auto px-3 flex items-center gap-2">
+              <Store size={14} /> Loja ({authUser.coins} moedas)
+            </button>
+          )}
+        </div>
       </div>
 
       <p className="text-[11px] text-zinc-500 -mt-1">
@@ -128,7 +145,21 @@ export default function CommunityBoard({ communityId }: { communityId: string })
       </p>
 
       <CommunityBoard3D
-        members={visibleMembers.map((m) => ({ id: m.id, name: m.name, completed: m.completed, pieceId: m.recipe.id, color: m.color }))}
+        members={visibleMembers.map((m) => {
+          const isMyOwnedToken = isOwner && m.id === authUser?.id
+          const nameFrameId = isMyOwnedToken ? authUser?.equippedNameFrame : undefined
+          const groundAuraId = isMyOwnedToken ? authUser?.equippedGroundAura : undefined
+          return {
+            id: m.id,
+            name: m.name,
+            completed: m.completed,
+            pieceId: m.recipe.id,
+            color: m.color,
+            level: isMyOwnedToken && myStats ? getLevelInfo(myStats.workXp).level : undefined,
+            nameFrameColors: nameFrameId ? SHOP_ITEM_MAP[nameFrameId]?.colors : undefined,
+            groundAuraColors: groundAuraId ? SHOP_ITEM_MAP[groundAuraId]?.colors : undefined,
+          }
+        })}
         onSelectMember={setSelectedMemberId}
       />
 
@@ -177,6 +208,8 @@ export default function CommunityBoard({ communityId }: { communityId: string })
           onClose={() => setSelectedMemberId(null)}
         />
       )}
+
+      {showShop && <ShopModal onClose={() => setShowShop(false)} />}
     </div>
   )
 }

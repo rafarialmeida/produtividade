@@ -77,6 +77,11 @@ export interface AuthUser extends NotificationPreferences {
   avatarUrl?: string
   onboardingCompletedAt?: string
   termsAcceptedAt?: string
+  coins: number
+  ownedItems: string[]
+  equippedNameFrame?: string
+  equippedGroundAura?: string
+  equippedPalette?: string
 }
 
 export interface PublicProfile {

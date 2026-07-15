@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber'
 import { Html, OrbitControls } from '@react-three/drei'
-import type { Group } from 'three'
+import { DoubleSide, type Group } from 'three'
 import Character3D from './Character3D'
 import { CHARACTER_MAP } from '../utils/boardPieces'
 
@@ -15,6 +15,30 @@ export interface BoardMember {
   completed: number
   pieceId: string
   color: string
+  level?: number
+  nameFrameColors?: [string, string?]
+  groundAuraColors?: [string, string?]
+}
+
+function GroundAura({ colors }: { colors: [string, string?] }) {
+  const ref = useRef<Group>(null)
+  useFrame((_, delta) => {
+    if (ref.current) ref.current.rotation.z += delta * 0.5
+  })
+  return (
+    <group ref={ref} position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh>
+        <ringGeometry args={[0.3, 0.42, 40]} />
+        <meshBasicMaterial color={colors[0]} transparent opacity={0.85} side={DoubleSide} />
+      </mesh>
+      {colors[1] && (
+        <mesh>
+          <ringGeometry args={[0.44, 0.5, 40]} />
+          <meshBasicMaterial color={colors[1]} transparent opacity={0.7} side={DoubleSide} />
+        </mesh>
+      )}
+    </group>
+  )
 }
 
 function stepPosition(step: number, lane: number, laneCount: number): [number, number, number] {
@@ -115,6 +139,15 @@ function BoardToken({
     document.body.style.cursor = 'auto'
   }
 
+  const frameColors = member.nameFrameColors
+  const frameStyle = frameColors
+    ? {
+        borderColor: frameColors[0],
+        boxShadow: `0 0 8px ${frameColors[0]}`,
+        color: frameColors[1] ?? '#fff',
+      }
+    : undefined
+
   return (
     <group
       ref={outerRef}
@@ -123,9 +156,14 @@ function BoardToken({
       onPointerOver={handlePointerOver}
       onPointerOut={handlePointerOut}
     >
+      {member.groundAuraColors && <GroundAura colors={member.groundAuraColors} />}
       <Character3D recipe={recipe} color={member.color} idle scale={hovered ? 0.6 : 0.55} />
       <Html position={[0, 1.55, 0]} center distanceFactor={9} occlude={false} zIndexRange={[10, 0]}>
-        <div className="pointer-events-none select-none whitespace-nowrap rounded-full bg-black/75 px-2 py-0.5 text-[10px] text-white border border-white/15">
+        <div
+          style={frameStyle}
+          className="pointer-events-none select-none whitespace-nowrap rounded-full bg-black/75 px-2 py-0.5 text-[10px] text-white border border-white/15"
+        >
+          {member.level != null && <span className="opacity-75 mr-1">Nv {member.level}</span>}
           {member.name}
         </div>
       </Html>

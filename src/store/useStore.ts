@@ -135,6 +135,9 @@ interface State {
   setOnlineUserIds: (ids: Set<string>) => void
   completeOnboarding: () => Promise<void>
   acceptTerms: () => Promise<void>
+  claimLevelCoins: () => Promise<void>
+  buyShopItem: (itemId: string) => Promise<string | null>
+  equipItem: (category: 'frame' | 'aura' | 'palette', itemId: string | null) => Promise<string | null>
 
   refreshAll: () => Promise<void>
 
@@ -1006,6 +1009,34 @@ export const useAppStore = create<State>()((set, get) => ({
     await supabase.from('profiles').update({ terms_accepted_at: now }).eq('id', authUser.id)
   },
 
+  claimLevelCoins: async () => {
+    const { data, error } = await supabase.rpc('claim_level_coins')
+    if (error || !data) return
+    const authUser = get().authUser
+    if (authUser && data > 0) set({ authUser: { ...authUser, coins: authUser.coins + data } })
+  },
+
+  buyShopItem: async (itemId) => {
+    const { error } = await supabase.rpc('buy_shop_item', { _item_id: itemId })
+    if (error) return error.message
+    const authUser = get().authUser
+    if (!authUser) return null
+    const { data: profile } = await supabase.from('profiles').select('coins, owned_items').eq('id', authUser.id).maybeSingle()
+    if (profile) set({ authUser: { ...authUser, coins: profile.coins, ownedItems: profile.owned_items ?? [] } })
+    return null
+  },
+
+  equipItem: async (category, itemId) => {
+    const { error } = await supabase.rpc('equip_item', { _category: category, _item_id: itemId })
+    if (error) return error.message
+    const authUser = get().authUser
+    if (!authUser) return null
+    if (category === 'frame') set({ authUser: { ...authUser, equippedNameFrame: itemId ?? undefined } })
+    else if (category === 'aura') set({ authUser: { ...authUser, equippedGroundAura: itemId ?? undefined } })
+    else set({ authUser: { ...authUser, equippedPalette: itemId ?? undefined } })
+    return null
+  },
+
   fetchGlobalWall: async () => {
     const { data, error } = await supabase.rpc('global_wall')
     if (error || !data) return []
@@ -1154,11 +1185,17 @@ async function loadAuthUser(userId: string, email: string) {
       notifyWeeklyDigest: profile.notify_weekly_digest,
       onboardingCompletedAt: profile.onboarding_completed_at ?? undefined,
       termsAcceptedAt: profile.terms_accepted_at ?? undefined,
+      coins: profile.coins,
+      ownedItems: profile.owned_items ?? [],
+      equippedNameFrame: profile.equipped_name_frame ?? undefined,
+      equippedGroundAura: profile.equipped_ground_aura ?? undefined,
+      equippedPalette: profile.equipped_palette ?? undefined,
     },
     authLoading: false,
   })
   await useAppStore.getState().refreshAll()
   await useAppStore.getState().checkExpirations()
+  await useAppStore.getState().claimLevelCoins()
 }
 
 supabase.auth.onAuthStateChange((_event, session) => {
