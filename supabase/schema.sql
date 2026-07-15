@@ -1024,9 +1024,7 @@ begin
 end;
 $$;
 
--- Chamado automaticamente a cada refreshAll do client. Não lança erro pra quem
--- não é o dono — simplesmente não credita nada (loja/moedas restritas por
--- enquanto, ver comentário no topo da tabela profiles).
+-- Chamado automaticamente a cada refreshAll do client, pra todo mundo.
 create or replace function public.claim_level_coins()
 returns integer
 language plpgsql
@@ -1039,10 +1037,6 @@ declare
   _paid_level integer;
   _awarded integer;
 begin
-  if (auth.jwt() ->> 'email') <> 'rafael.farialmeida@gmail.com' then
-    return 0;
-  end if;
-
   select work_xp into _work_xp from public.global_wall() where user_id = auth.uid();
   if _work_xp is null then
     return 0;
@@ -1080,10 +1074,6 @@ declare
   _coins integer;
   _owned text[];
 begin
-  if (auth.jwt() ->> 'email') <> 'rafael.farialmeida@gmail.com' then
-    raise exception 'NOT_ALLOWED';
-  end if;
-
   _price := case _item_id
     when 'frame_silver' then 50
     when 'frame_emerald' then 120
@@ -1133,10 +1123,6 @@ as $$
 declare
   _owned text[];
 begin
-  if (auth.jwt() ->> 'email') <> 'rafael.farialmeida@gmail.com' then
-    raise exception 'NOT_ALLOWED';
-  end if;
-
   if _category not in ('frame', 'aura', 'palette', 'pet') then
     raise exception 'INVALID_CATEGORY';
   end if;

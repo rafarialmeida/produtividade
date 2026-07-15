@@ -15,10 +15,6 @@ import PiecePickerModal from './PiecePickerModal'
 import RankBadge from './RankBadge'
 import ShopModal from './ShopModal'
 
-// Nível do personagem + moedas/loja: por enquanto só ativo pra conta do dono
-// da plataforma, até testarmos antes de liberar pra todo mundo.
-const OWNER_EMAIL = 'rafael.farialmeida@gmail.com'
-
 function hashString(s: string): number {
   let h = 0
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
@@ -52,10 +48,9 @@ export default function CommunityBoard({ communityId }: { communityId: string })
   const [showCharacterProfile, setShowCharacterProfile] = useState(false)
   const [criticalTasksCompleted, setCriticalTasksCompleted] = useState(0)
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
-  const isOwner = authUser?.email === OWNER_EMAIL
 
   useEffect(() => {
-    if (!isOwner || !authUser) return
+    if (!authUser) return
     let cancelled = false
     fetchCriticalTasksCompleted(authUser.id).then((count) => {
       if (!cancelled) setCriticalTasksCompleted(count)
@@ -63,7 +58,7 @@ export default function CommunityBoard({ communityId }: { communityId: string })
     return () => {
       cancelled = true
     }
-  }, [isOwner, authUser, fetchCriticalTasksCompleted])
+  }, [authUser, fetchCriticalTasksCompleted])
 
   const members = useMemo(() => {
     if (!community) return []
@@ -134,12 +129,13 @@ export default function CommunityBoard({ communityId }: { communityId: string })
   const visibleMembers = members.filter((m) => !community.adminIds.includes(m.id) || m.id === authUser?.id)
 
   // Cosméticos (nível, moldura, círculo de luz, pet, paleta exclusiva) só
-  // valem, por enquanto, pro próprio token do dono da plataforma — daí
-  // calcular tudo aqui uma vez só, reaproveitado no tabuleiro 3D, na lista
-  // de ranking e no modal de detalhe (pra mostrar sempre o mesmo "visual
+  // aparecem no seu próprio token — a gente não busca os itens equipados de
+  // outros membros, então cada pessoa só vê a própria personalização.
+  // Calculado aqui uma vez só, reaproveitado no tabuleiro 3D, na lista de
+  // ranking e no modal de detalhe (pra mostrar sempre o mesmo "visual
   // completo" do personagem).
   const boardMembers = visibleMembers.map((m) => {
-    const isMyOwnedToken = isOwner && m.id === authUser?.id
+    const isMyOwnedToken = m.id === authUser?.id
     const nameFrameId = isMyOwnedToken ? authUser?.equippedNameFrame : undefined
     const groundAuraId = isMyOwnedToken ? authUser?.equippedGroundAura : undefined
     const petId = isMyOwnedToken ? authUser?.equippedPet : undefined
@@ -172,12 +168,12 @@ export default function CommunityBoard({ communityId }: { communityId: string })
               Escolher meu personagem ({myPiece.recipe.label})
             </button>
           )}
-          {isOwner && myPiece && (
+          {authUser && myPiece && (
             <button onClick={() => setShowShop(true)} className="btn-ghost !w-auto px-3 flex items-center gap-2">
               <Store size={14} /> Loja ({authUser.coins} moedas)
             </button>
           )}
-          {isOwner && myPiece && (
+          {myPiece && (
             <button onClick={() => setShowCharacterProfile(true)} className="btn-ghost !w-auto px-3 flex items-center gap-2">
               <UserCircle2 size={14} /> Meu Perfil
             </button>
@@ -260,7 +256,7 @@ export default function CommunityBoard({ communityId }: { communityId: string })
 
       {showShop && <ShopModal onClose={() => setShowShop(false)} />}
 
-      {showPetInfo && isOwner && authUser?.equippedPet && PET_MAP[authUser.equippedPet] && (
+      {showPetInfo && authUser?.equippedPet && PET_MAP[authUser.equippedPet] && (
         <PetInfoModal
           name={SHOP_ITEM_MAP[authUser.equippedPet]?.label ?? 'Bichinho'}
           recipe={PET_MAP[authUser.equippedPet]}
@@ -272,7 +268,7 @@ export default function CommunityBoard({ communityId }: { communityId: string })
         />
       )}
 
-      {showCharacterProfile && isOwner && myBoardMember && myStats && (
+      {showCharacterProfile && authUser && myBoardMember && myStats && (
         <CharacterProfileModal
           recipe={myBoardMember.recipe}
           color={myBoardMember.color}
