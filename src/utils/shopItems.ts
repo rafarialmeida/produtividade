@@ -1,11 +1,13 @@
-export type ShopCategory = 'frame' | 'aura' | 'palette'
+export type ShopCategory = 'frame' | 'aura' | 'palette' | 'pet'
 
 export interface ShopItem {
   id: string
   category: ShopCategory
   label: string
   price: number
-  /** Cor(es) usadas pra renderizar o item — moldura/aura usam 1 cor (ou 2 pro efeito arco-íris), paleta é a cor do personagem. */
+  /** Cor(es) usadas pra renderizar o item — moldura/aura usam 1 cor (ou 2 pro efeito arco-íris),
+   * paleta é a cor do personagem, pet é a cor principal do bichinho (recipe em boardPieces.ts,
+   * mesmo id do item). */
   colors: [string, string?]
 }
 
@@ -27,6 +29,13 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: 'palette_toxic_green', category: 'palette', label: 'Verde Tóxico', price: 150, colors: ['#a3e635'] },
   { id: 'palette_blood_red', category: 'palette', label: 'Vermelho Sangue', price: 260, colors: ['#7f1d1d'] },
   { id: 'palette_royal_gold', category: 'palette', label: 'Dourado Real', price: 420, colors: ['#eab308'] },
+
+  // Bichinhos de estimação — os itens mais caros da loja. Recipe 3D com o
+  // mesmo id em utils/boardPieces.ts (PET_MAP).
+  { id: 'pet_slime', category: 'pet', label: 'Gosminha', price: 600, colors: ['#34d399'] },
+  { id: 'pet_owl', category: 'pet', label: 'Corujinha', price: 800, colors: ['#92400e'] },
+  { id: 'pet_ghost', category: 'pet', label: 'Fantasminha', price: 1000, colors: ['#c7d2fe'] },
+  { id: 'pet_dragon', category: 'pet', label: 'Dragãozinho', price: 1400, colors: ['#dc2626'] },
 ]
 
 export const SHOP_ITEM_MAP: Record<string, ShopItem> = Object.fromEntries(SHOP_ITEMS.map((i) => [i.id, i]))
@@ -35,4 +44,5 @@ export const SHOP_CATEGORY_LABEL: Record<ShopCategory, string> = {
   frame: 'Molduras de nome',
   aura: 'Círculos de Luz',
   palette: 'Paletas exclusivas',
+  pet: 'Bichinhos de estimação',
 }

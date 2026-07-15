@@ -29,6 +29,7 @@ create table if not exists public.profiles (
   equipped_name_frame text,
   equipped_ground_aura text,
   equipped_palette text,
+  equipped_pet text,
   created_at timestamptz not null default now()
 );
 
@@ -1096,6 +1097,10 @@ begin
     when 'palette_toxic_green' then 150
     when 'palette_blood_red' then 260
     when 'palette_royal_gold' then 420
+    when 'pet_slime' then 600
+    when 'pet_owl' then 800
+    when 'pet_ghost' then 1000
+    when 'pet_dragon' then 1400
     else null
   end;
 
@@ -1132,7 +1137,7 @@ begin
     raise exception 'NOT_ALLOWED';
   end if;
 
-  if _category not in ('frame', 'aura', 'palette') then
+  if _category not in ('frame', 'aura', 'palette', 'pet') then
     raise exception 'INVALID_CATEGORY';
   end if;
 
@@ -1147,10 +1152,22 @@ begin
     update public.profiles set equipped_name_frame = _item_id where id = auth.uid();
   elsif _category = 'aura' then
     update public.profiles set equipped_ground_aura = _item_id where id = auth.uid();
+  elsif _category = 'pet' then
+    update public.profiles set equipped_pet = _item_id where id = auth.uid();
   else
     update public.profiles set equipped_palette = _item_id where id = auth.uid();
   end if;
 end;
+$$;
+
+create or replace function public.critical_tasks_completed(_user_id uuid)
+returns bigint
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select count(*) from public.tasks where user_id = _user_id and completed and complexity = 'critica';
 $$;
 
 -- Perfil público de um único usuário (visível a partir do Muro Global ou das
@@ -1510,6 +1527,7 @@ grant execute on function public.work_level_from_xp(numeric) to authenticated;
 grant execute on function public.claim_level_coins() to authenticated;
 grant execute on function public.buy_shop_item(text) to authenticated;
 grant execute on function public.equip_item(text, text) to authenticated;
+grant execute on function public.critical_tasks_completed(uuid) to authenticated;
 grant execute on function public.get_public_profile(uuid) to authenticated;
 grant execute on function public.competition_community_rankings() to authenticated;
 grant execute on function public.work_community_rankings() to authenticated;

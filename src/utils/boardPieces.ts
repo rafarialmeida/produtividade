@@ -473,6 +473,60 @@ export const CHARACTERS: CharacterRecipe[] = [
 
 export const CHARACTER_MAP: Record<string, CharacterRecipe> = Object.fromEntries(CHARACTERS.map((c) => [c.id, c]))
 
+// Bichinhos de estimação — item mais caro da loja. Bem menores que os
+// personagens principais (renderizados numa escala pequena ao lado do
+// personagem no tabuleiro), então cada um usa só uns poucos formatos.
+export const PETS: CharacterRecipe[] = [
+  {
+    id: 'pet_slime',
+    label: 'Gosminha',
+    exclusive: false,
+    parts: [
+      { shape: 'sphere', position: [0, 0.2, 0], scale: [0.32, 0.24, 0.32], slot: 'primary' },
+      ...eyes(0.24, 0.27, 0.09, 0.045, 'black'),
+    ],
+  },
+  {
+    id: 'pet_owl',
+    label: 'Corujinha',
+    exclusive: false,
+    accentA: '#f59e0b',
+    parts: [
+      { shape: 'sphere', position: [0, 0.28, 0], scale: [0.26, 0.3, 0.26], slot: 'primary' },
+      ...mirror({ shape: 'sphere', position: [0.22, 0.22, 0], scale: [0.11, 0.16, 0.08], slot: 'primary' }),
+      ...mirror({ shape: 'cone', position: [0.13, 0.5, 0], rotation: [0, 0, -0.35], scale: [0.07, 0.13, 0.07], slot: 'primary' }),
+      ...eyes(0.3, 0.22, 0.09, 0.06, 'white'),
+      { shape: 'cone', position: [0, 0.24, 0.24], rotation: [Math.PI / 2, 0, 0], scale: [0.05, 0.08, 0.05], slot: 'accentA' },
+    ],
+  },
+  {
+    id: 'pet_ghost',
+    label: 'Fantasminha',
+    exclusive: false,
+    parts: [
+      { shape: 'sphere', position: [0, 0.26, 0], scale: [0.26, 0.32, 0.26], slot: 'white', emissive: true },
+      { shape: 'sphere', position: [0, 0.02, 0], scale: [0.24, 0.1, 0.24], slot: 'white', emissive: true },
+      ...eyes(0.28, 0.22, 0.08, 0.045, 'black'),
+    ],
+  },
+  {
+    id: 'pet_dragon',
+    label: 'Dragãozinho',
+    exclusive: false,
+    accentA: '#facc15',
+    parts: [
+      { shape: 'sphere', position: [0, 0.22, 0], scale: [0.24, 0.2, 0.3], slot: 'primary' },
+      { shape: 'sphere', position: [0, 0.24, 0.22], scale: [0.14, 0.13, 0.16], slot: 'primary' },
+      ...eyes(0.28, 0.32, 0.07, 0.04, 'black'),
+      ...mirror({ shape: 'cone', position: [0.08, 0.36, 0.18], rotation: [0.3, 0, -0.2], scale: [0.03, 0.09, 0.03], slot: 'accentA' }),
+      ...mirror({ shape: 'cone', position: [0.22, 0.22, -0.05], rotation: [0, 0, -1.1], scale: [0.03, 0.16, 0.12], slot: 'primary' }),
+      { shape: 'cone', position: [0, 0.16, -0.3], rotation: [1.3, 0, 0], scale: [0.05, 0.2, 0.05], slot: 'primary' },
+    ],
+  },
+]
+
+export const PET_MAP: Record<string, CharacterRecipe> = Object.fromEntries(PETS.map((p) => [p.id, p]))
+
 export const BOARD_COLORS: string[] = [
   '#ef4444',
   '#f97316',

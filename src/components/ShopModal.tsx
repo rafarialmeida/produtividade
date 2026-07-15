@@ -4,11 +4,12 @@ import { Check, Coins, Loader2, Lock, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { SHOP_ITEMS, SHOP_CATEGORY_LABEL, type ShopCategory } from '../utils/shopItems'
 
-const CATEGORIES: ShopCategory[] = ['frame', 'aura', 'palette']
+const CATEGORIES: ShopCategory[] = ['frame', 'aura', 'palette', 'pet']
 
 function equippedFieldFor(category: ShopCategory) {
   if (category === 'frame') return 'equippedNameFrame' as const
   if (category === 'aura') return 'equippedGroundAura' as const
+  if (category === 'pet') return 'equippedPet' as const
   return 'equippedPalette' as const
 }
 
@@ -60,12 +61,12 @@ export default function ShopModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="px-6 pt-4">
-          <div className="flex gap-1 border-b border-white/5">
+          <div className="flex gap-1 border-b border-white/5 overflow-x-auto">
             {CATEGORIES.map((c) => (
               <button
                 key={c}
                 onClick={() => setCategory(c)}
-                className={`text-sm px-3 py-2 -mb-px border-b-2 transition-colors ${
+                className={`text-sm px-3 py-2 -mb-px border-b-2 whitespace-nowrap transition-colors ${
                   category === c
                     ? 'border-purple-400 text-white light:text-zinc-900'
                     : 'border-transparent text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700'

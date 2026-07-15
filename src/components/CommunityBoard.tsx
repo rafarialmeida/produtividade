@@ -1,14 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Dices, Store } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { COMPLEXITY_MULTIPLIER } from '../types'
-import { BOARD_COLORS, CHARACTERS, CHARACTER_MAP, type CharacterRecipe } from '../utils/boardPieces'
+import { BOARD_COLORS, CHARACTERS, CHARACTER_MAP, PET_MAP, type CharacterRecipe } from '../utils/boardPieces'
 import { computeCompositeRanking } from '../utils/ranking'
 import { getLevelInfo } from '../utils/level'
 import { SHOP_ITEM_MAP } from '../utils/shopItems'
 import BoardMemberModal from './BoardMemberModal'
 import CommunityBoard3D from './CommunityBoard3D'
 import OnlineDot from './OnlineDot'
+import PetInfoModal from './PetInfoModal'
 import PiecePickerModal from './PiecePickerModal'
 import RankBadge from './RankBadge'
 import ShopModal from './ShopModal'
@@ -43,10 +44,24 @@ export default function CommunityBoard({ communityId }: { communityId: string })
   const allTasks = useAppStore((s) => s.tasks)
   const onlineUserIds = useAppStore((s) => s.onlineUserIds)
   const myStats = useAppStore((s) => s.myStats)
+  const fetchCriticalTasksCompleted = useAppStore((s) => s.fetchCriticalTasksCompleted)
   const [showPicker, setShowPicker] = useState(false)
   const [showShop, setShowShop] = useState(false)
+  const [showPetInfo, setShowPetInfo] = useState(false)
+  const [criticalTasksCompleted, setCriticalTasksCompleted] = useState(0)
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
   const isOwner = authUser?.email === OWNER_EMAIL
+
+  useEffect(() => {
+    if (!isOwner || !authUser) return
+    let cancelled = false
+    fetchCriticalTasksCompleted(authUser.id).then((count) => {
+      if (!cancelled) setCriticalTasksCompleted(count)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [isOwner, authUser, fetchCriticalTasksCompleted])
 
   const members = useMemo(() => {
     if (!community) return []
@@ -149,6 +164,7 @@ export default function CommunityBoard({ communityId }: { communityId: string })
           const isMyOwnedToken = isOwner && m.id === authUser?.id
           const nameFrameId = isMyOwnedToken ? authUser?.equippedNameFrame : undefined
           const groundAuraId = isMyOwnedToken ? authUser?.equippedGroundAura : undefined
+          const petId = isMyOwnedToken ? authUser?.equippedPet : undefined
           return {
             id: m.id,
             name: m.name,
@@ -158,9 +174,13 @@ export default function CommunityBoard({ communityId }: { communityId: string })
             level: isMyOwnedToken && myStats ? getLevelInfo(myStats.workXp).level : undefined,
             nameFrameColors: nameFrameId ? SHOP_ITEM_MAP[nameFrameId]?.colors : undefined,
             groundAuraColors: groundAuraId ? SHOP_ITEM_MAP[groundAuraId]?.colors : undefined,
+            petId,
+            petColor: petId ? SHOP_ITEM_MAP[petId]?.colors[0] : undefined,
+            petLevel: isMyOwnedToken ? criticalTasksCompleted + 1 : undefined,
           }
         })}
         onSelectMember={setSelectedMemberId}
+        onSelectPet={() => setShowPetInfo(true)}
       />
 
       <p className="text-[11px] text-zinc-500">
@@ -210,6 +230,18 @@ export default function CommunityBoard({ communityId }: { communityId: string })
       )}
 
       {showShop && <ShopModal onClose={() => setShowShop(false)} />}
+
+      {showPetInfo && isOwner && authUser?.equippedPet && PET_MAP[authUser.equippedPet] && (
+        <PetInfoModal
+          name={SHOP_ITEM_MAP[authUser.equippedPet]?.label ?? 'Bichinho'}
+          recipe={PET_MAP[authUser.equippedPet]}
+          color={SHOP_ITEM_MAP[authUser.equippedPet]?.colors[0] ?? '#a1a1aa'}
+          level={criticalTasksCompleted + 1}
+          criticalTasksCompleted={criticalTasksCompleted}
+          ownerName={authUser.name}
+          onClose={() => setShowPetInfo(false)}
+        />
+      )}
     </div>
   )
 }

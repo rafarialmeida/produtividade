@@ -82,6 +82,7 @@ export interface AuthUser extends NotificationPreferences {
   equippedNameFrame?: string
   equippedGroundAura?: string
   equippedPalette?: string
+  equippedPet?: string
 }
 
 export interface PublicProfile {

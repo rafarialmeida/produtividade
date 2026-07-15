@@ -137,7 +137,8 @@ interface State {
   acceptTerms: () => Promise<void>
   claimLevelCoins: () => Promise<void>
   buyShopItem: (itemId: string) => Promise<string | null>
-  equipItem: (category: 'frame' | 'aura' | 'palette', itemId: string | null) => Promise<string | null>
+  equipItem: (category: 'frame' | 'aura' | 'palette' | 'pet', itemId: string | null) => Promise<string | null>
+  fetchCriticalTasksCompleted: (userId: string) => Promise<number>
 
   refreshAll: () => Promise<void>
 
@@ -1033,8 +1034,15 @@ export const useAppStore = create<State>()((set, get) => ({
     if (!authUser) return null
     if (category === 'frame') set({ authUser: { ...authUser, equippedNameFrame: itemId ?? undefined } })
     else if (category === 'aura') set({ authUser: { ...authUser, equippedGroundAura: itemId ?? undefined } })
+    else if (category === 'pet') set({ authUser: { ...authUser, equippedPet: itemId ?? undefined } })
     else set({ authUser: { ...authUser, equippedPalette: itemId ?? undefined } })
     return null
+  },
+
+  fetchCriticalTasksCompleted: async (userId) => {
+    const { data, error } = await supabase.rpc('critical_tasks_completed', { _user_id: userId })
+    if (error || data == null) return 0
+    return Number(data)
   },
 
   fetchGlobalWall: async () => {
@@ -1190,6 +1198,7 @@ async function loadAuthUser(userId: string, email: string) {
       equippedNameFrame: profile.equipped_name_frame ?? undefined,
       equippedGroundAura: profile.equipped_ground_aura ?? undefined,
       equippedPalette: profile.equipped_palette ?? undefined,
+      equippedPet: profile.equipped_pet ?? undefined,
     },
     authLoading: false,
   })

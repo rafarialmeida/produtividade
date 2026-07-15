@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber'
 import { Html, OrbitControls } from '@react-three/drei'
-import { DoubleSide, type Group } from 'three'
+import { AdditiveBlending, DoubleSide, type Group, type Mesh, type PointLight } from 'three'
 import Character3D from './Character3D'
-import { CHARACTER_MAP } from '../utils/boardPieces'
+import { CHARACTER_MAP, PET_MAP } from '../utils/boardPieces'
 
 const STEP_HEIGHT = 0.35
 const STEP_DEPTH = 0.9
@@ -18,25 +18,116 @@ export interface BoardMember {
   level?: number
   nameFrameColors?: [string, string?]
   groundAuraColors?: [string, string?]
+  petId?: string
+  petColor?: string
+  petLevel?: number
 }
 
-function GroundAura({ colors }: { colors: [string, string?] }) {
-  const ref = useRef<Group>(null)
-  useFrame((_, delta) => {
-    if (ref.current) ref.current.rotation.z += delta * 0.5
-  })
+// Estágio de evolução do bichinho: só sobe com tarefas de complexidade
+// crítica concluídas (nível calculado fora daqui), não com XP normal.
+function petStage(level: number): 1 | 2 | 3 {
+  if (level >= 10) return 3
+  if (level >= 5) return 2
+  return 1
+}
+
+function PetCompanion({
+  petId,
+  color,
+  level,
+  onSelect,
+}: {
+  petId: string
+  color: string
+  level: number
+  onSelect?: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+  const recipe = PET_MAP[petId]
+  if (!recipe) return null
+
+  const stage = petStage(level)
+  const baseScale = stage === 3 ? 0.5 : stage === 2 ? 0.4 : 0.3
+
+  function handleClick(e: ThreeEvent<MouseEvent>) {
+    e.stopPropagation()
+    onSelect?.()
+  }
+
+  function handlePointerOver(e: ThreeEvent<PointerEvent>) {
+    e.stopPropagation()
+    setHovered(true)
+    document.body.style.cursor = 'pointer'
+  }
+
+  function handlePointerOut() {
+    setHovered(false)
+    document.body.style.cursor = 'auto'
+  }
+
   return (
-    <group ref={ref} position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <mesh>
-        <ringGeometry args={[0.3, 0.42, 40]} />
-        <meshBasicMaterial color={colors[0]} transparent opacity={0.85} side={DoubleSide} />
-      </mesh>
-      {colors[1] && (
-        <mesh>
-          <ringGeometry args={[0.44, 0.5, 40]} />
-          <meshBasicMaterial color={colors[1]} transparent opacity={0.7} side={DoubleSide} />
+    <group position={[0.42, 0, 0.12]} onClick={handleClick} onPointerOver={handlePointerOver} onPointerOut={handlePointerOut}>
+      {stage >= 3 && (
+        <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.16, 0.22, 32]} />
+          <meshBasicMaterial color={color} transparent opacity={0.6} blending={AdditiveBlending} depthWrite={false} side={DoubleSide} />
         </mesh>
       )}
+      <Character3D recipe={recipe} color={color} idle scale={hovered ? baseScale * 1.15 : baseScale} />
+    </group>
+  )
+}
+
+// Efeito de luz saindo do chão: feixe vertical translúcido (blending aditivo,
+// então "brilha" contra o fundo escuro em vez de só pintar um anel plano),
+// uma luz pontual colorida pulsante que ilumina de fato o personagem, e os
+// anéis do chão girando devagar por baixo.
+function GroundAura({ colors }: { colors: [string, string?] }) {
+  const ringRef = useRef<Group>(null)
+  const beamRef = useRef<Mesh>(null)
+  const lightRef = useRef<PointLight>(null)
+
+  useFrame(({ clock }, delta) => {
+    if (ringRef.current) ringRef.current.rotation.z += delta * 0.5
+    const pulse = 0.75 + Math.sin(clock.elapsedTime * 2.4) * 0.25
+    const beamMat = beamRef.current?.material
+    if (beamMat && 'opacity' in beamMat) beamMat.opacity = 0.22 * pulse
+    if (lightRef.current) lightRef.current.intensity = 1.3 * pulse
+  })
+
+  return (
+    <group>
+      <pointLight ref={lightRef} color={colors[0]} intensity={1.3} distance={1.7} position={[0, 0.15, 0]} />
+      <mesh ref={beamRef} position={[0, 0.75, 0]}>
+        <cylinderGeometry args={[0.05, 0.32, 1.5, 24, 1, true]} />
+        <meshBasicMaterial
+          color={colors[0]}
+          transparent
+          opacity={0.22}
+          blending={AdditiveBlending}
+          depthWrite={false}
+          side={DoubleSide}
+        />
+      </mesh>
+      <group ref={ringRef} position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh>
+          <ringGeometry args={[0.28, 0.46, 48]} />
+          <meshBasicMaterial color={colors[0]} transparent opacity={0.9} blending={AdditiveBlending} depthWrite={false} side={DoubleSide} />
+        </mesh>
+        {colors[1] && (
+          <mesh rotation={[0, 0, Math.PI / 6]}>
+            <ringGeometry args={[0.48, 0.58, 48]} />
+            <meshBasicMaterial
+              color={colors[1]}
+              transparent
+              opacity={0.7}
+              blending={AdditiveBlending}
+              depthWrite={false}
+              side={DoubleSide}
+            />
+          </mesh>
+        )}
+      </group>
     </group>
   )
 }
@@ -79,12 +170,14 @@ function BoardToken({
   lane,
   laneCount,
   onSelect,
+  onSelectPet,
 }: {
   member: BoardMember
   step: number
   lane: number
   laneCount: number
   onSelect?: (id: string) => void
+  onSelectPet?: (id: string) => void
 }) {
   const outerRef = useRef<Group>(null)
   const [hovered, setHovered] = useState(false)
@@ -158,6 +251,14 @@ function BoardToken({
     >
       {member.groundAuraColors && <GroundAura colors={member.groundAuraColors} />}
       <Character3D recipe={recipe} color={member.color} idle scale={hovered ? 0.6 : 0.55} />
+      {member.petId && member.petColor && (
+        <PetCompanion
+          petId={member.petId}
+          color={member.petColor}
+          level={member.petLevel ?? 1}
+          onSelect={() => onSelectPet?.(member.id)}
+        />
+      )}
       <Html position={[0, 1.55, 0]} center distanceFactor={9} occlude={false} zIndexRange={[10, 0]}>
         <div
           style={frameStyle}
@@ -174,9 +275,11 @@ function BoardToken({
 export default function CommunityBoard3D({
   members,
   onSelectMember,
+  onSelectPet,
 }: {
   members: BoardMember[]
   onSelectMember?: (id: string) => void
+  onSelectPet?: (id: string) => void
 }) {
   const boardSize = Math.max(20, Math.min(40, Math.max(0, ...members.map((m) => m.completed)) + 5))
 
@@ -213,7 +316,15 @@ export default function CommunityBoard3D({
         <Staircase boardSize={boardSize} />
         {Array.from(bySteps.entries()).map(([step, group]) =>
           group.map((m, lane) => (
-            <BoardToken key={m.id} member={m} step={step} lane={lane} laneCount={group.length} onSelect={onSelectMember} />
+            <BoardToken
+              key={m.id}
+              member={m}
+              step={step}
+              lane={lane}
+              laneCount={group.length}
+              onSelect={onSelectMember}
+              onSelectPet={onSelectPet}
+            />
           )),
         )}
         <OrbitControls
