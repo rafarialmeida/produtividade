@@ -4,7 +4,6 @@ import { Canvas } from '@react-three/fiber'
 import { Check, Lock, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { CHARACTERS, CHARACTER_MAP, BOARD_COLORS } from '../utils/boardPieces'
-import { SHOP_ITEMS } from '../utils/shopItems'
 import Character3D from './Character3D'
 
 export default function PiecePickerModal({
@@ -22,7 +21,6 @@ export default function PiecePickerModal({
 }) {
   const setCommunityPiece = useAppStore((s) => s.setCommunityPiece)
   const authUser = useAppStore((s) => s.authUser)
-  const ownedPalettes = SHOP_ITEMS.filter((i) => i.category === 'palette' && authUser?.ownedItems.includes(i.id))
   const [pieceId, setPieceId] = useState(currentPieceId ?? CHARACTERS[0].id)
   const [color, setColor] = useState(currentColor ?? BOARD_COLORS[0])
   const [saving, setSaving] = useState(false)
@@ -131,23 +129,11 @@ export default function PiecePickerModal({
               ))}
             </div>
 
-            {ownedPalettes.length > 0 && (
-              <>
-                <p className="text-xs font-medium text-amber-400/80 light:text-amber-600/80 mt-3 mb-2">Paletas exclusivas</p>
-                <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-                  {ownedPalettes.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => setColor(item.colors[0])}
-                      title={item.label}
-                      style={{ backgroundColor: item.colors[0] }}
-                      className={`aspect-square rounded-full border-2 ring-1 ring-amber-500/40 transition-transform ${
-                        color === item.colors[0] ? 'border-white light:border-zinc-900 scale-110' : 'border-transparent'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </>
+            {authUser?.equippedPalette && (
+              <p className="text-[11px] text-amber-400/80 light:text-amber-600/80 mt-2">
+                Você tem uma paleta exclusiva equipada na loja — ela substitui a cor escolhida aqui. Desequipe na loja
+                pra usar uma cor normal.
+              </p>
             )}
           </div>
 

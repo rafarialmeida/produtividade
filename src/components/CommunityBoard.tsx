@@ -130,7 +130,30 @@ export default function CommunityBoard({ communityId }: { communityId: string })
   // ranking pros demais membros, pra não se expor — só o próprio admin
   // consegue se ver ali.
   const visibleMembers = members.filter((m) => !community.adminIds.includes(m.id) || m.id === authUser?.id)
-  const selectedMember = selectedMemberId ? visibleMembers.find((m) => m.id === selectedMemberId) : undefined
+
+  // Cosméticos (nível, moldura, círculo de luz, pet, paleta exclusiva) só
+  // valem, por enquanto, pro próprio token do dono da plataforma — daí
+  // calcular tudo aqui uma vez só, reaproveitado no tabuleiro 3D, na lista
+  // de ranking e no modal de detalhe (pra mostrar sempre o mesmo "visual
+  // completo" do personagem).
+  const boardMembers = visibleMembers.map((m) => {
+    const isMyOwnedToken = isOwner && m.id === authUser?.id
+    const nameFrameId = isMyOwnedToken ? authUser?.equippedNameFrame : undefined
+    const groundAuraId = isMyOwnedToken ? authUser?.equippedGroundAura : undefined
+    const petId = isMyOwnedToken ? authUser?.equippedPet : undefined
+    const paletteId = isMyOwnedToken ? authUser?.equippedPalette : undefined
+    return {
+      ...m,
+      color: paletteId ? (SHOP_ITEM_MAP[paletteId]?.colors[0] ?? m.color) : m.color,
+      level: isMyOwnedToken && myStats ? getLevelInfo(myStats.workXp).level : undefined,
+      nameFrameColors: nameFrameId ? SHOP_ITEM_MAP[nameFrameId]?.colors : undefined,
+      groundAuraColors: groundAuraId ? SHOP_ITEM_MAP[groundAuraId]?.colors : undefined,
+      petId,
+      petColor: petId ? SHOP_ITEM_MAP[petId]?.colors[0] : undefined,
+      petLevel: isMyOwnedToken ? criticalTasksCompleted + 1 : undefined,
+    }
+  })
+  const selectedMember = selectedMemberId ? boardMembers.find((m) => m.id === selectedMemberId) : undefined
 
   return (
     <div className="flex flex-col gap-4">
@@ -160,25 +183,19 @@ export default function CommunityBoard({ communityId }: { communityId: string })
       </p>
 
       <CommunityBoard3D
-        members={visibleMembers.map((m) => {
-          const isMyOwnedToken = isOwner && m.id === authUser?.id
-          const nameFrameId = isMyOwnedToken ? authUser?.equippedNameFrame : undefined
-          const groundAuraId = isMyOwnedToken ? authUser?.equippedGroundAura : undefined
-          const petId = isMyOwnedToken ? authUser?.equippedPet : undefined
-          return {
-            id: m.id,
-            name: m.name,
-            completed: m.completed,
-            pieceId: m.recipe.id,
-            color: m.color,
-            level: isMyOwnedToken && myStats ? getLevelInfo(myStats.workXp).level : undefined,
-            nameFrameColors: nameFrameId ? SHOP_ITEM_MAP[nameFrameId]?.colors : undefined,
-            groundAuraColors: groundAuraId ? SHOP_ITEM_MAP[groundAuraId]?.colors : undefined,
-            petId,
-            petColor: petId ? SHOP_ITEM_MAP[petId]?.colors[0] : undefined,
-            petLevel: isMyOwnedToken ? criticalTasksCompleted + 1 : undefined,
-          }
-        })}
+        members={boardMembers.map((m) => ({
+          id: m.id,
+          name: m.name,
+          completed: m.completed,
+          pieceId: m.recipe.id,
+          color: m.color,
+          level: m.level,
+          nameFrameColors: m.nameFrameColors,
+          groundAuraColors: m.groundAuraColors,
+          petId: m.petId,
+          petColor: m.petColor,
+          petLevel: m.petLevel,
+        }))}
         onSelectMember={setSelectedMemberId}
         onSelectPet={() => setShowPetInfo(true)}
       />
@@ -189,7 +206,7 @@ export default function CommunityBoard({ communityId }: { communityId: string })
       </p>
 
       <div className="glass-panel rounded-xl divide-y divide-white/5 overflow-hidden">
-        {[...visibleMembers]
+        {[...boardMembers]
           .sort((a, b) => {
             if (a.compositeRank == null && b.compositeRank == null) return b.completed - a.completed
             if (a.compositeRank == null) return 1
@@ -225,6 +242,10 @@ export default function CommunityBoard({ communityId }: { communityId: string })
           recipe={selectedMember.recipe}
           color={selectedMember.color}
           completed={selectedMember.completed}
+          level={selectedMember.level}
+          groundAuraColors={selectedMember.groundAuraColors}
+          petId={selectedMember.petId}
+          petColor={selectedMember.petColor}
           onClose={() => setSelectedMemberId(null)}
         />
       )}

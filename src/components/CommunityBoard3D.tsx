@@ -47,7 +47,7 @@ function PetCompanion({
   if (!recipe) return null
 
   const stage = petStage(level)
-  const baseScale = stage === 3 ? 0.5 : stage === 2 ? 0.4 : 0.3
+  const baseScale = stage === 3 ? 0.85 : stage === 2 ? 0.7 : 0.55
 
   function handleClick(e: ThreeEvent<MouseEvent>) {
     e.stopPropagation()
@@ -66,10 +66,10 @@ function PetCompanion({
   }
 
   return (
-    <group position={[0.42, 0, 0.12]} onClick={handleClick} onPointerOver={handlePointerOver} onPointerOut={handlePointerOut}>
+    <group position={[0.55, 0, 0.15]} onClick={handleClick} onPointerOver={handlePointerOver} onPointerOut={handlePointerOut}>
       {stage >= 3 && (
         <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.16, 0.22, 32]} />
+          <ringGeometry args={[0.26, 0.34, 32]} />
           <meshBasicMaterial color={color} transparent opacity={0.6} blending={AdditiveBlending} depthWrite={false} side={DoubleSide} />
         </mesh>
       )}
