@@ -4,6 +4,7 @@ import { useAppStore } from '../store/useStore'
 import { COMPLEXITY_MULTIPLIER } from '../types'
 import { BOARD_COLORS, CHARACTERS, CHARACTER_MAP, type CharacterRecipe } from '../utils/boardPieces'
 import { computeCompositeRanking } from '../utils/ranking'
+import BoardMemberModal from './BoardMemberModal'
 import CommunityBoard3D from './CommunityBoard3D'
 import OnlineDot from './OnlineDot'
 import PiecePickerModal from './PiecePickerModal'
@@ -35,6 +36,7 @@ export default function CommunityBoard({ communityId }: { communityId: string })
   const allTasks = useAppStore((s) => s.tasks)
   const onlineUserIds = useAppStore((s) => s.onlineUserIds)
   const [showPicker, setShowPicker] = useState(false)
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
 
   const members = useMemo(() => {
     if (!community) return []
@@ -103,6 +105,7 @@ export default function CommunityBoard({ communityId }: { communityId: string })
   // ranking pros demais membros, pra não se expor — só o próprio admin
   // consegue se ver ali.
   const visibleMembers = members.filter((m) => !community.adminIds.includes(m.id) || m.id === authUser?.id)
+  const selectedMember = selectedMemberId ? visibleMembers.find((m) => m.id === selectedMemberId) : undefined
 
   return (
     <div className="flex flex-col gap-4">
@@ -126,6 +129,7 @@ export default function CommunityBoard({ communityId }: { communityId: string })
 
       <CommunityBoard3D
         members={visibleMembers.map((m) => ({ id: m.id, name: m.name, completed: m.completed, pieceId: m.recipe.id, color: m.color }))}
+        onSelectMember={setSelectedMemberId}
       />
 
       <p className="text-[11px] text-zinc-500">
@@ -160,6 +164,17 @@ export default function CommunityBoard({ communityId }: { communityId: string })
           currentPieceId={community.pieces[myPiece.id]?.pieceId}
           currentColor={community.pieces[myPiece.id]?.color}
           onClose={() => setShowPicker(false)}
+        />
+      )}
+
+      {selectedMember && (
+        <BoardMemberModal
+          userId={selectedMember.id}
+          name={selectedMember.name}
+          recipe={selectedMember.recipe}
+          color={selectedMember.color}
+          completed={selectedMember.completed}
+          onClose={() => setSelectedMemberId(null)}
         />
       )}
     </div>

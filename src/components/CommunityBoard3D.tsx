@@ -1,5 +1,5 @@
-import { useMemo, useRef } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { useMemo, useRef, useState } from 'react'
+import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber'
 import { Html, OrbitControls } from '@react-three/drei'
 import type { Group } from 'three'
 import Character3D from './Character3D'
@@ -34,10 +34,16 @@ function Staircase({ boardSize }: { boardSize: number }) {
   return (
     <group>
       {steps.map((i) => (
-        <mesh key={i} position={[0, i * STEP_HEIGHT + STEP_HEIGHT / 2, -i * STEP_DEPTH]} receiveShadow castShadow>
-          <boxGeometry args={[STEP_WIDTH, STEP_HEIGHT, STEP_DEPTH]} />
-          <meshStandardMaterial color={i === 0 ? '#22c55e' : i % 2 === 0 ? '#27272a' : '#3f3f46'} roughness={0.85} />
-        </mesh>
+        <group key={i}>
+          <mesh position={[0, i * STEP_HEIGHT + STEP_HEIGHT / 2, -i * STEP_DEPTH]} receiveShadow castShadow>
+            <boxGeometry args={[STEP_WIDTH, STEP_HEIGHT, STEP_DEPTH]} />
+            <meshStandardMaterial color={i === 0 ? '#22c55e' : i % 2 === 0 ? '#8b5cf6' : '#6d28d9'} roughness={0.55} metalness={0.1} />
+          </mesh>
+          <mesh position={[0, i * STEP_HEIGHT + STEP_HEIGHT + 0.008, -i * STEP_DEPTH + STEP_DEPTH / 2 - 0.03]}>
+            <boxGeometry args={[STEP_WIDTH, 0.016, 0.06]} />
+            <meshStandardMaterial color={i === 0 ? '#bbf7d0' : '#e9d5ff'} emissive={i === 0 ? '#4ade80' : '#c4b5fd'} emissiveIntensity={0.6} />
+          </mesh>
+        </group>
       ))}
     </group>
   )
@@ -48,13 +54,16 @@ function BoardToken({
   step,
   lane,
   laneCount,
+  onSelect,
 }: {
   member: BoardMember
   step: number
   lane: number
   laneCount: number
+  onSelect?: (id: string) => void
 }) {
   const outerRef = useRef<Group>(null)
+  const [hovered, setHovered] = useState(false)
   const lastStep = useRef(step)
   const startPos = useRef(stepPosition(step, lane, laneCount))
   const targetPos = useRef(stepPosition(step, lane, laneCount))
@@ -90,10 +99,32 @@ function BoardToken({
   const recipe = CHARACTER_MAP[member.pieceId]
   if (!recipe) return null
 
+  function handleClick(e: ThreeEvent<MouseEvent>) {
+    e.stopPropagation()
+    onSelect?.(member.id)
+  }
+
+  function handlePointerOver(e: ThreeEvent<PointerEvent>) {
+    e.stopPropagation()
+    setHovered(true)
+    document.body.style.cursor = 'pointer'
+  }
+
+  function handlePointerOut() {
+    setHovered(false)
+    document.body.style.cursor = 'auto'
+  }
+
   return (
-    <group ref={outerRef} position={targetPos.current}>
-      <Character3D recipe={recipe} color={member.color} idle scale={0.55} />
-      <Html position={[0, 1.05, 0]} center distanceFactor={9} occlude={false} zIndexRange={[10, 0]}>
+    <group
+      ref={outerRef}
+      position={targetPos.current}
+      onClick={handleClick}
+      onPointerOver={handlePointerOver}
+      onPointerOut={handlePointerOut}
+    >
+      <Character3D recipe={recipe} color={member.color} idle scale={hovered ? 0.6 : 0.55} />
+      <Html position={[0, 1.55, 0]} center distanceFactor={9} occlude={false} zIndexRange={[10, 0]}>
         <div className="pointer-events-none select-none whitespace-nowrap rounded-full bg-black/75 px-2 py-0.5 text-[10px] text-white border border-white/15">
           {member.name}
         </div>
@@ -102,7 +133,13 @@ function BoardToken({
   )
 }
 
-export default function CommunityBoard3D({ members }: { members: BoardMember[] }) {
+export default function CommunityBoard3D({
+  members,
+  onSelectMember,
+}: {
+  members: BoardMember[]
+  onSelectMember?: (id: string) => void
+}) {
   const boardSize = Math.max(20, Math.min(40, Math.max(0, ...members.map((m) => m.completed)) + 5))
 
   const bySteps = useMemo(() => {
@@ -138,7 +175,7 @@ export default function CommunityBoard3D({ members }: { members: BoardMember[] }
         <Staircase boardSize={boardSize} />
         {Array.from(bySteps.entries()).map(([step, group]) =>
           group.map((m, lane) => (
-            <BoardToken key={m.id} member={m} step={step} lane={lane} laneCount={group.length} />
+            <BoardToken key={m.id} member={m} step={step} lane={lane} laneCount={group.length} onSelect={onSelectMember} />
           )),
         )}
         <OrbitControls
