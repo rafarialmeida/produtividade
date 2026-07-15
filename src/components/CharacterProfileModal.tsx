@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Canvas } from '@react-three/fiber'
-import { Coins, PawPrint, X } from 'lucide-react'
+import { ChevronDown, Coins, PawPrint, X } from 'lucide-react'
 import { AdditiveBlending, DoubleSide } from 'three'
 import Character3D from './Character3D'
 import { getLevelInfo } from '../utils/level'
@@ -50,6 +51,7 @@ export default function CharacterProfileModal({
   const petRecipe = petId ? PET_MAP[petId] : undefined
   const levelInfo = getLevelInfo(workXp)
   const positive = levelInfo.level >= 1
+  const [showCoinsInfo, setShowCoinsInfo] = useState(false)
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/70 backdrop-blur-sm">
@@ -110,11 +112,30 @@ export default function CharacterProfileModal({
             </div>
           )}
 
-          <div className="flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-4 py-3">
-            <p className="flex items-center gap-1.5 text-sm font-bold text-amber-300 light:text-amber-600">
-              <Coins size={15} /> Moedas
-            </p>
-            <p className="text-sm font-semibold text-amber-300 light:text-amber-600 tabular-nums">{coins}</p>
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] overflow-hidden">
+            <button
+              onClick={() => setShowCoinsInfo((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-amber-500/[0.04] transition-colors"
+            >
+              <p className="flex items-center gap-1.5 text-sm font-bold text-amber-300 light:text-amber-600">
+                <Coins size={15} /> Moedas
+              </p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-semibold text-amber-300 light:text-amber-600 tabular-nums">{coins}</p>
+                <ChevronDown
+                  size={14}
+                  className={`text-amber-400/70 transition-transform ${showCoinsInfo ? 'rotate-180' : ''}`}
+                />
+              </div>
+            </button>
+            {showCoinsInfo && (
+              <p className="px-4 pb-3 text-[11px] text-zinc-400 light:text-zinc-600 leading-relaxed">
+                Você ganha <span className="text-amber-300 light:text-amber-600 font-medium">25 moedas</span> a cada
+                nível de trabalho que sobe (o mesmo nível mostrado acima, calculado pelo seu XP de tarefas de
+                comunidades de Trabalho). É creditado automaticamente, sem precisar fazer nada. Gaste na Loja em
+                molduras, círculos de luz, paletas exclusivas e bichinhos de estimação.
+              </p>
+            )}
           </div>
 
           <p className="text-[11px] text-zinc-600 text-center">Só você vê essa tela.</p>
