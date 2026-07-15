@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Dices, Store } from 'lucide-react'
+import { Dices, Store, UserCircle2 } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import { COMPLEXITY_MULTIPLIER } from '../types'
 import { BOARD_COLORS, CHARACTERS, CHARACTER_MAP, PET_MAP, type CharacterRecipe } from '../utils/boardPieces'
@@ -7,6 +7,7 @@ import { computeCompositeRanking } from '../utils/ranking'
 import { getLevelInfo } from '../utils/level'
 import { SHOP_ITEM_MAP } from '../utils/shopItems'
 import BoardMemberModal from './BoardMemberModal'
+import CharacterProfileModal from './CharacterProfileModal'
 import CommunityBoard3D from './CommunityBoard3D'
 import OnlineDot from './OnlineDot'
 import PetInfoModal from './PetInfoModal'
@@ -48,6 +49,7 @@ export default function CommunityBoard({ communityId }: { communityId: string })
   const [showPicker, setShowPicker] = useState(false)
   const [showShop, setShowShop] = useState(false)
   const [showPetInfo, setShowPetInfo] = useState(false)
+  const [showCharacterProfile, setShowCharacterProfile] = useState(false)
   const [criticalTasksCompleted, setCriticalTasksCompleted] = useState(0)
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
   const isOwner = authUser?.email === OWNER_EMAIL
@@ -154,6 +156,7 @@ export default function CommunityBoard({ communityId }: { communityId: string })
     }
   })
   const selectedMember = selectedMemberId ? boardMembers.find((m) => m.id === selectedMemberId) : undefined
+  const myBoardMember = authUser ? boardMembers.find((m) => m.id === authUser.id) : undefined
 
   return (
     <div className="flex flex-col gap-4">
@@ -172,6 +175,11 @@ export default function CommunityBoard({ communityId }: { communityId: string })
           {isOwner && myPiece && (
             <button onClick={() => setShowShop(true)} className="btn-ghost !w-auto px-3 flex items-center gap-2">
               <Store size={14} /> Loja ({authUser.coins} moedas)
+            </button>
+          )}
+          {isOwner && myPiece && (
+            <button onClick={() => setShowCharacterProfile(true)} className="btn-ghost !w-auto px-3 flex items-center gap-2">
+              <UserCircle2 size={14} /> Meu Perfil
             </button>
           )}
         </div>
@@ -261,6 +269,21 @@ export default function CommunityBoard({ communityId }: { communityId: string })
           criticalTasksCompleted={criticalTasksCompleted}
           ownerName={authUser.name}
           onClose={() => setShowPetInfo(false)}
+        />
+      )}
+
+      {showCharacterProfile && isOwner && myBoardMember && myStats && (
+        <CharacterProfileModal
+          recipe={myBoardMember.recipe}
+          color={myBoardMember.color}
+          workXp={myStats.workXp}
+          groundAuraColors={myBoardMember.groundAuraColors}
+          petId={myBoardMember.petId}
+          petColor={myBoardMember.petColor}
+          petLevel={myBoardMember.petLevel}
+          criticalTasksCompleted={criticalTasksCompleted}
+          coins={authUser.coins}
+          onClose={() => setShowCharacterProfile(false)}
         />
       )}
     </div>
