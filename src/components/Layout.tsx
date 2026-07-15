@@ -29,6 +29,7 @@ import PushToggle from './PushToggle'
 import ProfileModal from './ProfileModal'
 import ReportBugModal from './ReportBugModal'
 import MessagesPanel from './MessagesPanel'
+import TermsAcceptanceModal from './TermsAcceptanceModal'
 
 const NAV_ITEMS = [
   { to: '/day', label: 'Minhas tarefas', icon: Sparkles },
@@ -295,7 +296,8 @@ export default function Layout({ children }: { children: ReactNode }) {
       )}
       {showProfile && user && <ProfileModal userId={user.id} onClose={() => setShowProfile(false)} />}
       {showReportBug && <ReportBugModal onClose={() => setShowReportBug(false)} />}
-      {user && (!user.onboardingCompletedAt || showTourAgain) && (
+      {user && !user.termsAcceptedAt && <TermsAcceptanceModal />}
+      {user && user.termsAcceptedAt && (!user.onboardingCompletedAt || showTourAgain) && (
         <OnboardingTour onDismiss={() => setShowTourAgain(false)} />
       )}
     </div>

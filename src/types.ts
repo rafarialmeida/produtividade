@@ -76,6 +76,7 @@ export interface AuthUser extends NotificationPreferences {
   avatarSeed: string
   avatarUrl?: string
   onboardingCompletedAt?: string
+  termsAcceptedAt?: string
 }
 
 export interface PublicProfile {

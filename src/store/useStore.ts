@@ -134,6 +134,7 @@ interface State {
   sendPasswordReset: (email: string) => Promise<string | null>
   setOnlineUserIds: (ids: Set<string>) => void
   completeOnboarding: () => Promise<void>
+  acceptTerms: () => Promise<void>
 
   refreshAll: () => Promise<void>
 
@@ -997,6 +998,14 @@ export const useAppStore = create<State>()((set, get) => ({
     await supabase.from('profiles').update({ onboarding_completed_at: now }).eq('id', authUser.id)
   },
 
+  acceptTerms: async () => {
+    const authUser = get().authUser
+    if (!authUser) return
+    const now = new Date().toISOString()
+    set({ authUser: { ...authUser, termsAcceptedAt: now } })
+    await supabase.from('profiles').update({ terms_accepted_at: now }).eq('id', authUser.id)
+  },
+
   fetchGlobalWall: async () => {
     const { data, error } = await supabase.rpc('global_wall')
     if (error || !data) return []
@@ -1144,6 +1153,7 @@ async function loadAuthUser(userId: string, email: string) {
       notifyOnlyUrgent: profile.notify_only_urgent,
       notifyWeeklyDigest: profile.notify_weekly_digest,
       onboardingCompletedAt: profile.onboarding_completed_at ?? undefined,
+      termsAcceptedAt: profile.terms_accepted_at ?? undefined,
     },
     authLoading: false,
   })

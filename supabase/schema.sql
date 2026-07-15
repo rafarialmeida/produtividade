@@ -21,6 +21,7 @@ create table if not exists public.profiles (
   notify_only_urgent boolean not null default false,
   notify_weekly_digest boolean not null default true,
   onboarding_completed_at timestamptz,
+  terms_accepted_at timestamptz,
   avatar_url text,
   created_at timestamptz not null default now()
 );
@@ -1372,7 +1373,7 @@ revoke update on public.profiles from authenticated;
 grant update (
   name, avatar_seed, avatar_url,
   notify_reminder, notify_expired, notify_completed, notify_only_urgent, notify_weekly_digest,
-  onboarding_completed_at
+  onboarding_completed_at, terms_accepted_at
 ) on public.profiles to authenticated;
 
 -- communities: visível para quem é membro (ou admin). Criar é livre para qualquer
