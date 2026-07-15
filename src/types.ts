@@ -85,6 +85,15 @@ export interface AuthUser extends NotificationPreferences {
   equippedPet?: string
 }
 
+export interface BoardCosmetics {
+  workXp: number
+  criticalTasksCompleted: number
+  equippedNameFrame?: string
+  equippedGroundAura?: string
+  equippedPalette?: string
+  equippedPet?: string
+}
+
 export interface PublicProfile {
   userId: string
   name: string

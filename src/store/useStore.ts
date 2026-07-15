@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import type {
   AuthUser,
+  BoardCosmetics,
   BugReport,
   Community,
   CommunityJoinRequest,
@@ -139,6 +140,7 @@ interface State {
   buyShopItem: (itemId: string) => Promise<string | null>
   equipItem: (category: 'frame' | 'aura' | 'palette' | 'pet', itemId: string | null) => Promise<string | null>
   fetchCriticalTasksCompleted: (userId: string) => Promise<number>
+  fetchBoardCosmetics: (userIds: string[]) => Promise<Record<string, BoardCosmetics>>
 
   refreshAll: () => Promise<void>
 
@@ -1043,6 +1045,24 @@ export const useAppStore = create<State>()((set, get) => ({
     const { data, error } = await supabase.rpc('critical_tasks_completed', { _user_id: userId })
     if (error || data == null) return 0
     return Number(data)
+  },
+
+  fetchBoardCosmetics: async (userIds) => {
+    if (userIds.length === 0) return {}
+    const { data, error } = await supabase.rpc('board_cosmetics', { _user_ids: userIds })
+    if (error || !data) return {}
+    const map: Record<string, BoardCosmetics> = {}
+    for (const row of data as Record<string, unknown>[]) {
+      map[row.user_id as string] = {
+        workXp: Number(row.work_xp ?? 0),
+        criticalTasksCompleted: Number(row.critical_tasks_completed ?? 0),
+        equippedNameFrame: (row.equipped_name_frame as string | null) ?? undefined,
+        equippedGroundAura: (row.equipped_ground_aura as string | null) ?? undefined,
+        equippedPalette: (row.equipped_palette as string | null) ?? undefined,
+        equippedPet: (row.equipped_pet as string | null) ?? undefined,
+      }
+    }
+    return map
   },
 
   fetchGlobalWall: async () => {

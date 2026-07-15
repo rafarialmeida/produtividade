@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Dices, Store, UserCircle2 } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
-import { COMPLEXITY_MULTIPLIER } from '../types'
+import { COMPLEXITY_MULTIPLIER, type BoardCosmetics } from '../types'
 import { BOARD_COLORS, CHARACTERS, CHARACTER_MAP, PET_MAP, type CharacterRecipe } from '../utils/boardPieces'
 import { computeCompositeRanking } from '../utils/ranking'
 import { getLevelInfo } from '../utils/level'
@@ -34,6 +34,26 @@ function avg(values: number[]): number | undefined {
   return values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : undefined
 }
 
+function applyCosmetics(
+  baseColor: string,
+  workXp: number | undefined,
+  criticalTasksCompleted: number | undefined,
+  nameFrameId: string | undefined,
+  groundAuraId: string | undefined,
+  paletteId: string | undefined,
+  petId: string | undefined,
+) {
+  return {
+    color: paletteId ? (SHOP_ITEM_MAP[paletteId]?.colors[0] ?? baseColor) : baseColor,
+    level: workXp != null ? getLevelInfo(workXp).level : undefined,
+    nameFrameColors: nameFrameId ? SHOP_ITEM_MAP[nameFrameId]?.colors : undefined,
+    groundAuraColors: groundAuraId ? SHOP_ITEM_MAP[groundAuraId]?.colors : undefined,
+    petId,
+    petColor: petId ? SHOP_ITEM_MAP[petId]?.colors[0] : undefined,
+    petLevel: criticalTasksCompleted != null ? criticalTasksCompleted + 1 : undefined,
+  }
+}
+
 export default function CommunityBoard({ communityId }: { communityId: string }) {
   const authUser = useAppStore((s) => s.authUser)
   const community = useAppStore((s) => s.getCommunityById(communityId))
@@ -42,12 +62,14 @@ export default function CommunityBoard({ communityId }: { communityId: string })
   const onlineUserIds = useAppStore((s) => s.onlineUserIds)
   const myStats = useAppStore((s) => s.myStats)
   const fetchCriticalTasksCompleted = useAppStore((s) => s.fetchCriticalTasksCompleted)
+  const fetchBoardCosmetics = useAppStore((s) => s.fetchBoardCosmetics)
   const [showPicker, setShowPicker] = useState(false)
   const [showShop, setShowShop] = useState(false)
-  const [showPetInfo, setShowPetInfo] = useState(false)
   const [showCharacterProfile, setShowCharacterProfile] = useState(false)
   const [criticalTasksCompleted, setCriticalTasksCompleted] = useState(0)
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
+  const [selectedPetMemberId, setSelectedPetMemberId] = useState<string | null>(null)
+  const [cosmeticsByUserId, setCosmeticsByUserId] = useState<Record<string, BoardCosmetics>>({})
 
   useEffect(() => {
     if (!authUser) return
@@ -118,40 +140,75 @@ export default function CommunityBoard({ communityId }: { communityId: string })
     }))
   }, [community, users, allTasks, communityId])
 
+  // Administradores ficam de fora tanto da escadaria 3D quanto da lista de
+  // ranking pros demais membros, pra não se expor — só o próprio admin
+  // consegue se ver ali.
+  const visibleMemberIds = useMemo(() => {
+    if (!community) return []
+    return members.filter((m) => !community.adminIds.includes(m.id) || m.id === authUser?.id).map((m) => m.id)
+  }, [community, members, authUser])
+
+  const visibleMemberIdsKey = visibleMemberIds.join(',')
+
+  // Cosméticos (nível, moldura, círculo de luz, pet, paleta exclusiva) de
+  // todo mundo, buscados em lote pra qualquer um poder ver a personalização
+  // completa dos demais membros no tabuleiro — não só a própria.
+  useEffect(() => {
+    if (visibleMemberIds.length === 0) return
+    let cancelled = false
+    fetchBoardCosmetics(visibleMemberIds).then((map) => {
+      if (!cancelled) setCosmeticsByUserId(map)
+    })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleMemberIdsKey, fetchBoardCosmetics])
+
   if (!community) return null
 
   const myPiece = authUser ? members.find((m) => m.id === authUser.id) : undefined
   const isCommunityAdmin = Boolean(authUser && (authUser.role === 'admin' || community.adminIds.includes(authUser.id)))
 
-  // Administradores ficam de fora tanto da escadaria 3D quanto da lista de
-  // ranking pros demais membros, pra não se expor — só o próprio admin
-  // consegue se ver ali.
-  const visibleMembers = members.filter((m) => !community.adminIds.includes(m.id) || m.id === authUser?.id)
+  const visibleMembers = members.filter((m) => visibleMemberIds.includes(m.id))
 
-  // Cosméticos (nível, moldura, círculo de luz, pet, paleta exclusiva) só
-  // aparecem no seu próprio token — a gente não busca os itens equipados de
-  // outros membros, então cada pessoa só vê a própria personalização.
   // Calculado aqui uma vez só, reaproveitado no tabuleiro 3D, na lista de
   // ranking e no modal de detalhe (pra mostrar sempre o mesmo "visual
-  // completo" do personagem).
+  // completo" do personagem). O próprio usuário usa o estado local (mais
+  // atualizado logo após comprar/equipar); os demais usam o lote buscado do
+  // servidor.
   const boardMembers = visibleMembers.map((m) => {
     const isMyOwnedToken = m.id === authUser?.id
-    const nameFrameId = isMyOwnedToken ? authUser?.equippedNameFrame : undefined
-    const groundAuraId = isMyOwnedToken ? authUser?.equippedGroundAura : undefined
-    const petId = isMyOwnedToken ? authUser?.equippedPet : undefined
-    const paletteId = isMyOwnedToken ? authUser?.equippedPalette : undefined
+    if (isMyOwnedToken) {
+      return {
+        ...m,
+        ...applyCosmetics(
+          m.color,
+          myStats?.workXp,
+          criticalTasksCompleted,
+          authUser?.equippedNameFrame,
+          authUser?.equippedGroundAura,
+          authUser?.equippedPalette,
+          authUser?.equippedPet,
+        ),
+      }
+    }
+    const cosmetics = cosmeticsByUserId[m.id]
     return {
       ...m,
-      color: paletteId ? (SHOP_ITEM_MAP[paletteId]?.colors[0] ?? m.color) : m.color,
-      level: isMyOwnedToken && myStats ? getLevelInfo(myStats.workXp).level : undefined,
-      nameFrameColors: nameFrameId ? SHOP_ITEM_MAP[nameFrameId]?.colors : undefined,
-      groundAuraColors: groundAuraId ? SHOP_ITEM_MAP[groundAuraId]?.colors : undefined,
-      petId,
-      petColor: petId ? SHOP_ITEM_MAP[petId]?.colors[0] : undefined,
-      petLevel: isMyOwnedToken ? criticalTasksCompleted + 1 : undefined,
+      ...applyCosmetics(
+        m.color,
+        cosmetics?.workXp,
+        cosmetics?.criticalTasksCompleted,
+        cosmetics?.equippedNameFrame,
+        cosmetics?.equippedGroundAura,
+        cosmetics?.equippedPalette,
+        cosmetics?.equippedPet,
+      ),
     }
   })
   const selectedMember = selectedMemberId ? boardMembers.find((m) => m.id === selectedMemberId) : undefined
+  const selectedPetMember = selectedPetMemberId ? boardMembers.find((m) => m.id === selectedPetMemberId) : undefined
   const myBoardMember = authUser ? boardMembers.find((m) => m.id === authUser.id) : undefined
 
   return (
@@ -201,7 +258,7 @@ export default function CommunityBoard({ communityId }: { communityId: string })
           petLevel: m.petLevel,
         }))}
         onSelectMember={setSelectedMemberId}
-        onSelectPet={() => setShowPetInfo(true)}
+        onSelectPet={setSelectedPetMemberId}
       />
 
       <p className="text-[11px] text-zinc-500">
@@ -256,15 +313,15 @@ export default function CommunityBoard({ communityId }: { communityId: string })
 
       {showShop && <ShopModal onClose={() => setShowShop(false)} />}
 
-      {showPetInfo && authUser?.equippedPet && PET_MAP[authUser.equippedPet] && (
+      {selectedPetMember && selectedPetMember.petId && PET_MAP[selectedPetMember.petId] && (
         <PetInfoModal
-          name={SHOP_ITEM_MAP[authUser.equippedPet]?.label ?? 'Bichinho'}
-          recipe={PET_MAP[authUser.equippedPet]}
-          color={SHOP_ITEM_MAP[authUser.equippedPet]?.colors[0] ?? '#a1a1aa'}
-          level={criticalTasksCompleted + 1}
-          criticalTasksCompleted={criticalTasksCompleted}
-          ownerName={authUser.name}
-          onClose={() => setShowPetInfo(false)}
+          name={SHOP_ITEM_MAP[selectedPetMember.petId]?.label ?? 'Bichinho'}
+          recipe={PET_MAP[selectedPetMember.petId]}
+          color={selectedPetMember.petColor ?? '#a1a1aa'}
+          level={selectedPetMember.petLevel ?? 1}
+          criticalTasksCompleted={(selectedPetMember.petLevel ?? 1) - 1}
+          ownerName={selectedPetMember.name}
+          onClose={() => setSelectedPetMemberId(null)}
         />
       )}
 
