@@ -16,11 +16,11 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: 'frame_neon_purple', category: 'frame', label: 'Moldura Roxa Neon', price: 220, colors: ['#c084fc'] },
   { id: 'frame_gold', category: 'frame', label: 'Moldura Dourada Lendária', price: 400, colors: ['#fbbf24', '#fde68a'] },
 
-  // Auras — anel de luz no chão, embaixo do personagem.
-  { id: 'aura_blue', category: 'aura', label: 'Aura Azul', price: 60, colors: ['#3b82f6'] },
-  { id: 'aura_green', category: 'aura', label: 'Aura Verde', price: 140, colors: ['#22c55e'] },
-  { id: 'aura_flames', category: 'aura', label: 'Aura Chamas', price: 250, colors: ['#f97316'] },
-  { id: 'aura_rainbow', category: 'aura', label: 'Aura Arco-íris', price: 450, colors: ['#f472b6', '#60a5fa'] },
+  // Círculos de luz — anel de luz no chão, embaixo do personagem.
+  { id: 'aura_blue', category: 'aura', label: 'Círculo de Luz Azul', price: 60, colors: ['#3b82f6'] },
+  { id: 'aura_green', category: 'aura', label: 'Círculo de Luz Verde', price: 140, colors: ['#22c55e'] },
+  { id: 'aura_flames', category: 'aura', label: 'Círculo de Luz Chamas', price: 250, colors: ['#f97316'] },
+  { id: 'aura_rainbow', category: 'aura', label: 'Círculo de Luz Arco-íris', price: 450, colors: ['#f472b6', '#60a5fa'] },
 
   // Paletas de cor exclusivas — fora da roda de cores padrão do personagem.
   { id: 'palette_silver', category: 'palette', label: 'Prata Metálico', price: 70, colors: ['#94a3b8'] },
@@ -33,6 +33,6 @@ export const SHOP_ITEM_MAP: Record<string, ShopItem> = Object.fromEntries(SHOP_I
 
 export const SHOP_CATEGORY_LABEL: Record<ShopCategory, string> = {
   frame: 'Molduras de nome',
-  aura: 'Auras',
+  aura: 'Círculos de Luz',
   palette: 'Paletas exclusivas',
 }
