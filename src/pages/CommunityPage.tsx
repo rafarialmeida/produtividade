@@ -320,18 +320,20 @@ export default function CommunityPage() {
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h2 className="text-sm font-semibold text-zinc-300 light:text-zinc-700">Tarefas da comunidade</h2>
             <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={userFilter}
-                onChange={(e) => setUserFilter(e.target.value)}
-                className="input !w-auto !py-1 !text-xs"
-              >
-                <option value="all">Todos os membros</option>
-                {members.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-              </select>
+              {isCommunityAdmin && (
+                <select
+                  value={userFilter}
+                  onChange={(e) => setUserFilter(e.target.value)}
+                  className="input !w-auto !py-1 !text-xs"
+                >
+                  <option value="all">Todos os membros</option>
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              )}
               <div className="flex gap-1">
                 {(['all', 'active', 'expired', 'completed'] as const).map((f) => (
                   <button
