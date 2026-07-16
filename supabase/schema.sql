@@ -112,7 +112,8 @@ create table if not exists public.subtasks (
   position int not null default 0,
   due_date timestamptz,
   assignee_id uuid references public.profiles (id) on delete set null,
-  minutes_spent integer
+  minutes_spent integer,
+  note text
 );
 
 create table if not exists public.notifications (

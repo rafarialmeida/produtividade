@@ -83,7 +83,7 @@ interface CreateTaskInput {
   macroObjectiveId: string
   title: string
   category: string
-  subtasks: { text: string; dueDate?: string }[]
+  subtasks: { text: string; dueDate?: string; note?: string }[]
   deadline: string
   urgency: Severity
   complexity: Complexity
@@ -96,7 +96,7 @@ interface UpdateTaskInput {
   macroObjectiveId: string
   title: string
   category: string
-  subtasks: { id?: string; text: string; dueDate?: string }[]
+  subtasks: { id?: string; text: string; dueDate?: string; note?: string }[]
   deadline: string
   urgency: Severity
   complexity: Complexity
@@ -168,6 +168,7 @@ interface State {
 
   // objetivo macro
   createMacroObjective: (title: string, communityId?: string) => Promise<string | null>
+  deleteMacroObjective: (id: string) => Promise<string | null>
 
   // task actions
   createTask: (input: CreateTaskInput) => Promise<string | null>
@@ -215,6 +216,7 @@ function mapSubtask(row: Record<string, unknown>): SubTask {
     dueDate: (row.due_date as string | null) ?? undefined,
     assigneeId: (row.assignee_id as string | null) ?? undefined,
     minutesSpent: (row.minutes_spent as number | null) ?? undefined,
+    note: (row.note as string | null) ?? undefined,
   }
 }
 
@@ -673,6 +675,16 @@ export const useAppStore = create<State>()((set, get) => ({
     return data.id as string
   },
 
+  deleteMacroObjective: async (id) => {
+    const { error } = await supabase.from('macro_objectives').delete().eq('id', id)
+    if (error) {
+      if (error.code === '23503') return 'Esse objetivo já tem tarefas vinculadas — mude ou apague as tarefas antes de excluí-lo.'
+      return error.message
+    }
+    await get().refreshAll()
+    return null
+  },
+
   createTask: async ({ communityId, userId, macroObjectiveId, title, category, subtasks, deadline, urgency, complexity, scored, recurrence }) => {
     const { data: task, error } = await supabase
       .from('tasks')
@@ -701,6 +713,7 @@ export const useAppStore = create<State>()((set, get) => ({
           text: s.text.trim(),
           position: i,
           due_date: s.dueDate ?? null,
+          note: s.note?.trim() ? s.note.trim() : null,
         })),
       )
       if (subtaskError) return subtaskError.message
@@ -741,10 +754,11 @@ export const useAppStore = create<State>()((set, get) => ({
       cleanSubtasks.map((s, i) => {
         const text = s.text.trim()
         const dueDate = s.dueDate ?? null
+        const note = s.note?.trim() ? s.note.trim() : null
         if (s.id) {
-          return supabase.from('subtasks').update({ text, due_date: dueDate, position: i }).eq('id', s.id)
+          return supabase.from('subtasks').update({ text, due_date: dueDate, note, position: i }).eq('id', s.id)
         }
-        return supabase.from('subtasks').insert({ task_id: taskId, text, due_date: dueDate, position: i })
+        return supabase.from('subtasks').insert({ task_id: taskId, text, due_date: dueDate, note, position: i })
       }),
     )
     const subtaskError = results.find((r) => r.error)?.error

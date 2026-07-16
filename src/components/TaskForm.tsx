@@ -11,6 +11,7 @@ import {
   ListChecks,
   Plus,
   Repeat,
+  StickyNote,
   Tag,
   Target,
   Trash2,
@@ -90,6 +91,7 @@ export default function TaskForm({
   const createTask = useAppStore((s) => s.createTask)
   const updateTask = useAppStore((s) => s.updateTask)
   const createMacroObjective = useAppStore((s) => s.createMacroObjective)
+  const deleteMacroObjective = useAppStore((s) => s.deleteMacroObjective)
   const allCommunities = useAppStore((s) => s.communities)
   const allMacroObjectives = useAppStore((s) => s.macroObjectives)
   const user = useAppStore((s) => s.getUserById(userId))
@@ -119,6 +121,8 @@ export default function TaskForm({
   const [addingMacro, setAddingMacro] = useState(false)
   const [newMacro, setNewMacro] = useState('')
   const [creatingMacro, setCreatingMacro] = useState(false)
+  const [deletingMacroId, setDeletingMacroId] = useState<string | null>(null)
+  const [macroDeleteError, setMacroDeleteError] = useState('')
   const [complexity, setComplexity] = useState<Complexity>(task?.complexity ?? 'media')
   const [notScored, setNotScored] = useState(task ? !task.scored : false)
   const [title, setTitle] = useState(task?.title ?? '')
@@ -126,10 +130,16 @@ export default function TaskForm({
   const [categories, setCategories] = useState(availableCategories)
   const [addingCategory, setAddingCategory] = useState(false)
   const [newCategory, setNewCategory] = useState('')
-  const [subtasks, setSubtasks] = useState<{ id?: string; text: string; dueDate: string }[]>(
+  const [subtasks, setSubtasks] = useState<{ id?: string; text: string; dueDate: string; note: string; showNote: boolean }[]>(
     task && task.subtasks.length > 0
-      ? task.subtasks.map((s) => ({ id: s.id, text: s.text, dueDate: s.dueDate ? toDatetimeLocalValue(new Date(s.dueDate)) : '' }))
-      : [{ text: '', dueDate: '' }],
+      ? task.subtasks.map((s) => ({
+          id: s.id,
+          text: s.text,
+          dueDate: s.dueDate ? toDatetimeLocalValue(new Date(s.dueDate)) : '',
+          note: s.note ?? '',
+          showNote: Boolean(s.note),
+        }))
+      : [{ text: '', dueDate: '', note: '', showNote: false }],
   )
   const [deadline, setDeadline] = useState(task ? toDatetimeLocalValue(new Date(task.deadline)) : '')
   const [urgency, setUrgency] = useState<Severity>(task?.urgency ?? 'media')
@@ -202,8 +212,16 @@ export default function TaskForm({
     setSubtasks((s) => s.map((item, i) => (i === index ? { ...item, dueDate: value } : item)))
   }
 
+  function updateSubtaskNote(index: number, value: string) {
+    setSubtasks((s) => s.map((item, i) => (i === index ? { ...item, note: value } : item)))
+  }
+
+  function toggleSubtaskNote(index: number) {
+    setSubtasks((s) => s.map((item, i) => (i === index ? { ...item, showNote: !item.showNote, note: item.showNote ? '' : item.note } : item)))
+  }
+
   function addSubtaskField() {
-    setSubtasks((s) => [...s, { text: '', dueDate: '' }])
+    setSubtasks((s) => [...s, { text: '', dueDate: '', note: '', showNote: false }])
   }
 
   function removeSubtaskField(index: number) {
@@ -239,6 +257,19 @@ export default function TaskForm({
     setAddingMacro(false)
   }
 
+  async function handleDeleteMacro(id: string, title: string) {
+    if (deletingMacroId) return
+    if (!window.confirm(`Excluir o objetivo macro "${title}"? Essa ação não pode ser desfeita.`)) return
+    setDeletingMacroId(id)
+    const error = await deleteMacroObjective(id)
+    setDeletingMacroId(null)
+    if (error) {
+      setMacroDeleteError(error)
+      return
+    }
+    setMacroDeleteError('')
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!isValid || submitting) return
@@ -254,6 +285,7 @@ export default function TaskForm({
           id: s.id,
           text: s.text,
           dueDate: s.dueDate ? new Date(s.dueDate).toISOString() : undefined,
+          note: s.note.trim() ? s.note.trim() : undefined,
         })),
         urgency,
         complexity,
@@ -400,25 +432,37 @@ export default function TaskForm({
               )}
             </div>
             {showMacroList && scopedMacroObjectives.length > 0 && (
-              <select
-                autoFocus
-                value={macroObjectiveId}
-                onChange={(e) => {
-                  setMacroObjectiveId(e.target.value)
-                  setShowMacroList(false)
-                }}
-                className="input mt-1.5"
-              >
-                <option value="" style={optionStyle}>
-                  Selecione um objetivo
-                </option>
+              <div className="mt-1.5 rounded-lg border border-white/10 light:border-black/15 divide-y divide-white/5 light:divide-black/5 overflow-hidden">
                 {scopedMacroObjectives.map((m) => (
-                  <option key={m.id} value={m.id} style={optionStyle}>
-                    {m.title}
-                  </option>
+                  <div key={m.id} className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMacroObjectiveId(m.id)
+                        setShowMacroList(false)
+                      }}
+                      className={`flex-1 text-left text-xs px-3 py-2 transition-colors ${
+                        m.id === macroObjectiveId
+                          ? 'bg-purple-500/15 text-purple-200 light:bg-purple-500/10 light:text-purple-700'
+                          : 'text-zinc-300 hover:bg-white/5 light:text-zinc-700 light:hover:bg-black/5'
+                      }`}
+                    >
+                      {m.title}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteMacro(m.id, m.title)}
+                      disabled={deletingMacroId === m.id}
+                      title="Excluir objetivo macro"
+                      className="p-2 text-zinc-500 hover:text-rose-400 light:hover:text-rose-600 transition-colors disabled:opacity-50"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 ))}
-              </select>
+              </div>
             )}
+            {macroDeleteError && <p className="text-[11px] text-rose-400 light:text-rose-600 mt-1.5">{macroDeleteError}</p>}
             {scopedMacroObjectives.length === 0 && !addingMacro && (
               <p className="text-[11px] text-zinc-500 mt-1.5">Nenhum objetivo macro ainda — crie um pra vincular essa tarefa.</p>
             )}
@@ -531,6 +575,34 @@ export default function TaskForm({
                       </button>
                     )}
                   </div>
+                  {s.showNote ? (
+                    <div className="flex items-start gap-2 pl-6">
+                      <StickyNote size={12} className="text-zinc-600 shrink-0 mt-1.5" />
+                      <textarea
+                        autoFocus={!s.note}
+                        value={s.note}
+                        onChange={(e) => updateSubtaskNote(i, e.target.value)}
+                        placeholder="Observação (opcional)"
+                        rows={2}
+                        className="input !text-xs flex-1 resize-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => toggleSubtaskNote(i)}
+                        className="text-[10px] text-zinc-500 hover:text-rose-400 light:hover:text-rose-600 shrink-0 mt-1.5"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => toggleSubtaskNote(i)}
+                      className="flex items-center gap-1 text-[11px] text-zinc-500 hover:text-emerald-300 light:hover:text-emerald-600 pl-6 self-start"
+                    >
+                      <StickyNote size={12} /> Adicionar observação
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

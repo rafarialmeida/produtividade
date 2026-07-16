@@ -9,6 +9,7 @@ import {
   Play,
   Repeat,
   RotateCcw,
+  StickyNote,
   Tag,
   Target,
   Trash2,
@@ -209,6 +210,11 @@ export default function TaskCard({
               {subtaskAssignee && (
                 <span className="text-[10px] text-sky-300 light:text-sky-700 bg-sky-500/10 border border-sky-500/30 rounded px-1.5 py-0.5 shrink-0">
                   {subtaskAssignee.name}
+                </span>
+              )}
+              {st.note && (
+                <span title={st.note} className="text-zinc-600 hover:text-amber-400 light:hover:text-amber-600 shrink-0">
+                  <StickyNote size={11} />
                 </span>
               )}
               {st.dueDate && !st.done && (

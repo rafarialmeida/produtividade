@@ -165,6 +165,7 @@ export interface SubTask {
   dueDate?: string
   assigneeId?: string
   minutesSpent?: number
+  note?: string
 }
 
 export interface MacroObjective {
