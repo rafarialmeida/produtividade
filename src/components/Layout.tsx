@@ -86,39 +86,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           </Link>
 
           {user && (
-            <>
-              <nav className="hidden sm:flex items-center gap-1 overflow-x-auto">
-                {NAV_ITEMS.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    className={({ isActive }) =>
-                      `flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
-                        isActive
-                          ? 'bg-white/10 text-white light:bg-black/[0.06] light:text-zinc-900'
-                          : 'text-zinc-400 hover:text-white hover:bg-white/5 light:text-zinc-500 light:hover:text-zinc-900 light:hover:bg-black/[0.04]'
-                      }`
-                    }
-                  >
-                    <item.icon size={15} /> {item.label}
-                  </NavLink>
-                ))}
-                {user.role === 'admin' && (
-                  <NavLink
-                    to="/admin"
-                    className={({ isActive }) =>
-                      `flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
-                        isActive
-                          ? 'bg-white/10 text-white light:bg-black/[0.06] light:text-zinc-900'
-                          : 'text-zinc-400 hover:text-white hover:bg-white/5 light:text-zinc-500 light:hover:text-zinc-900 light:hover:bg-black/[0.04]'
-                      }`
-                    }
-                  >
-                    <ShieldCheck size={15} /> Admin
-                  </NavLink>
-                )}
-              </nav>
-              <div className="flex items-center gap-1 sm:gap-2 pl-2 sm:pl-3 border-l border-white/10 light:border-black/10 shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2 pl-2 sm:pl-3 border-l border-white/10 light:border-black/10 shrink-0">
                 {activeLevelInfo && (
                   <button
                     onClick={() =>
@@ -246,7 +214,6 @@ export default function Layout({ children }: { children: ReactNode }) {
                   )}
                 </div>
               </div>
-            </>
           )}
 
           <button
@@ -257,6 +224,40 @@ export default function Layout({ children }: { children: ReactNode }) {
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
         </div>
+
+        {user && (
+          <nav className="hidden sm:flex items-center gap-1 max-w-6xl mx-auto px-3 sm:px-6 py-2 border-t border-white/5 light:border-black/10">
+            {NAV_ITEMS.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
+                    isActive
+                      ? 'bg-white/10 text-white light:bg-black/[0.06] light:text-zinc-900'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/5 light:text-zinc-500 light:hover:text-zinc-900 light:hover:bg-black/[0.04]'
+                  }`
+                }
+              >
+                <item.icon size={15} /> {item.label}
+              </NavLink>
+            ))}
+            {user.role === 'admin' && (
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  `flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
+                    isActive
+                      ? 'bg-white/10 text-white light:bg-black/[0.06] light:text-zinc-900'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/5 light:text-zinc-500 light:hover:text-zinc-900 light:hover:bg-black/[0.04]'
+                  }`
+                }
+              >
+                <ShieldCheck size={15} /> Admin
+              </NavLink>
+            )}
+          </nav>
+        )}
       </header>
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 pb-24 sm:pb-8">{children}</main>
       {user && (
