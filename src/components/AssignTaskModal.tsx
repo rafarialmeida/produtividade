@@ -3,8 +3,11 @@ import { createPortal } from 'react-dom'
 import { Loader2, UserCog, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import type { Task } from '../types'
+import { useTheme } from '../hooks/useTheme'
 
 export default function AssignTaskModal({ task, onClose }: { task: Task; onClose: () => void }) {
+  const { theme } = useTheme()
+  const optionStyle = theme === 'light' ? { backgroundColor: '#fff', color: '#18181b' } : { backgroundColor: '#0d0e14', color: '#fff' }
   const community = useAppStore((s) => (task.communityId ? s.getCommunityById(task.communityId) : undefined))
   const users = useAppStore((s) => s.users)
   const assignTask = useAppStore((s) => s.assignTask)
@@ -72,7 +75,7 @@ export default function AssignTaskModal({ task, onClose }: { task: Task; onClose
             <label className="text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5 block">Responsável pela tarefa</label>
             <select value={taskAssignee} onChange={(e) => setTaskAssignee(e.target.value)} className="input">
               {members.map((m) => (
-                <option key={m!.id} value={m!.id}>
+                <option key={m!.id} value={m!.id} style={optionStyle}>
                   {m!.name}
                 </option>
               ))}
@@ -91,9 +94,11 @@ export default function AssignTaskModal({ task, onClose }: { task: Task; onClose
                       onChange={(e) => setSubtaskAssignees((prev) => ({ ...prev, [s.id]: e.target.value }))}
                       className="input !w-32 sm:!w-40 !py-1 !text-xs shrink-0"
                     >
-                      <option value="">Mesmo da tarefa</option>
+                      <option value="" style={optionStyle}>
+                        Mesmo da tarefa
+                      </option>
                       {members.map((m) => (
-                        <option key={m!.id} value={m!.id}>
+                        <option key={m!.id} value={m!.id} style={optionStyle}>
                           {m!.name}
                         </option>
                       ))}

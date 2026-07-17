@@ -10,8 +10,11 @@ import MoodWall from '../components/MoodWall'
 import { isNearDeadline } from '../utils/date'
 import { URGENCY_POINTS } from '../types'
 import type { Task } from '../types'
+import { useTheme } from '../hooks/useTheme'
 
 export default function MyDay() {
+  const { theme } = useTheme()
+  const optionStyle = theme === 'light' ? { backgroundColor: '#fff', color: '#18181b' } : { backgroundColor: '#0d0e14', color: '#fff' }
   const user = useAppStore((s) => s.authUser)!
   const allCommunities = useAppStore((s) => s.communities)
   const communities = useMemo(
@@ -164,9 +167,11 @@ export default function MyDay() {
             onChange={(e) => setCategoryFilter(e.target.value)}
             className="input !w-auto !py-1.5 !text-xs"
           >
-            <option value="all">Todas as categorias</option>
+            <option value="all" style={optionStyle}>
+              Todas as categorias
+            </option>
             {availableCategories.map((c) => (
-              <option key={c} value={c}>
+              <option key={c} value={c} style={optionStyle}>
                 {c}
               </option>
             ))}

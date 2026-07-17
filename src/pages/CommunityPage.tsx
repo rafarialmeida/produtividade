@@ -13,10 +13,13 @@ import TaskHistoryModal from '../components/TaskHistoryModal'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
 import { SEVERITY_LABEL } from '../types'
+import { useTheme } from '../hooks/useTheme'
 
 const CommunityBoard = lazy(() => import('../components/CommunityBoard'))
 
 export default function CommunityPage() {
+  const { theme } = useTheme()
+  const optionStyle = theme === 'light' ? { backgroundColor: '#fff', color: '#18181b' } : { backgroundColor: '#0d0e14', color: '#fff' }
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const currentUser = useAppStore((s) => s.authUser)!
@@ -326,9 +329,11 @@ export default function CommunityPage() {
                   onChange={(e) => setUserFilter(e.target.value)}
                   className="input !w-auto !py-1 !text-xs"
                 >
-                  <option value="all">Todos os membros</option>
+                  <option value="all" style={optionStyle}>
+                    Todos os membros
+                  </option>
                   {members.map((m) => (
-                    <option key={m.id} value={m.id}>
+                    <option key={m.id} value={m.id} style={optionStyle}>
                       {m.name}
                     </option>
                   ))}
