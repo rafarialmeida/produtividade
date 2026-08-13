@@ -565,7 +565,7 @@ begin
 
   insert into public.community_join_requests (community_id, user_id, status, resolved_at, resolved_by)
   values (_community.id, auth.uid(), 'pending', null, null)
-  on conflict (community_id, user_id)
+  on conflict on constraint community_join_requests_community_id_user_id_key
   do update set status = 'pending', created_at = now(), resolved_at = null, resolved_by = null;
 
   insert into public.notifications (user_id, type, message)
