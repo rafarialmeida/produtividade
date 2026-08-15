@@ -173,6 +173,7 @@ export interface MacroObjective {
   communityId?: string
   userId: string
   title: string
+  description?: string
   createdAt: string
 }
 
@@ -191,6 +192,7 @@ export interface Task {
   userId: string
   macroObjectiveId: string
   macroObjective: string
+  macroObjectiveDescription?: string
   title: string
   category: string
   subtasks: SubTask[]

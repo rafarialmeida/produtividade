@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { CalendarClock, ListChecks, Lock, Plus, Target } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
-import type { Task } from '../types'
+import type { BoardStatus, Task } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { formatRelative, isNearDeadline, isPastDeadline } from '../utils/date'
 import { KANBAN_COLUMNS as COLUMNS, resolveKanbanColumn as resolveColumn, type KanbanColumn } from '../utils/kanbanColumn'
@@ -9,12 +9,14 @@ import BlockTaskModal from './BlockTaskModal'
 import CompleteTaskModal from './CompleteTaskModal'
 import TaskDetailModal from './TaskDetailModal'
 
+const CREATABLE_STATUSES: BoardStatus[] = ['backlog', 'todo', 'in_progress', 'awaiting_approval']
+
 export default function CommunityKanbanBoard({
   communityId,
   onNewTask,
 }: {
   communityId: string
-  onNewTask: () => void
+  onNewTask: (initialStatus?: BoardStatus) => void
 }) {
   const authUser = useAppStore((s) => s.authUser)
   const community = useAppStore((s) => s.getCommunityById(communityId))
@@ -132,7 +134,7 @@ export default function CommunityKanbanBoard({
         <p className="text-[11px] text-zinc-500">
           Arraste os cards entre as colunas. Só um admin da comunidade aprova (conclui) tarefa de outra pessoa.
         </p>
-        <button onClick={onNewTask} className="btn-secondary !w-auto px-3 shrink-0">
+        <button onClick={() => onNewTask()} className="btn-secondary !w-auto px-3 shrink-0">
           <Plus size={14} /> Nova Tarefa
         </button>
       </div>
@@ -158,7 +160,19 @@ export default function CommunityKanbanBoard({
             >
               <div className="flex items-center justify-between px-1">
                 <h3 className="text-xs font-semibold text-zinc-300 light:text-zinc-700">{col.label}</h3>
-                <span className="text-[10px] text-zinc-500 tabular-nums">{colTasks.length}</span>
+                <div className="flex items-center gap-2">
+                  {CREATABLE_STATUSES.includes(col.key as BoardStatus) && (
+                    <button
+                      type="button"
+                      onClick={() => onNewTask(col.key as BoardStatus)}
+                      title={`Nova tarefa em "${col.label}"`}
+                      className="p-0.5 rounded text-zinc-500 hover:text-purple-300 light:hover:text-purple-600 hover:bg-purple-500/10 transition-colors"
+                    >
+                      <Plus size={13} />
+                    </button>
+                  )}
+                  <span className="text-[10px] text-zinc-500 tabular-nums">{colTasks.length}</span>
+                </div>
               </div>
 
               <div className="flex flex-col gap-2 min-h-[40px]">

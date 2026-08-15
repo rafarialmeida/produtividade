@@ -168,8 +168,8 @@ interface State {
   setCommunityPiece: (communityId: string, pieceId: string, color: string) => Promise<string | null>
 
   // objetivo macro
-  createMacroObjective: (title: string, communityId?: string) => Promise<string | null>
-  updateMacroObjective: (id: string, title: string) => Promise<string | null>
+  createMacroObjective: (title: string, communityId?: string, description?: string) => Promise<string | null>
+  updateMacroObjective: (id: string, title: string, description?: string) => Promise<string | null>
   deleteMacroObjective: (id: string) => Promise<string | null>
 
   // task actions
@@ -231,6 +231,7 @@ function mapTask(row: Record<string, unknown>): Task {
     userId: row.user_id as string,
     macroObjectiveId: row.macro_objective_id as string,
     macroObjective: (macroObjective?.title as string | undefined) ?? '',
+    macroObjectiveDescription: (macroObjective?.description as string | null) ?? undefined,
     title: row.title as string,
     category: row.category as string,
     subtasks: ((row.subtasks as Record<string, unknown>[] | null) ?? []).map(mapSubtask),
@@ -262,6 +263,7 @@ function mapMacroObjective(row: Record<string, unknown>): MacroObjective {
     communityId: (row.community_id as string | null) ?? undefined,
     userId: row.user_id as string,
     title: row.title as string,
+    description: (row.description as string | null) ?? undefined,
     createdAt: row.created_at as string,
   }
 }
@@ -415,7 +417,7 @@ export const useAppStore = create<State>()((set, get) => ({
       supabase.from('community_members').select('*'),
       supabase
         .from('tasks')
-        .select('*, subtasks(*), macro_objectives(title)')
+        .select('*, subtasks(*), macro_objectives(title, description)')
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .order('position', { foreignTable: 'subtasks', ascending: true }),
@@ -667,12 +669,17 @@ export const useAppStore = create<State>()((set, get) => ({
     return null
   },
 
-  createMacroObjective: async (title, communityId) => {
+  createMacroObjective: async (title, communityId, description) => {
     const authUser = get().authUser
     if (!authUser) return null
     const { data, error } = await supabase
       .from('macro_objectives')
-      .insert({ title: title.trim(), community_id: communityId ?? null, user_id: authUser.id })
+      .insert({
+        title: title.trim(),
+        community_id: communityId ?? null,
+        user_id: authUser.id,
+        description: description?.trim() ? description.trim() : null,
+      })
       .select()
       .single()
     if (error || !data) return null
@@ -680,8 +687,11 @@ export const useAppStore = create<State>()((set, get) => ({
     return data.id as string
   },
 
-  updateMacroObjective: async (id, title) => {
-    const { error } = await supabase.from('macro_objectives').update({ title: title.trim() }).eq('id', id)
+  updateMacroObjective: async (id, title, description) => {
+    const { error } = await supabase
+      .from('macro_objectives')
+      .update({ title: title.trim(), description: description?.trim() ? description.trim() : null })
+      .eq('id', id)
     if (error) return error.message
     await get().refreshAll()
     return null
@@ -905,7 +915,7 @@ export const useAppStore = create<State>()((set, get) => ({
     const [tasksRes, communitiesRes, membersRes] = await Promise.all([
       supabase
         .from('tasks')
-        .select('*, subtasks(*), macro_objectives(title)')
+        .select('*, subtasks(*), macro_objectives(title, description)')
         .eq('user_id', authUser.id)
         .not('deleted_at', 'is', null)
         .order('deleted_at', { ascending: false }),

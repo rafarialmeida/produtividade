@@ -29,6 +29,7 @@ import TaskForm from './TaskForm'
 import AssignTaskModal from './AssignTaskModal'
 import BlockTaskModal from './BlockTaskModal'
 import CompleteTaskModal from './CompleteTaskModal'
+import NoteViewerModal from './NoteViewerModal'
 
 export default function TaskCard({
   task,
@@ -66,6 +67,7 @@ export default function TaskCard({
   const [assigning, setAssigning] = useState(false)
   const [completing, setCompleting] = useState(false)
   const [blocking, setBlocking] = useState(false)
+  const [viewingNote, setViewingNote] = useState<{ title: string; text: string } | null>(null)
 
   function handleDelete() {
     if (window.confirm(`Excluir a tarefa "${task.title}"? Ela vai pra lixeira e dá pra restaurar depois.`)) {
@@ -100,10 +102,23 @@ export default function TaskCard({
     <div className={`glass-panel rounded-2xl p-5 border ${statusStyles[cardStatus]}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-1.5 text-[11px] text-purple-300/80 light:text-purple-600/80 mb-1.5">
-            <Target size={11} />
-            <span className="truncate">{task.macroObjective}</span>
-          </div>
+          {task.macroObjectiveDescription ? (
+            <button
+              type="button"
+              onClick={() => setViewingNote({ title: task.macroObjective, text: task.macroObjectiveDescription! })}
+              title="Ver descrição do objetivo"
+              className="flex items-center gap-1.5 text-[11px] text-purple-300/80 hover:text-purple-200 light:text-purple-600/80 light:hover:text-purple-700 mb-1.5 transition-colors"
+            >
+              <Target size={11} className="shrink-0" />
+              <span className="truncate">{task.macroObjective}</span>
+              <StickyNote size={10} className="shrink-0" />
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5 text-[11px] text-purple-300/80 light:text-purple-600/80 mb-1.5">
+              <Target size={11} />
+              <span className="truncate">{task.macroObjective}</span>
+            </div>
+          )}
           <h3 className={`font-semibold text-white light:text-zinc-900 ${task.completed ? 'line-through decoration-zinc-600' : ''}`}>
             {task.title}
           </h3>
@@ -205,27 +220,35 @@ export default function TaskCard({
           const subtaskNear = !st.done && st.dueDate && isNearDeadline(st.dueDate)
           const subtaskAssignee = st.assigneeId && st.assigneeId !== task.userId ? users.find((u) => u.id === st.assigneeId) : undefined
           return (
-            <button
-              key={st.id}
-              onClick={() => !task.completed && toggleSubtask(task.id, st.id)}
-              disabled={task.completed}
-              className="flex items-center gap-2 text-left group"
-            >
-              {st.done ? (
-                <CheckCircle2 size={15} className="text-emerald-400 light:text-emerald-600 shrink-0" />
-              ) : (
-                <Circle size={15} className="text-zinc-600 shrink-0 group-hover:text-zinc-400" />
-              )}
-              <span className={`text-sm ${st.done ? 'text-zinc-500 line-through' : 'text-zinc-300 light:text-zinc-700'}`}>{st.text}</span>
+            <div key={st.id} className="flex items-center gap-2">
+              <button
+                onClick={() => !task.completed && toggleSubtask(task.id, st.id)}
+                disabled={task.completed}
+                className="flex items-center gap-2 text-left group min-w-0"
+              >
+                {st.done ? (
+                  <CheckCircle2 size={15} className="text-emerald-400 light:text-emerald-600 shrink-0" />
+                ) : (
+                  <Circle size={15} className="text-zinc-600 shrink-0 group-hover:text-zinc-400" />
+                )}
+                <span className={`text-sm truncate ${st.done ? 'text-zinc-500 line-through' : 'text-zinc-300 light:text-zinc-700'}`}>
+                  {st.text}
+                </span>
+              </button>
               {subtaskAssignee && (
                 <span className="text-[10px] text-sky-300 light:text-sky-700 bg-sky-500/10 border border-sky-500/30 rounded px-1.5 py-0.5 shrink-0">
                   {subtaskAssignee.name}
                 </span>
               )}
               {st.note && (
-                <span title={st.note} className="text-zinc-600 hover:text-amber-400 light:hover:text-amber-600 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setViewingNote({ title: st.text, text: st.note! })}
+                  title="Ver observação"
+                  className="text-zinc-600 hover:text-amber-400 light:hover:text-amber-600 shrink-0"
+                >
                   <StickyNote size={11} />
-                </span>
+                </button>
               )}
               {st.dueDate && !st.done && (
                 <span
@@ -236,7 +259,7 @@ export default function TaskCard({
                   <CalendarClock size={10} /> {formatRelative(st.dueDate)}
                 </span>
               )}
-            </button>
+            </div>
           )
         })}
       </div>
@@ -305,6 +328,9 @@ export default function TaskCard({
       {assigning && <AssignTaskModal task={task} onClose={() => setAssigning(false)} />}
       {completing && <CompleteTaskModal task={task} onClose={() => setCompleting(false)} />}
       {blocking && <BlockTaskModal task={task} onClose={() => setBlocking(false)} />}
+      {viewingNote && (
+        <NoteViewerModal title={viewingNote.title} note={viewingNote.text} onClose={() => setViewingNote(null)} />
+      )}
     </div>
   )
 }

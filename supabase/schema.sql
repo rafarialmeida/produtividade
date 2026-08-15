@@ -74,6 +74,7 @@ create table if not exists public.macro_objectives (
   community_id uuid references public.communities (id) on delete cascade,
   user_id uuid not null references public.profiles (id) on delete cascade,
   title text not null,
+  description text,
   created_at timestamptz not null default now()
 );
 

@@ -12,7 +12,7 @@ import CommunityKanbanBoard from '../components/CommunityKanbanBoard'
 import TaskHistoryModal from '../components/TaskHistoryModal'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
-import { SEVERITY_LABEL } from '../types'
+import { SEVERITY_LABEL, type BoardStatus } from '../types'
 
 const CommunityBoard = lazy(() => import('../components/CommunityBoard'))
 
@@ -26,7 +26,7 @@ export default function CommunityPage() {
   const setCommunityBoardEnabled = useAppStore((s) => s.setCommunityBoardEnabled)
   const setCommunityClosed = useAppStore((s) => s.setCommunityClosed)
   const renameCommunity = useAppStore((s) => s.renameCommunity)
-  const [showForm, setShowForm] = useState(false)
+  const [showForm, setShowForm] = useState<false | true | BoardStatus>(false)
   const [showInvite, setShowInvite] = useState(false)
   const [historyUserId, setHistoryUserId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'tasks' | 'members' | 'dashboard' | 'board' | 'ranking'>('tasks')
@@ -289,11 +289,18 @@ export default function CommunityPage() {
 
       {activeTab === 'tasks' && (
         <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen px-4 sm:px-6">
-          <CommunityKanbanBoard communityId={community.id} onNewTask={() => setShowForm(true)} />
+          <CommunityKanbanBoard communityId={community.id} onNewTask={(status) => setShowForm(status ?? true)} />
         </div>
       )}
 
-      {showForm && <TaskForm communityId={community.id} userId={currentUserId} onClose={() => setShowForm(false)} />}
+      {showForm !== false && (
+        <TaskForm
+          communityId={community.id}
+          userId={currentUserId}
+          initialBoardStatus={typeof showForm === 'string' ? showForm : undefined}
+          onClose={() => setShowForm(false)}
+        />
+      )}
       {showInvite && <InviteModal communityId={community.id} onClose={() => setShowInvite(false)} />}
       {historyUserId && (
         <TaskHistoryModal

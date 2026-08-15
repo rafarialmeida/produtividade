@@ -3,11 +3,11 @@ import { createPortal } from 'react-dom'
 import {
   Ban,
   CalendarClock,
-  Check,
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  GripVertical,
   Layers,
   ListChecks,
   Pencil,
@@ -21,12 +21,13 @@ import {
   X,
 } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
-import type { Complexity, Recurrence, Severity, Task } from '../types'
+import type { BoardStatus, Complexity, Recurrence, Severity, Task } from '../types'
 import { COMPLEXITY_LABEL, COMPLEXITY_MULTIPLIER } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { CATEGORY_PRESETS } from '../utils/category'
 import { toDatetimeLocalValue } from '../utils/date'
 import { useTheme } from '../hooks/useTheme'
+import NoteViewerModal from './NoteViewerModal'
 
 const RECURRENCE_KEYS: Recurrence[] = ['daily', 'every_other_day', 'weekly', 'biweekly', 'monthly']
 
@@ -77,15 +78,98 @@ function buildMonthGrid(year: number, month: number): { date: Date; inMonth: boo
   return cells
 }
 
+function MacroEditForm({
+  title,
+  description,
+  showDesc,
+  saving,
+  placeholder,
+  onTitleChange,
+  onDescriptionChange,
+  onToggleDesc,
+  onConfirm,
+  onCancel,
+}: {
+  title: string
+  description: string
+  showDesc: boolean
+  saving: boolean
+  placeholder?: string
+  onTitleChange: (v: string) => void
+  onDescriptionChange: (v: string) => void
+  onToggleDesc: () => void
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  return (
+    <div className="flex flex-col gap-1.5 p-2 rounded-lg border border-purple-500/40 bg-white/5 w-full sm:w-64 light:bg-black/5">
+      <input
+        autoFocus
+        value={title}
+        onChange={(e) => onTitleChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !showDesc) {
+            e.preventDefault()
+            onConfirm()
+          }
+          if (e.key === 'Escape') onCancel()
+        }}
+        disabled={saving}
+        placeholder={placeholder ?? 'Título do objetivo'}
+        className="text-xs px-2 py-1.5 rounded-lg border border-white/10 bg-transparent text-white outline-none light:text-zinc-900 disabled:opacity-50"
+      />
+      {showDesc ? (
+        <textarea
+          autoFocus={!description}
+          value={description}
+          onChange={(e) => onDescriptionChange(e.target.value)}
+          placeholder="Descrição (opcional) — links, pessoas, contexto..."
+          rows={3}
+          disabled={saving}
+          className="text-xs px-2 py-1.5 rounded-lg border border-white/10 bg-transparent text-white outline-none resize-none light:text-zinc-900 disabled:opacity-50"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={onToggleDesc}
+          className="flex items-center gap-1 text-[11px] text-zinc-500 hover:text-emerald-300 light:hover:text-emerald-600 self-start"
+        >
+          <StickyNote size={11} /> Adicionar descrição
+        </button>
+      )}
+      <div className="flex gap-1.5 justify-end">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={saving}
+          className="text-[11px] px-2 py-1 rounded text-zinc-500 hover:bg-white/5 disabled:opacity-50"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={saving || !title.trim()}
+          className="text-[11px] px-2 py-1 rounded bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 disabled:opacity-40"
+        >
+          Salvar
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function TaskForm({
   communityId: fixedCommunityId,
   userId,
   task,
+  initialBoardStatus,
   onClose,
 }: {
   communityId?: string
   userId: string
   task?: Task
+  initialBoardStatus?: BoardStatus
   onClose: () => void
 }) {
   const isEditing = Boolean(task)
@@ -94,6 +178,7 @@ export default function TaskForm({
   const createTask = useAppStore((s) => s.createTask)
   const updateTask = useAppStore((s) => s.updateTask)
   const assignTask = useAppStore((s) => s.assignTask)
+  const setTaskBoardStatus = useAppStore((s) => s.setTaskBoardStatus)
   const createMacroObjective = useAppStore((s) => s.createMacroObjective)
   const updateMacroObjective = useAppStore((s) => s.updateMacroObjective)
   const deleteMacroObjective = useAppStore((s) => s.deleteMacroObjective)
@@ -139,12 +224,17 @@ export default function TaskForm({
   const [showMacroList, setShowMacroList] = useState(false)
   const [addingMacro, setAddingMacro] = useState(false)
   const [newMacro, setNewMacro] = useState('')
+  const [newMacroDescription, setNewMacroDescription] = useState('')
+  const [newMacroShowDesc, setNewMacroShowDesc] = useState(false)
   const [creatingMacro, setCreatingMacro] = useState(false)
   const [deletingMacroId, setDeletingMacroId] = useState<string | null>(null)
   const [macroDeleteError, setMacroDeleteError] = useState('')
   const [editingMacroId, setEditingMacroId] = useState<string | null>(null)
   const [editMacroTitle, setEditMacroTitle] = useState('')
+  const [editMacroDescription, setEditMacroDescription] = useState('')
+  const [editMacroShowDesc, setEditMacroShowDesc] = useState(false)
   const [savingMacroEdit, setSavingMacroEdit] = useState(false)
+  const [viewingMacroDescription, setViewingMacroDescription] = useState<{ title: string; text: string } | null>(null)
   const [complexity, setComplexity] = useState<Complexity>(task?.complexity ?? 'media')
   const [notScored, setNotScored] = useState(task ? !task.scored : false)
   const [title, setTitle] = useState(task?.title ?? '')
@@ -173,6 +263,8 @@ export default function TaskForm({
   const [assigneeId, setAssigneeId] = useState(userId)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [dragSubtaskIndex, setDragSubtaskIndex] = useState<number | null>(null)
+  const [dragOverSubtaskIndex, setDragOverSubtaskIndex] = useState<number | null>(null)
 
   const monthGrid = useMemo(
     () => buildMonthGrid(calendarCursor.getFullYear(), calendarCursor.getMonth()),
@@ -255,6 +347,15 @@ export default function TaskForm({
     setSubtasks((s) => (s.length === 1 ? s : s.filter((_, i) => i !== index)))
   }
 
+  function reorderSubtask(from: number, to: number) {
+    setSubtasks((s) => {
+      const next = [...s]
+      const [moved] = next.splice(from, 1)
+      next.splice(to, 0, moved)
+      return next
+    })
+  }
+
   function confirmNewCategory() {
     const trimmed = newCategory.trim()
     if (!trimmed) {
@@ -269,19 +370,25 @@ export default function TaskForm({
     setAddingCategory(false)
   }
 
+  function cancelNewMacro() {
+    setAddingMacro(false)
+    setNewMacro('')
+    setNewMacroDescription('')
+    setNewMacroShowDesc(false)
+  }
+
   async function confirmNewMacro() {
     if (creatingMacro) return
     const trimmed = newMacro.trim()
     if (!trimmed) {
-      setAddingMacro(false)
+      cancelNewMacro()
       return
     }
     setCreatingMacro(true)
-    const id = await createMacroObjective(trimmed, communityId || undefined)
+    const id = await createMacroObjective(trimmed, communityId || undefined, newMacroDescription)
     setCreatingMacro(false)
     if (id) setMacroObjectiveId(id)
-    setNewMacro('')
-    setAddingMacro(false)
+    cancelNewMacro()
   }
 
   async function handleDeleteMacro(id: string, title: string) {
@@ -297,15 +404,19 @@ export default function TaskForm({
     setMacroDeleteError('')
   }
 
-  function startEditMacro(id: string, title: string) {
+  function startEditMacro(id: string, title: string, description?: string) {
     setEditingMacroId(id)
     setEditMacroTitle(title)
+    setEditMacroDescription(description ?? '')
+    setEditMacroShowDesc(Boolean(description))
     setMacroDeleteError('')
   }
 
   function cancelEditMacro() {
     setEditingMacroId(null)
     setEditMacroTitle('')
+    setEditMacroDescription('')
+    setEditMacroShowDesc(false)
   }
 
   async function confirmEditMacro() {
@@ -316,7 +427,7 @@ export default function TaskForm({
       return
     }
     setSavingMacroEdit(true)
-    const error = await updateMacroObjective(editingMacroId, trimmed)
+    const error = await updateMacroObjective(editingMacroId, trimmed, editMacroDescription)
     setSavingMacroEdit(false)
     if (error) {
       setMacroDeleteError(error)
@@ -392,6 +503,10 @@ export default function TaskForm({
         await Promise.all(createdIds.map((id) => assignTask(id, assigneeId)))
       }
 
+      if (initialBoardStatus && initialBoardStatus !== 'todo') {
+        await Promise.all(createdIds.map((id) => setTaskBoardStatus(id, initialBoardStatus)))
+      }
+
       onClose()
     } finally {
       setSubmitting(false)
@@ -446,21 +561,17 @@ export default function TaskForm({
                   .filter((m) => m.id === macroObjectiveId)
                   .map((m) =>
                     editingMacroId === m.id ? (
-                      <input
+                      <MacroEditForm
                         key={m.id}
-                        autoFocus
-                        value={editMacroTitle}
-                        onChange={(e) => setEditMacroTitle(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault()
-                            confirmEditMacro()
-                          }
-                          if (e.key === 'Escape') cancelEditMacro()
-                        }}
-                        onBlur={confirmEditMacro}
-                        disabled={savingMacroEdit}
-                        className="text-xs px-2.5 py-1.5 rounded-lg border border-purple-500/40 bg-white/5 text-white outline-none w-44 light:bg-black/5 light:text-zinc-900 disabled:opacity-50"
+                        title={editMacroTitle}
+                        description={editMacroDescription}
+                        showDesc={editMacroShowDesc}
+                        saving={savingMacroEdit}
+                        onTitleChange={setEditMacroTitle}
+                        onDescriptionChange={setEditMacroDescription}
+                        onToggleDesc={() => setEditMacroShowDesc((v) => !v)}
+                        onConfirm={confirmEditMacro}
+                        onCancel={cancelEditMacro}
                       />
                     ) : (
                       <div key={m.id} className="flex items-center gap-1">
@@ -471,9 +582,19 @@ export default function TaskForm({
                         >
                           {m.title}
                         </button>
+                        {m.description && (
+                          <button
+                            type="button"
+                            onClick={() => setViewingMacroDescription({ title: m.title, text: m.description! })}
+                            title="Ver descrição do objetivo"
+                            className="p-1.5 rounded-lg text-zinc-500 hover:text-amber-300 light:hover:text-amber-600 hover:bg-amber-500/10 transition-colors"
+                          >
+                            <StickyNote size={12} />
+                          </button>
+                        )}
                         <button
                           type="button"
-                          onClick={() => startEditMacro(m.id, m.title)}
+                          onClick={() => startEditMacro(m.id, m.title, m.description)}
                           title="Editar objetivo macro"
                           className="p-1.5 rounded-lg text-zinc-500 hover:text-purple-300 light:hover:text-purple-600 hover:bg-purple-500/10 transition-colors"
                         >
@@ -492,24 +613,17 @@ export default function TaskForm({
                     ),
                   )}
               {addingMacro ? (
-                <input
-                  autoFocus
-                  value={newMacro}
-                  onChange={(e) => setNewMacro(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      confirmNewMacro()
-                    }
-                    if (e.key === 'Escape') {
-                      setAddingMacro(false)
-                      setNewMacro('')
-                    }
-                  }}
-                  onBlur={confirmNewMacro}
-                  disabled={creatingMacro}
+                <MacroEditForm
+                  title={newMacro}
+                  description={newMacroDescription}
+                  showDesc={newMacroShowDesc}
+                  saving={creatingMacro}
                   placeholder={community?.type === 'competicao' ? 'Ex.: Meta pessoal de saúde' : 'Ex.: Lançamento Q3 do produto'}
-                  className="text-xs px-2.5 py-1.5 rounded-lg border border-purple-500/40 bg-white/5 text-white outline-none w-44 light:bg-black/5 light:text-zinc-900 disabled:opacity-50"
+                  onTitleChange={setNewMacro}
+                  onDescriptionChange={setNewMacroDescription}
+                  onToggleDesc={() => setNewMacroShowDesc((v) => !v)}
+                  onConfirm={confirmNewMacro}
+                  onCancel={cancelNewMacro}
                 />
               ) : (
                 <button
@@ -535,39 +649,18 @@ export default function TaskForm({
               <div className="mt-1.5 rounded-lg border border-white/10 light:border-black/15 divide-y divide-white/5 light:divide-black/5 overflow-hidden">
                 {scopedMacroObjectives.map((m) =>
                   editingMacroId === m.id ? (
-                    <div key={m.id} className="flex items-center gap-1 px-2 py-1.5">
-                      <input
-                        autoFocus
-                        value={editMacroTitle}
-                        onChange={(e) => setEditMacroTitle(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault()
-                            confirmEditMacro()
-                          }
-                          if (e.key === 'Escape') cancelEditMacro()
-                        }}
-                        disabled={savingMacroEdit}
-                        className="flex-1 text-xs px-2 py-1 rounded-lg border border-purple-500/40 bg-white/5 text-white outline-none light:bg-black/5 light:text-zinc-900 disabled:opacity-50"
+                    <div key={m.id} className="px-2 py-1.5">
+                      <MacroEditForm
+                        title={editMacroTitle}
+                        description={editMacroDescription}
+                        showDesc={editMacroShowDesc}
+                        saving={savingMacroEdit}
+                        onTitleChange={setEditMacroTitle}
+                        onDescriptionChange={setEditMacroDescription}
+                        onToggleDesc={() => setEditMacroShowDesc((v) => !v)}
+                        onConfirm={confirmEditMacro}
+                        onCancel={cancelEditMacro}
                       />
-                      <button
-                        type="button"
-                        onClick={confirmEditMacro}
-                        disabled={savingMacroEdit}
-                        title="Salvar"
-                        className="p-1.5 text-emerald-400 light:text-emerald-600 hover:bg-emerald-500/10 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        <Check size={13} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={cancelEditMacro}
-                        disabled={savingMacroEdit}
-                        title="Cancelar"
-                        className="p-1.5 text-zinc-500 hover:bg-white/5 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        <X size={13} />
-                      </button>
                     </div>
                   ) : (
                     <div key={m.id} className="flex items-center gap-1">
@@ -585,9 +678,19 @@ export default function TaskForm({
                       >
                         {m.title}
                       </button>
+                      {m.description && (
+                        <button
+                          type="button"
+                          onClick={() => setViewingMacroDescription({ title: m.title, text: m.description! })}
+                          title="Ver descrição do objetivo"
+                          className="p-2 text-zinc-500 hover:text-amber-300 light:hover:text-amber-600 transition-colors"
+                        >
+                          <StickyNote size={13} />
+                        </button>
+                      )}
                       <button
                         type="button"
-                        onClick={() => startEditMacro(m.id, m.title)}
+                        onClick={() => startEditMacro(m.id, m.title, m.description)}
                         title="Editar objetivo macro"
                         className="p-2 text-zinc-500 hover:text-purple-300 light:hover:text-purple-600 transition-colors"
                       >
@@ -697,9 +800,40 @@ export default function TaskForm({
             </label>
             <div className="flex flex-col gap-2">
               {subtasks.map((s, i) => (
-                <div key={i} className="rounded-xl border border-white/5 bg-white/[0.02] p-2 flex flex-col gap-1.5 light:border-black/5 light:bg-black/[0.015]">
+                <div
+                  key={i}
+                  onDragOver={(e) => {
+                    if (dragSubtaskIndex === null) return
+                    e.preventDefault()
+                    setDragOverSubtaskIndex(i)
+                  }}
+                  onDragLeave={() => setDragOverSubtaskIndex((c) => (c === i ? null : c))}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    setDragOverSubtaskIndex(null)
+                    if (dragSubtaskIndex === null || dragSubtaskIndex === i) return
+                    reorderSubtask(dragSubtaskIndex, i)
+                    setDragSubtaskIndex(null)
+                  }}
+                  className={`rounded-xl border p-2 flex flex-col gap-1.5 transition-colors ${
+                    dragOverSubtaskIndex === i
+                      ? 'border-purple-500/50 bg-purple-500/[0.06]'
+                      : 'border-white/5 bg-white/[0.02] light:border-black/5 light:bg-black/[0.015]'
+                  }`}
+                >
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-zinc-600 w-4">{i + 1}.</span>
+                    <span
+                      draggable={subtasks.length > 1}
+                      onDragStart={() => setDragSubtaskIndex(i)}
+                      onDragEnd={() => {
+                        setDragSubtaskIndex(null)
+                        setDragOverSubtaskIndex(null)
+                      }}
+                      title={subtasks.length > 1 ? 'Arraste para reordenar' : undefined}
+                      className={`shrink-0 text-zinc-600 ${subtasks.length > 1 ? 'cursor-grab active:cursor-grabbing hover:text-zinc-400' : 'opacity-30'}`}
+                    >
+                      <GripVertical size={14} />
+                    </span>
                     <input
                       value={s.text}
                       onChange={(e) => updateSubtaskText(i, e.target.value)}
@@ -1008,6 +1142,13 @@ export default function TaskForm({
           )}
         </form>
       </div>
+      {viewingMacroDescription && (
+        <NoteViewerModal
+          title={viewingMacroDescription.title}
+          note={viewingMacroDescription.text}
+          onClose={() => setViewingMacroDescription(null)}
+        />
+      )}
     </div>,
     document.body,
   )
