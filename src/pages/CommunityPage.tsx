@@ -288,7 +288,9 @@ export default function CommunityPage() {
       {activeTab === 'ranking' && showBoard && <CommunityRankingBoard communityId={community.id} />}
 
       {activeTab === 'tasks' && (
-        <CommunityKanbanBoard communityId={community.id} onNewTask={() => setShowForm(true)} />
+        <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen px-4 sm:px-6">
+          <CommunityKanbanBoard communityId={community.id} onNewTask={() => setShowForm(true)} />
+        </div>
       )}
 
       {showForm && <TaskForm communityId={community.id} userId={currentUserId} onClose={() => setShowForm(false)} />}

@@ -888,6 +888,83 @@ begin
 end;
 $$;
 
+-- Mover pra lixeira / restaurar continuam só o dono (ou admin da plataforma) —
+-- admin de comunidade ganhou edição de conteúdo, mas não excluir tarefa alheia.
+create or replace function public.soft_delete_task(_task_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _owner_id uuid;
+begin
+  select user_id into _owner_id from public.tasks where id = _task_id;
+  if _owner_id is null then
+    raise exception 'not found';
+  end if;
+  if not (_owner_id = auth.uid() or public.is_admin()) then
+    raise exception 'not authorized';
+  end if;
+  update public.tasks set deleted_at = now() where id = _task_id;
+end;
+$$;
+
+create or replace function public.restore_task(_task_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _owner_id uuid;
+begin
+  select user_id into _owner_id from public.tasks where id = _task_id;
+  if _owner_id is null then
+    raise exception 'not found';
+  end if;
+  if not (_owner_id = auth.uid() or public.is_admin()) then
+    raise exception 'not authorized';
+  end if;
+  update public.tasks set deleted_at = null where id = _task_id;
+end;
+$$;
+
+-- Marca subtarefa feita/não feita — liberado pra qualquer colega da mesma
+-- comunidade (checklist colaborativo), não só dono/admin. Reescrever outros
+-- campos da subtarefa (texto, nota, prazo) exige dono/admin e vai direto pela
+-- tabela, não por aqui — ver política subtasks_update_owner_or_admin.
+create or replace function public.toggle_subtask_done(_subtask_id uuid, _done boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _owner_id uuid;
+  _community_id uuid;
+begin
+  select t.user_id, t.community_id into _owner_id, _community_id
+  from public.subtasks s
+  join public.tasks t on t.id = s.task_id
+  where s.id = _subtask_id;
+
+  if _owner_id is null then
+    raise exception 'not found';
+  end if;
+
+  if not (
+    _owner_id = auth.uid()
+    or (_community_id is not null and public.is_community_member(_community_id))
+    or public.is_admin()
+  ) then
+    raise exception 'not authorized';
+  end if;
+
+  update public.subtasks set done = _done where id = _subtask_id;
+end;
+$$;
+
 -- Gera um novo código de convite (só quem criou a comunidade ou um admin).
 create or replace function public.regenerate_invite_code(_community_id uuid)
 returns text
@@ -1670,6 +1747,9 @@ grant execute on function public.set_task_blocked(uuid, boolean, text, double pr
 grant execute on function public.set_task_board_status(uuid, text, double precision) to authenticated;
 grant execute on function public.complete_task(uuid, integer, double precision) to authenticated;
 grant execute on function public.reopen_task(uuid, double precision) to authenticated;
+grant execute on function public.soft_delete_task(uuid) to authenticated;
+grant execute on function public.restore_task(uuid) to authenticated;
+grant execute on function public.toggle_subtask_done(uuid, boolean) to authenticated;
 grant execute on function public.join_community_with_code(text) to authenticated;
 grant execute on function public.approve_join_request(uuid) to authenticated;
 grant execute on function public.reject_join_request(uuid) to authenticated;
@@ -1779,7 +1859,10 @@ create policy "macro_objectives_delete_own" on public.macro_objectives for delet
   using (user_id = auth.uid() or public.is_admin());
 
 -- tasks: dono sempre vê e edita as próprias. Tarefas de uma comunidade são visíveis
--- para todos os membros dela, mas só o dono edita/exclui/conclui.
+-- para todos os membros dela; dono ou admin da comunidade (ou admin da plataforma)
+-- edita. Reatribuir o responsável (user_id) e excluir/restaurar (deleted_at) ficam
+-- de fora do update direto — só passam pelas funções assign_task / soft_delete_task /
+-- restore_task, que validam regras extras (ex.: novo responsável precisa ser membro).
 drop policy if exists "tasks_select_own_or_community" on public.tasks;
 create policy "tasks_select_own_or_community" on public.tasks for select to authenticated
   using (
@@ -1793,16 +1876,32 @@ create policy "tasks_insert_own" on public.tasks for insert to authenticated
   with check (user_id = auth.uid());
 
 drop policy if exists "tasks_update_own" on public.tasks;
-create policy "tasks_update_own" on public.tasks for update to authenticated
-  using (user_id = auth.uid());
+drop policy if exists "tasks_update_own_or_community_admin" on public.tasks;
+create policy "tasks_update_own_or_community_admin" on public.tasks for update to authenticated
+  using (
+    user_id = auth.uid()
+    or (community_id is not null and public.is_community_admin(community_id))
+    or public.is_admin()
+  );
+
+revoke update on public.tasks from authenticated;
+grant update (
+  community_id, macro_objective_id, title, category, deadline, urgency, complexity,
+  started, started_at, completed, completed_at, minutes_spent, expired, scored,
+  recurrence, blocked, blocked_reason, blocked_at, blocked_by, board_status, board_order,
+  reminder_sent_at
+) on public.tasks to authenticated;
 
 drop policy if exists "tasks_delete_own" on public.tasks;
 create policy "tasks_delete_own" on public.tasks for delete to authenticated
   using (user_id = auth.uid());
 
--- subtasks: seguem a visibilidade da tarefa. Marcar feito/não feito é permitido para
--- o dono da tarefa e para colegas da mesma comunidade (checklist colaborativo em
--- comunidades de Trabalho); tarefas pessoais só o dono mexe.
+-- subtasks: seguem a visibilidade da tarefa. Reescrever qualquer campo (texto, nota,
+-- prazo, etc.) é permitido pro dono da tarefa ou admin da comunidade — igual à
+-- tarefa em si. Marcar feito/não feito continua liberado pra qualquer colega da
+-- mesma comunidade (checklist colaborativo), mas passa pela função
+-- toggle_subtask_done, já que o update direto na tabela agora exige dono/admin.
+-- Atribuir responsável de subtarefa (assignee_id) só pela função assign_subtask.
 drop policy if exists "subtasks_select_via_task" on public.subtasks;
 create policy "subtasks_select_via_task" on public.subtasks for select to authenticated
   using (exists (
@@ -1816,20 +1915,46 @@ create policy "subtasks_select_via_task" on public.subtasks for select to authen
   ));
 
 drop policy if exists "subtasks_insert_via_task_owner" on public.subtasks;
-create policy "subtasks_insert_via_task_owner" on public.subtasks for insert to authenticated
-  with check (exists (select 1 from public.tasks t where t.id = subtasks.task_id and t.user_id = auth.uid()));
+drop policy if exists "subtasks_insert_owner_or_admin" on public.subtasks;
+create policy "subtasks_insert_owner_or_admin" on public.subtasks for insert to authenticated
+  with check (exists (
+    select 1 from public.tasks t
+    where t.id = subtasks.task_id
+      and (
+        t.user_id = auth.uid()
+        or (t.community_id is not null and public.is_community_admin(t.community_id))
+        or public.is_admin()
+      )
+  ));
 
 drop policy if exists "subtasks_update_via_task_or_community" on public.subtasks;
-create policy "subtasks_update_via_task_or_community" on public.subtasks for update to authenticated
+drop policy if exists "subtasks_update_owner_or_admin" on public.subtasks;
+create policy "subtasks_update_owner_or_admin" on public.subtasks for update to authenticated
   using (exists (
     select 1 from public.tasks t
     where t.id = subtasks.task_id
-      and (t.user_id = auth.uid() or (t.community_id is not null and public.is_community_member(t.community_id)))
+      and (
+        t.user_id = auth.uid()
+        or (t.community_id is not null and public.is_community_admin(t.community_id))
+        or public.is_admin()
+      )
   ));
 
 drop policy if exists "subtasks_delete_via_task_owner" on public.subtasks;
-create policy "subtasks_delete_via_task_owner" on public.subtasks for delete to authenticated
-  using (exists (select 1 from public.tasks t where t.id = subtasks.task_id and t.user_id = auth.uid()));
+drop policy if exists "subtasks_delete_owner_or_admin" on public.subtasks;
+create policy "subtasks_delete_owner_or_admin" on public.subtasks for delete to authenticated
+  using (exists (
+    select 1 from public.tasks t
+    where t.id = subtasks.task_id
+      and (
+        t.user_id = auth.uid()
+        or (t.community_id is not null and public.is_community_admin(t.community_id))
+        or public.is_admin()
+      )
+  ));
+
+revoke update on public.subtasks from authenticated;
+grant update (text, done, position, due_date, minutes_spent, note) on public.subtasks to authenticated;
 
 -- notifications: cada um só vê e mexe nas próprias.
 drop policy if exists "notifications_select_own" on public.notifications;

@@ -178,23 +178,23 @@ export default function TaskCard({
               {task.blocked ? <Unlock size={13} /> : <Lock size={13} />}
             </button>
           )}
+          {(isOwner || isCommunityAdmin) && (
+            <button
+              onClick={() => setEditing(true)}
+              title="Editar tarefa"
+              className="p-1.5 rounded-lg text-zinc-600 hover:text-purple-300 light:hover:text-purple-600 hover:bg-purple-500/10 transition-colors"
+            >
+              <Pencil size={13} />
+            </button>
+          )}
           {isOwner && (
-            <>
-              <button
-                onClick={() => setEditing(true)}
-                title="Editar tarefa"
-                className="p-1.5 rounded-lg text-zinc-600 hover:text-purple-300 light:hover:text-purple-600 hover:bg-purple-500/10 transition-colors"
-              >
-                <Pencil size={13} />
-              </button>
-              <button
-                onClick={handleDelete}
-                title="Excluir tarefa"
-                className="p-1.5 rounded-lg text-zinc-600 hover:text-rose-400 light:hover:text-rose-600 hover:bg-rose-500/10 transition-colors"
-              >
-                <Trash2 size={13} />
-              </button>
-            </>
+            <button
+              onClick={handleDelete}
+              title="Excluir tarefa"
+              className="p-1.5 rounded-lg text-zinc-600 hover:text-rose-400 light:hover:text-rose-600 hover:bg-rose-500/10 transition-colors"
+            >
+              <Trash2 size={13} />
+            </button>
           )}
         </div>
       </div>
@@ -288,7 +288,7 @@ export default function TaskCard({
           </div>
         )}
 
-        {task.completed && isOwner && (
+        {task.completed && (isOwner || isCommunityAdmin) && (
           <button
             onClick={() => reopenTask(task.id)}
             title="Voltar para Em andamento"

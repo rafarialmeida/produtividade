@@ -4,26 +4,10 @@ import { useAppStore } from '../store/useStore'
 import type { Task } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { formatRelative, isNearDeadline, isPastDeadline } from '../utils/date'
+import { KANBAN_COLUMNS as COLUMNS, resolveKanbanColumn as resolveColumn, type KanbanColumn } from '../utils/kanbanColumn'
 import BlockTaskModal from './BlockTaskModal'
 import CompleteTaskModal from './CompleteTaskModal'
 import TaskDetailModal from './TaskDetailModal'
-
-type KanbanColumn = 'backlog' | 'todo' | 'in_progress' | 'awaiting_approval' | 'blocked' | 'completed'
-
-const COLUMNS: { key: KanbanColumn; label: string }[] = [
-  { key: 'backlog', label: 'Backlog' },
-  { key: 'todo', label: 'A Fazer' },
-  { key: 'in_progress', label: 'Em andamento' },
-  { key: 'awaiting_approval', label: 'Aguardando aprovação' },
-  { key: 'blocked', label: 'Bloqueadas' },
-  { key: 'completed', label: 'Concluídas' },
-]
-
-function resolveColumn(task: Task): KanbanColumn {
-  if (task.completed) return 'completed'
-  if (task.blocked) return 'blocked'
-  return task.boardStatus
-}
 
 export default function CommunityKanbanBoard({
   communityId,
@@ -153,7 +137,7 @@ export default function CommunityKanbanBoard({
         </button>
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+      <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1">
         {COLUMNS.map((col) => {
           const colTasks = byColumn[col.key]
           const isDragOver = dragOverColumn === col.key
@@ -166,7 +150,7 @@ export default function CommunityKanbanBoard({
               }}
               onDragLeave={() => setDragOverColumn((c) => (c === col.key ? null : c))}
               onDrop={handleDropOnColumn(col.key)}
-              className={`shrink-0 w-72 rounded-2xl border p-2.5 flex flex-col gap-2 transition-colors ${
+              className={`shrink-0 w-72 sm:w-80 xl:w-96 min-h-[70vh] rounded-2xl border p-2.5 flex flex-col gap-2 transition-colors ${
                 isDragOver
                   ? 'border-purple-500/50 bg-purple-500/[0.04]'
                   : 'border-white/10 bg-white/[0.02] light:border-black/10 light:bg-black/[0.015]'

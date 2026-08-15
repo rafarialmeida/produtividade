@@ -169,6 +169,7 @@ interface State {
 
   // objetivo macro
   createMacroObjective: (title: string, communityId?: string) => Promise<string | null>
+  updateMacroObjective: (id: string, title: string) => Promise<string | null>
   deleteMacroObjective: (id: string) => Promise<string | null>
 
   // task actions
@@ -679,6 +680,13 @@ export const useAppStore = create<State>()((set, get) => ({
     return data.id as string
   },
 
+  updateMacroObjective: async (id, title) => {
+    const { error } = await supabase.from('macro_objectives').update({ title: title.trim() }).eq('id', id)
+    if (error) return error.message
+    await get().refreshAll()
+    return null
+  },
+
   deleteMacroObjective: async (id) => {
     const { error } = await supabase.from('macro_objectives').delete().eq('id', id)
     if (error) {
@@ -776,15 +784,26 @@ export const useAppStore = create<State>()((set, get) => ({
     const task = get().tasks.find((t) => t.id === taskId)
     const subtask = task?.subtasks.find((s) => s.id === subtaskId)
     if (!subtask) return
-    await supabase.from('subtasks').update({ done: !subtask.done }).eq('id', subtaskId)
+    await supabase.rpc('toggle_subtask_done', { _subtask_id: subtaskId, _done: !subtask.done })
     await get().refreshAll()
   },
 
   setTaskStarted: async (taskId, started) => {
     const task = get().tasks.find((t) => t.id === taskId)
+    const boardStatus = started
+      ? task?.boardStatus === 'backlog' || task?.boardStatus === 'todo'
+        ? 'in_progress'
+        : task?.boardStatus
+      : task?.boardStatus === 'in_progress'
+        ? 'todo'
+        : task?.boardStatus
     await supabase
       .from('tasks')
-      .update({ started, ...(started && !task?.startedAt && { started_at: new Date().toISOString() }) })
+      .update({
+        started,
+        board_status: boardStatus,
+        ...(started && !task?.startedAt && { started_at: new Date().toISOString() }),
+      })
       .eq('id', taskId)
     await get().refreshAll()
   },
@@ -865,12 +884,12 @@ export const useAppStore = create<State>()((set, get) => ({
   },
 
   deleteTask: async (taskId) => {
-    await supabase.from('tasks').update({ deleted_at: new Date().toISOString() }).eq('id', taskId)
+    await supabase.rpc('soft_delete_task', { _task_id: taskId })
     await get().refreshAll()
   },
 
   restoreTask: async (taskId) => {
-    await supabase.from('tasks').update({ deleted_at: null }).eq('id', taskId)
+    await supabase.rpc('restore_task', { _task_id: taskId })
     await get().refreshAll()
     await get().fetchTrash()
   },

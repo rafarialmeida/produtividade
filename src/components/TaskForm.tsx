@@ -3,12 +3,14 @@ import { createPortal } from 'react-dom'
 import {
   Ban,
   CalendarClock,
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Layers,
   ListChecks,
+  Pencil,
   Plus,
   Repeat,
   StickyNote,
@@ -93,6 +95,7 @@ export default function TaskForm({
   const updateTask = useAppStore((s) => s.updateTask)
   const assignTask = useAppStore((s) => s.assignTask)
   const createMacroObjective = useAppStore((s) => s.createMacroObjective)
+  const updateMacroObjective = useAppStore((s) => s.updateMacroObjective)
   const deleteMacroObjective = useAppStore((s) => s.deleteMacroObjective)
   const allCommunities = useAppStore((s) => s.communities)
   const allMacroObjectives = useAppStore((s) => s.macroObjectives)
@@ -139,6 +142,9 @@ export default function TaskForm({
   const [creatingMacro, setCreatingMacro] = useState(false)
   const [deletingMacroId, setDeletingMacroId] = useState<string | null>(null)
   const [macroDeleteError, setMacroDeleteError] = useState('')
+  const [editingMacroId, setEditingMacroId] = useState<string | null>(null)
+  const [editMacroTitle, setEditMacroTitle] = useState('')
+  const [savingMacroEdit, setSavingMacroEdit] = useState(false)
   const [complexity, setComplexity] = useState<Complexity>(task?.complexity ?? 'media')
   const [notScored, setNotScored] = useState(task ? !task.scored : false)
   const [title, setTitle] = useState(task?.title ?? '')
@@ -291,6 +297,35 @@ export default function TaskForm({
     setMacroDeleteError('')
   }
 
+  function startEditMacro(id: string, title: string) {
+    setEditingMacroId(id)
+    setEditMacroTitle(title)
+    setMacroDeleteError('')
+  }
+
+  function cancelEditMacro() {
+    setEditingMacroId(null)
+    setEditMacroTitle('')
+  }
+
+  async function confirmEditMacro() {
+    if (!editingMacroId || savingMacroEdit) return
+    const trimmed = editMacroTitle.trim()
+    if (!trimmed) {
+      cancelEditMacro()
+      return
+    }
+    setSavingMacroEdit(true)
+    const error = await updateMacroObjective(editingMacroId, trimmed)
+    setSavingMacroEdit(false)
+    if (error) {
+      setMacroDeleteError(error)
+      return
+    }
+    setMacroDeleteError('')
+    cancelEditMacro()
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!isValid || submitting) return
@@ -409,16 +444,53 @@ export default function TaskForm({
               {!showMacroList &&
                 scopedMacroObjectives
                   .filter((m) => m.id === macroObjectiveId)
-                  .map((m) => (
-                    <button
-                      type="button"
-                      key={m.id}
-                      onClick={() => setShowMacroList(true)}
-                      className="text-xs font-medium px-2.5 py-1.5 rounded-lg border bg-purple-500/15 border-purple-500/40 text-purple-200 transition-colors light:bg-purple-500/10 light:text-purple-700"
-                    >
-                      {m.title}
-                    </button>
-                  ))}
+                  .map((m) =>
+                    editingMacroId === m.id ? (
+                      <input
+                        key={m.id}
+                        autoFocus
+                        value={editMacroTitle}
+                        onChange={(e) => setEditMacroTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            confirmEditMacro()
+                          }
+                          if (e.key === 'Escape') cancelEditMacro()
+                        }}
+                        onBlur={confirmEditMacro}
+                        disabled={savingMacroEdit}
+                        className="text-xs px-2.5 py-1.5 rounded-lg border border-purple-500/40 bg-white/5 text-white outline-none w-44 light:bg-black/5 light:text-zinc-900 disabled:opacity-50"
+                      />
+                    ) : (
+                      <div key={m.id} className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setShowMacroList(true)}
+                          className="text-xs font-medium px-2.5 py-1.5 rounded-lg border bg-purple-500/15 border-purple-500/40 text-purple-200 transition-colors light:bg-purple-500/10 light:text-purple-700"
+                        >
+                          {m.title}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => startEditMacro(m.id, m.title)}
+                          title="Editar objetivo macro"
+                          className="p-1.5 rounded-lg text-zinc-500 hover:text-purple-300 light:hover:text-purple-600 hover:bg-purple-500/10 transition-colors"
+                        >
+                          <Pencil size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMacro(m.id, m.title)}
+                          disabled={deletingMacroId === m.id}
+                          title="Excluir objetivo macro"
+                          className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 light:hover:text-rose-600 hover:bg-rose-500/10 transition-colors disabled:opacity-50"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ),
+                  )}
               {addingMacro ? (
                 <input
                   autoFocus
@@ -461,33 +533,78 @@ export default function TaskForm({
             </div>
             {showMacroList && scopedMacroObjectives.length > 0 && (
               <div className="mt-1.5 rounded-lg border border-white/10 light:border-black/15 divide-y divide-white/5 light:divide-black/5 overflow-hidden">
-                {scopedMacroObjectives.map((m) => (
-                  <div key={m.id} className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMacroObjectiveId(m.id)
-                        setShowMacroList(false)
-                      }}
-                      className={`flex-1 text-left text-xs px-3 py-2 transition-colors ${
-                        m.id === macroObjectiveId
-                          ? 'bg-purple-500/15 text-purple-200 light:bg-purple-500/10 light:text-purple-700'
-                          : 'text-zinc-300 hover:bg-white/5 light:text-zinc-700 light:hover:bg-black/5'
-                      }`}
-                    >
-                      {m.title}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteMacro(m.id, m.title)}
-                      disabled={deletingMacroId === m.id}
-                      title="Excluir objetivo macro"
-                      className="p-2 text-zinc-500 hover:text-rose-400 light:hover:text-rose-600 transition-colors disabled:opacity-50"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                ))}
+                {scopedMacroObjectives.map((m) =>
+                  editingMacroId === m.id ? (
+                    <div key={m.id} className="flex items-center gap-1 px-2 py-1.5">
+                      <input
+                        autoFocus
+                        value={editMacroTitle}
+                        onChange={(e) => setEditMacroTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            confirmEditMacro()
+                          }
+                          if (e.key === 'Escape') cancelEditMacro()
+                        }}
+                        disabled={savingMacroEdit}
+                        className="flex-1 text-xs px-2 py-1 rounded-lg border border-purple-500/40 bg-white/5 text-white outline-none light:bg-black/5 light:text-zinc-900 disabled:opacity-50"
+                      />
+                      <button
+                        type="button"
+                        onClick={confirmEditMacro}
+                        disabled={savingMacroEdit}
+                        title="Salvar"
+                        className="p-1.5 text-emerald-400 light:text-emerald-600 hover:bg-emerald-500/10 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        <Check size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelEditMacro}
+                        disabled={savingMacroEdit}
+                        title="Cancelar"
+                        className="p-1.5 text-zinc-500 hover:bg-white/5 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div key={m.id} className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMacroObjectiveId(m.id)
+                          setShowMacroList(false)
+                        }}
+                        className={`flex-1 text-left text-xs px-3 py-2 transition-colors ${
+                          m.id === macroObjectiveId
+                            ? 'bg-purple-500/15 text-purple-200 light:bg-purple-500/10 light:text-purple-700'
+                            : 'text-zinc-300 hover:bg-white/5 light:text-zinc-700 light:hover:bg-black/5'
+                        }`}
+                      >
+                        {m.title}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => startEditMacro(m.id, m.title)}
+                        title="Editar objetivo macro"
+                        className="p-2 text-zinc-500 hover:text-purple-300 light:hover:text-purple-600 transition-colors"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMacro(m.id, m.title)}
+                        disabled={deletingMacroId === m.id}
+                        title="Excluir objetivo macro"
+                        className="p-2 text-zinc-500 hover:text-rose-400 light:hover:text-rose-600 transition-colors disabled:opacity-50"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ),
+                )}
               </div>
             )}
             {macroDeleteError && <p className="text-[11px] text-rose-400 light:text-rose-600 mt-1.5">{macroDeleteError}</p>}

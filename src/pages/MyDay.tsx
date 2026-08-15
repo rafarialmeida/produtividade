@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Circle, Play, Plus, Podium, Tag, TrendingDown, UserCog, Users } from 'lucide-react'
+import { Circle, ListFilter, Play, Plus, Podium, Tag, TrendingDown, UserCog, Users } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import TaskForm from '../components/TaskForm'
 import TaskCard from '../components/TaskCard'
@@ -11,6 +11,7 @@ import { isNearDeadline } from '../utils/date'
 import { URGENCY_POINTS } from '../types'
 import type { Task } from '../types'
 import { useTheme } from '../hooks/useTheme'
+import { KANBAN_COLUMNS, resolveKanbanColumn, type KanbanColumn } from '../utils/kanbanColumn'
 
 export default function MyDay() {
   const { theme } = useTheme()
@@ -27,6 +28,7 @@ export default function MyDay() {
   const [showForm, setShowForm] = useState(false)
   const [listModal, setListModal] = useState<{ title: string; tasks: Task[] } | null>(null)
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | KanbanColumn>('all')
 
   const workCommunityIds = useMemo(
     () => new Set(allCommunities.filter((c) => c.type === 'trabalho').map((c) => c.id)),
@@ -63,10 +65,11 @@ export default function MyDay() {
     if (categoryFilter !== 'all' && !availableCategories.includes(categoryFilter)) setCategoryFilter('all')
   }, [availableCategories, categoryFilter])
 
-  const myTasks = useMemo(
-    () => (categoryFilter === 'all' ? levelFiltered : levelFiltered.filter((t) => t.category === categoryFilter)),
-    [levelFiltered, categoryFilter],
-  )
+  const myTasks = useMemo(() => {
+    let list = categoryFilter === 'all' ? levelFiltered : levelFiltered.filter((t) => t.category === categoryFilter)
+    if (statusFilter !== 'all') list = list.filter((t) => resolveKanbanColumn(t) === statusFilter)
+    return list
+  }, [levelFiltered, categoryFilter, statusFilter])
 
   const active = myTasks.filter((t) => !t.completed && !t.expired).sort((a, b) => a.deadline.localeCompare(b.deadline))
   const notStarted = active.filter((t) => !t.started)
@@ -171,25 +174,44 @@ export default function MyDay() {
         </Section>
       )}
 
-      {availableCategories.length > 0 && (
+      <div className="flex flex-wrap items-center gap-3">
+        {availableCategories.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Tag size={13} className="text-purple-400 light:text-purple-600 shrink-0" />
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="input !w-auto !py-1.5 !text-xs"
+            >
+              <option value="all" style={optionStyle}>
+                Todas as categorias
+              </option>
+              {availableCategories.map((c) => (
+                <option key={c} value={c} style={optionStyle}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="flex items-center gap-2">
-          <Tag size={13} className="text-purple-400 light:text-purple-600 shrink-0" />
+          <ListFilter size={13} className="text-purple-400 light:text-purple-600 shrink-0" />
           <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as 'all' | KanbanColumn)}
             className="input !w-auto !py-1.5 !text-xs"
           >
             <option value="all" style={optionStyle}>
-              Todas as categorias
+              Todos os status
             </option>
-            {availableCategories.map((c) => (
-              <option key={c} value={c} style={optionStyle}>
-                {c}
+            {KANBAN_COLUMNS.map((c) => (
+              <option key={c.key} value={c.key} style={optionStyle}>
+                {c.label}
               </option>
             ))}
           </select>
         </div>
-      )}
+      </div>
 
       {assignedSubtaskTasks.length > 0 && (
         <Section title="Subtarefas atribuídas a você" icon={<UserCog size={14} className="text-sky-300 light:text-sky-700" />}>
