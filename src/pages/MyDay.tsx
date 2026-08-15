@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Circle, Play, Plus, Podium, Tag, TrendingDown, Users } from 'lucide-react'
+import { Circle, Play, Plus, Podium, Tag, TrendingDown, UserCog, Users } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import TaskForm from '../components/TaskForm'
 import TaskCard from '../components/TaskCard'
@@ -41,6 +41,18 @@ export default function MyDay() {
       return levelMode === 'work' ? isWork : !isWork
     })
   }, [allTasks, user.id, levelMode, workCommunityIds])
+
+  // Tarefas que não são minhas, mas em que fui atribuído a uma subtarefa
+  // específica — aparecem numa seção separada (não contam pra "Tarefas
+  // ativas"/"Pontos perdidos" nem entram no filtro de nível, que são sobre
+  // responsabilidade da tarefa em si, não de uma subtarefa dentro dela).
+  const assignedSubtaskTasks = useMemo(
+    () =>
+      allTasks
+        .filter((t) => t.userId !== user.id && !t.completed && t.subtasks.some((s) => s.assigneeId === user.id))
+        .sort((a, b) => a.deadline.localeCompare(b.deadline)),
+    [allTasks, user.id],
+  )
 
   const availableCategories = useMemo(
     () => Array.from(new Set(levelFiltered.map((t) => t.category))).sort((a, b) => a.localeCompare(b)),
@@ -177,6 +189,14 @@ export default function MyDay() {
             ))}
           </select>
         </div>
+      )}
+
+      {assignedSubtaskTasks.length > 0 && (
+        <Section title="Subtarefas atribuídas a você" icon={<UserCog size={14} className="text-sky-300 light:text-sky-700" />}>
+          {assignedSubtaskTasks.map((t) => (
+            <TaskCard key={t.id} task={t} showOwner showCommunity={multiCommunity} assignedSubtaskOnly />
+          ))}
+        </Section>
       )}
 
       <Section title="Não iniciadas" icon={<Circle size={14} className="text-zinc-400" />}>

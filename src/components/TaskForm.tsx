@@ -15,6 +15,7 @@ import {
   Tag,
   Target,
   Trash2,
+  UserCog,
   X,
 } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
@@ -90,10 +91,13 @@ export default function TaskForm({
   const optionStyle = theme === 'light' ? { backgroundColor: '#fff', color: '#18181b' } : { backgroundColor: '#0d0e14', color: '#fff' }
   const createTask = useAppStore((s) => s.createTask)
   const updateTask = useAppStore((s) => s.updateTask)
+  const assignTask = useAppStore((s) => s.assignTask)
   const createMacroObjective = useAppStore((s) => s.createMacroObjective)
   const deleteMacroObjective = useAppStore((s) => s.deleteMacroObjective)
   const allCommunities = useAppStore((s) => s.communities)
   const allMacroObjectives = useAppStore((s) => s.macroObjectives)
+  const allUsers = useAppStore((s) => s.users)
+  const authUser = useAppStore((s) => s.authUser)
   const user = useAppStore((s) => s.getUserById(userId))
   const myCommunities = useMemo(
     () => allCommunities.filter((c) => user?.communityIds.includes(c.id)),
@@ -115,6 +119,18 @@ export default function TaskForm({
   )
 
   const isWorkCommunity = community?.type === 'trabalho'
+  const isCommunityAdmin = Boolean(
+    authUser && community && (authUser.role === 'admin' || community.adminIds.includes(authUser.id)),
+  )
+  const canAssignAtCreation = !isEditing && isWorkCommunity && isCommunityAdmin
+  const communityMembers = useMemo(
+    () =>
+      (community?.memberIds ?? [])
+        .map((id) => allUsers.find((u) => u.id === id))
+        .filter((u): u is NonNullable<typeof u> => Boolean(u))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [community, allUsers],
+  )
 
   const [macroObjectiveId, setMacroObjectiveId] = useState(task?.macroObjectiveId ?? '')
   const [showMacroList, setShowMacroList] = useState(false)
@@ -148,6 +164,7 @@ export default function TaskForm({
   const [customMode, setCustomMode] = useState(false)
   const [customDates, setCustomDates] = useState<Set<string>>(new Set())
   const [calendarCursor, setCalendarCursor] = useState(() => new Date())
+  const [assigneeId, setAssigneeId] = useState(userId)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
@@ -199,6 +216,10 @@ export default function TaskForm({
       setMacroObjectiveId('')
     }
   }, [communityId, scopedMacroObjectives, macroObjectiveId])
+
+  useEffect(() => {
+    if (!canAssignAtCreation) setAssigneeId(userId)
+  }, [canAssignAtCreation, userId])
 
   useEffect(() => {
     if (isWorkCommunity && notScored) setNotScored(false)
@@ -317,8 +338,9 @@ export default function TaskForm({
       }
       deadlines.sort((a, b) => a.getTime() - b.getTime())
 
+      const createdIds: string[] = []
       for (const dt of deadlines) {
-        const error = await createTask({
+        const { error, taskId } = await createTask({
           ...baseFields,
           userId,
           deadline: dt.toISOString(),
@@ -328,7 +350,13 @@ export default function TaskForm({
           setSubmitError(error)
           return
         }
+        if (taskId) createdIds.push(taskId)
       }
+
+      if (canAssignAtCreation && assigneeId !== userId) {
+        await Promise.all(createdIds.map((id) => assignTask(id, assigneeId)))
+      }
+
       onClose()
     } finally {
       setSubmitting(false)
@@ -477,6 +505,21 @@ export default function TaskForm({
               className="input"
             />
           </div>
+
+          {canAssignAtCreation && (
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
+                <UserCog size={13} className="text-sky-400 light:text-sky-600" /> Responsável
+              </label>
+              <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="input">
+                {communityMembers.map((m) => (
+                  <option key={m.id} value={m.id} style={optionStyle}>
+                    {m.id === userId ? `${m.name} (você)` : m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">

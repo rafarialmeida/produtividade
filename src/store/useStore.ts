@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type {
   AuthUser,
   BoardCosmetics,
+  BoardStatus,
   BugReport,
   Community,
   CommunityJoinRequest,
@@ -171,7 +172,7 @@ interface State {
   deleteMacroObjective: (id: string) => Promise<string | null>
 
   // task actions
-  createTask: (input: CreateTaskInput) => Promise<string | null>
+  createTask: (input: CreateTaskInput) => Promise<{ error: string | null; taskId: string | null }>
   updateTask: (taskId: string, input: UpdateTaskInput) => Promise<string | null>
   toggleSubtask: (taskId: string, subtaskId: string) => Promise<void>
   setTaskStarted: (taskId: string, started: boolean) => Promise<void>
@@ -185,7 +186,8 @@ interface State {
   checkExpirations: () => Promise<void>
   assignTask: (taskId: string, assigneeId: string) => Promise<string | null>
   assignSubtask: (subtaskId: string, assigneeId: string | null) => Promise<string | null>
-  setTaskBlocked: (taskId: string, blocked: boolean, reason?: string) => Promise<string | null>
+  setTaskBlocked: (taskId: string, blocked: boolean, reason?: string, order?: number) => Promise<string | null>
+  setTaskBoardStatus: (taskId: string, status: BoardStatus, order?: number) => Promise<string | null>
 
   // notifications
   markNotificationRead: (id: string) => Promise<void>
@@ -246,6 +248,8 @@ function mapTask(row: Record<string, unknown>): Task {
     blockedReason: (row.blocked_reason as string | null) ?? undefined,
     blockedAt: (row.blocked_at as string | null) ?? undefined,
     blockedBy: (row.blocked_by as string | null) ?? undefined,
+    boardStatus: (row.board_status as BoardStatus | null) ?? 'todo',
+    boardOrder: (row.board_order as number | null) ?? 0,
     deletedAt: (row.deleted_at as string | null) ?? undefined,
     createdAt: row.created_at as string,
   }
@@ -702,8 +706,8 @@ export const useAppStore = create<State>()((set, get) => ({
       })
       .select()
       .single()
-    if (error) return error.message
-    if (!task) return 'Não foi possível criar a tarefa.'
+    if (error) return { error: error.message, taskId: null }
+    if (!task) return { error: 'Não foi possível criar a tarefa.', taskId: null }
 
     const cleanSubtasks = subtasks.filter((s) => s.text.trim().length > 0)
     if (cleanSubtasks.length > 0) {
@@ -716,10 +720,10 @@ export const useAppStore = create<State>()((set, get) => ({
           note: s.note?.trim() ? s.note.trim() : null,
         })),
       )
-      if (subtaskError) return subtaskError.message
+      if (subtaskError) return { error: subtaskError.message, taskId: null }
     }
     await get().refreshAll()
-    return null
+    return { error: null, taskId: task.id as string }
   },
 
   updateTask: async (taskId, { communityId, macroObjectiveId, title, category, subtasks, deadline, urgency, complexity, scored, recurrence }) => {
@@ -787,6 +791,7 @@ export const useAppStore = create<State>()((set, get) => ({
 
   completeTask: async (taskId, minutes) => {
     const task = get().tasks.find((t) => t.id === taskId)
+    if (!task) return
 
     if (minutes?.subtasks) {
       await Promise.all(
@@ -799,22 +804,25 @@ export const useAppStore = create<State>()((set, get) => ({
       ? Object.values(minutes.subtasks).reduce((sum, m) => sum + m, 0)
       : minutes?.direct
 
-    await supabase
-      .from('tasks')
-      .update({
-        completed: true,
-        completed_at: new Date().toISOString(),
-        ...(totalMinutes !== undefined && { minutes_spent: totalMinutes }),
-      })
-      .eq('id', taskId)
+    // complete_task (security definer) permite o dono concluir a própria
+    // tarefa ou um admin da comunidade "aprovar" a de outra pessoa — RLS
+    // sozinha só deixaria o dono mexer na linha.
+    const { error } = await supabase.rpc('complete_task', {
+      _task_id: taskId,
+      _minutes_spent: totalMinutes ?? null,
+    })
+    if (error) return
 
     const authUser = get().authUser
-    if (authUser && task) {
+    if (authUser) {
+      const approvedByOther = task.userId !== authUser.id
       await supabase.from('notifications').insert({
-        user_id: authUser.id,
+        user_id: task.userId,
         task_id: taskId,
         type: 'success',
-        message: `Parabéns! Você concluiu "${task.title}".`,
+        message: approvedByOther
+          ? `${authUser.name} aprovou e concluiu "${task.title}".`
+          : `Parabéns! Você concluiu "${task.title}".`,
       })
       const fnName = import.meta.env.VITE_PUSH_FUNCTION_NAME || 'push-sweep'
       supabase.functions.invoke(fnName, { body: { type: 'completed', taskId } }).catch(() => {})
@@ -840,17 +848,20 @@ export const useAppStore = create<State>()((set, get) => ({
   },
 
   reopenTask: async (taskId) => {
-    const task = get().tasks.find((t) => t.id === taskId)
-    await supabase
-      .from('tasks')
-      .update({
-        completed: false,
-        completed_at: null,
-        started: true,
-        ...(!task?.startedAt && { started_at: new Date().toISOString() }),
-      })
-      .eq('id', taskId)
+    const { error } = await supabase.rpc('reopen_task', { _task_id: taskId })
+    if (error) return
     await get().refreshAll()
+  },
+
+  setTaskBoardStatus: async (taskId, status, order) => {
+    const { error } = await supabase.rpc('set_task_board_status', {
+      _task_id: taskId,
+      _status: status,
+      _order: order ?? null,
+    })
+    if (error) return error.message
+    await get().refreshAll()
+    return null
   },
 
   deleteTask: async (taskId) => {
@@ -919,8 +930,13 @@ export const useAppStore = create<State>()((set, get) => ({
     return null
   },
 
-  setTaskBlocked: async (taskId, blocked, reason) => {
-    const { error } = await supabase.rpc('set_task_blocked', { _task_id: taskId, _blocked: blocked, _reason: reason ?? null })
+  setTaskBlocked: async (taskId, blocked, reason, order) => {
+    const { error } = await supabase.rpc('set_task_blocked', {
+      _task_id: taskId,
+      _blocked: blocked,
+      _reason: reason ?? null,
+      _order: order ?? null,
+    })
     if (error) return error.message
     await get().refreshAll()
     return null

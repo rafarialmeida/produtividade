@@ -1,41 +1,33 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, Check, Dices, Loader2, Lock, LockOpen, Pencil, Plus, Trash2, UserPlus, Users, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import ProcrastinationWall from '../components/ProcrastinationWall'
-import TaskCard from '../components/TaskCard'
 import TaskForm from '../components/TaskForm'
 import InviteModal from '../components/InviteModal'
 import CommunityMembersTab from '../components/CommunityMembersTab'
 import CommunityDashboard from '../components/CommunityDashboard'
 import CommunityRankingBoard from '../components/CommunityRankingBoard'
+import CommunityKanbanBoard from '../components/CommunityKanbanBoard'
 import TaskHistoryModal from '../components/TaskHistoryModal'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
 import { SEVERITY_LABEL } from '../types'
-import { useTheme } from '../hooks/useTheme'
 
 const CommunityBoard = lazy(() => import('../components/CommunityBoard'))
 
 export default function CommunityPage() {
-  const { theme } = useTheme()
-  const optionStyle = theme === 'light' ? { backgroundColor: '#fff', color: '#18181b' } : { backgroundColor: '#0d0e14', color: '#fff' }
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const currentUser = useAppStore((s) => s.authUser)!
   const currentUserId = currentUser.id
   const community = useAppStore((s) => (id ? s.getCommunityById(id) : undefined))
-  const users = useAppStore((s) => s.users)
   const deleteCommunity = useAppStore((s) => s.deleteCommunity)
   const setCommunityBoardEnabled = useAppStore((s) => s.setCommunityBoardEnabled)
   const setCommunityClosed = useAppStore((s) => s.setCommunityClosed)
   const renameCommunity = useAppStore((s) => s.renameCommunity)
-  const allTasks = useAppStore((s) => s.tasks)
-  const tasks = useMemo(() => allTasks.filter((t) => t.communityId === id), [allTasks, id])
   const [showForm, setShowForm] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
-  const [filter, setFilter] = useState<'all' | 'active' | 'expired' | 'completed'>('all')
-  const [userFilter, setUserFilter] = useState<string>('all')
   const [historyUserId, setHistoryUserId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'tasks' | 'members' | 'dashboard' | 'board' | 'ranking'>('tasks')
   const [togglingBoard, setTogglingBoard] = useState(false)
@@ -53,19 +45,6 @@ export default function CommunityPage() {
     if (activeTab === 'ranking' && !boardOk) setActiveTab('tasks')
     if (activeTab === 'dashboard' && !dashboardOk) setActiveTab('tasks')
   }, [community, activeTab, currentUser, currentUserId])
-
-  useEffect(() => {
-    setUserFilter('all')
-  }, [id])
-
-  const members = useMemo(
-    () =>
-      (community?.memberIds ?? [])
-        .map((memberId) => users.find((u) => u.id === memberId))
-        .filter((u): u is NonNullable<typeof u> => Boolean(u))
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    [community, users],
-  )
 
   if (!community) {
     return (
@@ -146,16 +125,6 @@ export default function CommunityPage() {
       setTogglingClosed(false)
     }
   }
-
-  const filtered = tasks
-    .filter((t) => {
-      if (userFilter !== 'all' && t.userId !== userFilter) return false
-      if (filter === 'active') return !t.completed && !t.expired
-      if (filter === 'expired') return t.expired && !t.completed
-      if (filter === 'completed') return t.completed
-      return true
-    })
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
   return (
     <div className="flex flex-col gap-8">
@@ -319,51 +288,7 @@ export default function CommunityPage() {
       {activeTab === 'ranking' && showBoard && <CommunityRankingBoard communityId={community.id} />}
 
       {activeTab === 'tasks' && (
-        <div>
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <h2 className="text-sm font-semibold text-zinc-300 light:text-zinc-700">Tarefas da comunidade</h2>
-            <div className="flex flex-wrap items-center gap-2">
-              {isCommunityAdmin && (
-                <select
-                  value={userFilter}
-                  onChange={(e) => setUserFilter(e.target.value)}
-                  className="input !w-auto !py-1 !text-xs"
-                >
-                  <option value="all" style={optionStyle}>
-                    Todos os membros
-                  </option>
-                  {members.map((m) => (
-                    <option key={m.id} value={m.id} style={optionStyle}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <div className="flex gap-1">
-                {(['all', 'active', 'expired', 'completed'] as const).map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setFilter(f)}
-                    className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${
-                      filter === f
-                        ? 'bg-white/10 text-white light:bg-black/[0.06] light:text-zinc-900'
-                        : 'text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700'
-                    }`}
-                  >
-                    {{ all: 'Todas', active: 'Ativas', expired: 'Expiradas', completed: 'Concluídas' }[f]}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {filtered.length === 0 ? (
-              <p className="sm:col-span-2 text-center text-sm text-zinc-500 py-10">Nenhuma tarefa nesse filtro.</p>
-            ) : (
-              filtered.map((t) => <TaskCard key={t.id} task={t} showOwner />)
-            )}
-          </div>
-        </div>
+        <CommunityKanbanBoard communityId={community.id} onNewTask={() => setShowForm(true)} />
       )}
 
       {showForm && <TaskForm communityId={community.id} userId={currentUserId} onClose={() => setShowForm(false)} />}

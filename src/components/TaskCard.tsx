@@ -34,10 +34,12 @@ export default function TaskCard({
   task,
   showOwner = false,
   showCommunity = false,
+  assignedSubtaskOnly = false,
 }: {
   task: Task
   showOwner?: boolean
   showCommunity?: boolean
+  assignedSubtaskOnly?: boolean
 }) {
   const authUser = useAppStore((s) => s.authUser)
   const currentUserId = authUser?.id
@@ -128,6 +130,14 @@ export default function TaskCard({
                 className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-300 bg-slate-500/10 border border-slate-400/30 rounded px-1.5 py-0.5 light:text-slate-600"
               >
                 <Lock size={9} /> Bloqueada{task.blockedReason ? `: ${task.blockedReason}` : ''}
+              </span>
+            )}
+            {assignedSubtaskOnly && (
+              <span
+                title="Você não é o dono da tarefa, mas tem uma subtarefa atribuída a você aqui"
+                className="inline-flex items-center gap-1 text-[10px] font-medium text-sky-300 light:text-sky-700 bg-sky-500/10 border border-sky-500/30 rounded px-1.5 py-0.5"
+              >
+                <UserCog size={9} /> Subtarefa atribuída a você
               </span>
             )}
           </div>

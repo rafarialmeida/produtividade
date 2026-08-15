@@ -176,6 +176,15 @@ export interface MacroObjective {
   createdAt: string
 }
 
+export type BoardStatus = 'backlog' | 'todo' | 'in_progress' | 'awaiting_approval'
+
+export const BOARD_STATUS_LABEL: Record<BoardStatus, string> = {
+  backlog: 'Backlog',
+  todo: 'A Fazer',
+  in_progress: 'Em andamento',
+  awaiting_approval: 'Aguardando aprovação',
+}
+
 export interface Task {
   id: string
   communityId?: string
@@ -200,6 +209,8 @@ export interface Task {
   blockedReason?: string
   blockedAt?: string
   blockedBy?: string
+  boardStatus: BoardStatus
+  boardOrder: number
   deletedAt?: string
   createdAt: string
 }
