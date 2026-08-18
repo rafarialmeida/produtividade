@@ -170,9 +170,7 @@ export default function MyDay() {
       {levelFiltered.length === 0 ? (
         <EmptyState onCreate={() => setShowForm(true)} />
       ) : (
-        <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen px-4 sm:px-6">
-          <MyKanbanBoard tasks={levelFiltered} onNewTask={(status) => setShowForm(status ?? true)} />
-        </div>
+        <MyKanbanBoard tasks={levelFiltered} onNewTask={(status) => setShowForm(status ?? true)} />
       )}
 
       <TaskCalendar tasks={myTasks} />
