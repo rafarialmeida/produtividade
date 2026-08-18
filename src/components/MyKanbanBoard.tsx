@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
-import { CalendarClock, ListChecks, Lock, Plus, Target, User } from 'lucide-react'
+import { CalendarClock, ListChecks, ListFilter, Lock, Plus, Target, User, Users2 } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import type { BoardStatus, Task } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
 import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
 import { formatRelative, isNearDeadline, isPastDeadline } from '../utils/date'
 import { KANBAN_COLUMNS as COLUMNS, resolveKanbanColumn as resolveColumn, type KanbanColumn } from '../utils/kanbanColumn'
+import { useTheme } from '../hooks/useTheme'
 import BlockTaskModal from './BlockTaskModal'
 import CompleteTaskModal from './CompleteTaskModal'
 import TaskDetailModal from './TaskDetailModal'
@@ -19,6 +20,8 @@ export default function MyKanbanBoard({
   tasks: Task[]
   onNewTask: (initialStatus?: BoardStatus) => void
 }) {
+  const { theme } = useTheme()
+  const optionStyle = theme === 'light' ? { backgroundColor: '#fff', color: '#18181b' } : { backgroundColor: '#0d0e14', color: '#fff' }
   const communities = useAppStore((s) => s.communities)
   const setTaskBoardStatus = useAppStore((s) => s.setTaskBoardStatus)
   const setTaskBlocked = useAppStore((s) => s.setTaskBlocked)
@@ -28,6 +31,24 @@ export default function MyKanbanBoard({
   const [blockingTask, setBlockingTask] = useState<Task | null>(null)
   const [completingTask, setCompletingTask] = useState<Task | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<KanbanColumn | null>(null)
+  const [communityFilter, setCommunityFilter] = useState('all')
+  const [columnFilter, setColumnFilter] = useState<'all' | KanbanColumn>('all')
+
+  const availableCommunities = useMemo(() => {
+    const ids = new Set(tasks.map((t) => t.communityId).filter((id): id is string => Boolean(id)))
+    return communities.filter((c) => ids.has(c.id)).sort((a, b) => a.name.localeCompare(b.name))
+  }, [tasks, communities])
+  const hasPersonalTasks = tasks.some((t) => !t.communityId)
+
+  const filteredTasks = useMemo(() => {
+    let list = tasks
+    if (communityFilter === 'personal') list = list.filter((t) => !t.communityId)
+    else if (communityFilter !== 'all') list = list.filter((t) => t.communityId === communityFilter)
+    if (columnFilter !== 'all') list = list.filter((t) => resolveColumn(t) === columnFilter)
+    return list
+  }, [tasks, communityFilter, columnFilter])
+
+  const visibleColumns = columnFilter === 'all' ? COLUMNS : COLUMNS.filter((c) => c.key === columnFilter)
 
   const byColumn = useMemo(() => {
     const map: Record<KanbanColumn, Task[]> = {
@@ -38,10 +59,10 @@ export default function MyKanbanBoard({
       blocked: [],
       completed: [],
     }
-    for (const t of tasks) map[resolveColumn(t)].push(t)
+    for (const t of filteredTasks) map[resolveColumn(t)].push(t)
     for (const col of COLUMNS) map[col.key].sort((a, b) => a.boardOrder - b.boardOrder)
     return map
-  }, [tasks])
+  }, [filteredTasks])
 
   function orderBefore(column: KanbanColumn, draggedId: string, beforeTaskId: string | null): number {
     const columnTasks = byColumn[column].filter((t) => t.id !== draggedId)
@@ -116,15 +137,45 @@ export default function MyKanbanBoard({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] text-zinc-500">Suas tarefas de todas as comunidades e pessoais, num quadro só. Arraste os cards entre as colunas.</p>
         <button onClick={() => onNewTask()} className="btn-secondary !w-auto px-3 shrink-0">
           <Plus size={14} /> Nova Tarefa
         </button>
       </div>
 
+      {(availableCommunities.length > 0 || hasPersonalTasks) && (
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <Users2 size={13} className="text-purple-400 light:text-purple-600 shrink-0" />
+            <select value={communityFilter} onChange={(e) => setCommunityFilter(e.target.value)} className="input !w-auto !py-1 !text-xs">
+              <option value="all" style={optionStyle}>Todas as comunidades</option>
+              {hasPersonalTasks && (
+                <option value="personal" style={optionStyle}>Pessoal</option>
+              )}
+              {availableCommunities.map((c) => (
+                <option key={c.id} value={c.id} style={optionStyle}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <ListFilter size={13} className="text-purple-400 light:text-purple-600 shrink-0" />
+            <select value={columnFilter} onChange={(e) => setColumnFilter(e.target.value as 'all' | KanbanColumn)} className="input !w-auto !py-1 !text-xs">
+              <option value="all" style={optionStyle}>Todas as colunas</option>
+              {COLUMNS.map((c) => (
+                <option key={c.key} value={c.key} style={optionStyle}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1">
-        {COLUMNS.map((col) => {
+        {visibleColumns.map((col) => {
           const colTasks = byColumn[col.key]
           const isDragOver = dragOverColumn === col.key
           return (
