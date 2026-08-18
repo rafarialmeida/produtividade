@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react'
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, Users2, ListFilter, CheckCircle2 } from 'lucide-react'
 import type { Task } from '../types'
 import { useAppStore } from '../store/useStore'
 import { URGENCY_CONFIG } from '../utils/urgency'
+import { KANBAN_COLUMNS, resolveKanbanColumn, type KanbanColumn } from '../utils/kanbanColumn'
+import { useTheme } from '../hooks/useTheme'
 import TaskDetailModal from './TaskDetailModal'
+import CompleteTaskModal from './CompleteTaskModal'
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
@@ -52,24 +55,65 @@ function buildMonthGrid(year: number, month: number): DayCell[] {
 }
 
 export default function TaskCalendar({ tasks }: { tasks: Task[] }) {
+  const { theme } = useTheme()
+  const optionStyle = theme === 'light' ? { backgroundColor: '#fff', color: '#18181b' } : { backgroundColor: '#0d0e14', color: '#fff' }
+  const authUser = useAppStore((s) => s.authUser)
+  const allTasks = useAppStore((s) => s.tasks)
+  const allCommunities = useAppStore((s) => s.communities)
+  const allUsers = useAppStore((s) => s.users)
   const rescheduleTask = useAppStore((s) => s.rescheduleTask)
   const today = new Date()
   const [cursor, setCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [completingTask, setCompletingTask] = useState<Task | null>(null)
   const [dragOverKey, setDragOverKey] = useState<string | null>(null)
+  const [personFilter, setPersonFilter] = useState('me')
+  const [communityFilter, setCommunityFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | KanbanColumn>('all')
+
+  const myCommunities = useMemo(
+    () => allCommunities.filter((c) => authUser && c.memberIds.includes(authUser.id)),
+    [allCommunities, authUser],
+  )
+
+  const communityMembers = useMemo(() => {
+    const ids = new Set<string>()
+    for (const c of myCommunities) for (const id of c.memberIds) ids.add(id)
+    return Array.from(ids)
+      .map((id) => allUsers.find((u) => u.id === id))
+      .filter((u): u is NonNullable<typeof u> => Boolean(u) && u?.id !== authUser?.id)
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [myCommunities, allUsers, authUser])
+
+  const basePool = useMemo(() => {
+    if (personFilter === 'me' && communityFilter === 'all') return tasks
+    if (!authUser) return tasks
+    const myCommunityIds = new Set(myCommunities.map((c) => c.id))
+    return allTasks.filter((t) => t.userId === authUser.id || (t.communityId && myCommunityIds.has(t.communityId)))
+  }, [personFilter, communityFilter, tasks, allTasks, authUser, myCommunities])
+
+  const filtered = useMemo(() => {
+    let list = basePool
+    if (personFilter === 'me') list = list.filter((t) => t.userId === authUser?.id)
+    else if (personFilter !== 'all') list = list.filter((t) => t.userId === personFilter)
+    if (communityFilter === 'personal') list = list.filter((t) => !t.communityId)
+    else if (communityFilter !== 'all') list = list.filter((t) => t.communityId === communityFilter)
+    if (statusFilter !== 'all') list = list.filter((t) => resolveKanbanColumn(t) === statusFilter)
+    return list
+  }, [basePool, personFilter, communityFilter, statusFilter, authUser])
 
   const cells = useMemo(() => buildMonthGrid(cursor.getFullYear(), cursor.getMonth()), [cursor])
 
   const tasksByDay = useMemo(() => {
     const map = new Map<string, Task[]>()
-    for (const t of tasks) {
+    for (const t of filtered) {
       const key = dayKey(new Date(t.deadline))
       const list = map.get(key) ?? []
       list.push(t)
       map.set(key, list)
     }
     return map
-  }, [tasks])
+  }, [filtered])
 
   function tasksFor(date: Date) {
     return tasksByDay.get(dayKey(date)) ?? []
@@ -79,13 +123,14 @@ export default function TaskCalendar({ tasks }: { tasks: Task[] }) {
     e.preventDefault()
     setDragOverKey(null)
     const taskId = e.dataTransfer.getData('text/plain')
-    const task = tasks.find((t) => t.id === taskId)
+    const task = filtered.find((t) => t.id === taskId)
     if (!task) return
     const newDeadline = withNewDate(new Date(task.deadline), targetDate)
     rescheduleTask(task.id, newDeadline.toISOString())
   }
 
   const monthLabel = cursor.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+  const hasFilters = myCommunities.length > 0
 
   return (
     <div className="glass-panel rounded-2xl overflow-hidden">
@@ -118,6 +163,43 @@ export default function TaskCalendar({ tasks }: { tasks: Task[] }) {
           </button>
         </div>
       </div>
+
+      {hasFilters && (
+        <div className="px-6 py-3 border-b border-white/5 light:border-black/5 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <Users2 size={13} className="text-purple-400 light:text-purple-600 shrink-0" />
+            <select value={personFilter} onChange={(e) => setPersonFilter(e.target.value)} className="input !w-auto !py-1 !text-xs">
+              <option value="me" style={optionStyle}>Só eu</option>
+              <option value="all" style={optionStyle}>Todo mundo</option>
+              {communityMembers.map((m) => (
+                <option key={m.id} value={m.id} style={optionStyle}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <select value={communityFilter} onChange={(e) => setCommunityFilter(e.target.value)} className="input !w-auto !py-1 !text-xs">
+            <option value="all" style={optionStyle}>Todas as comunidades</option>
+            <option value="personal" style={optionStyle}>Pessoal</option>
+            {myCommunities.map((c) => (
+              <option key={c.id} value={c.id} style={optionStyle}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <div className="flex items-center gap-1.5">
+            <ListFilter size={13} className="text-purple-400 light:text-purple-600 shrink-0" />
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'all' | KanbanColumn)} className="input !w-auto !py-1 !text-xs">
+              <option value="all" style={optionStyle}>Todos os status</option>
+              {KANBAN_COLUMNS.map((c) => (
+                <option key={c.key} value={c.key} style={optionStyle}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-7 border-b border-white/5 light:border-black/5">
         {WEEKDAYS.map((w) => (
@@ -161,19 +243,30 @@ export default function TaskCalendar({ tasks }: { tasks: Task[] }) {
                   const cfg = URGENCY_CONFIG[t.urgency]
                   const draggable = !t.completed && !t.expired
                   return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      title={t.title}
-                      draggable={draggable}
-                      onDragStart={(e) => e.dataTransfer.setData('text/plain', t.id)}
-                      onClick={() => setSelectedTaskId(t.id)}
-                      className={`text-[10px] leading-tight px-1 py-0.5 rounded truncate border text-left ${cfg.bg} ${cfg.border} ${cfg.color} ${
-                        t.completed ? 'opacity-50 line-through' : ''
-                      } ${draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} hover:brightness-125`}
-                    >
-                      {t.title}
-                    </button>
+                    <div key={t.id} className="flex items-center gap-0.5">
+                      <button
+                        type="button"
+                        title={t.title}
+                        draggable={draggable}
+                        onDragStart={(e) => e.dataTransfer.setData('text/plain', t.id)}
+                        onClick={() => setSelectedTaskId(t.id)}
+                        className={`flex-1 min-w-0 text-[10px] leading-tight px-1 py-0.5 rounded truncate border text-left ${cfg.bg} ${cfg.border} ${cfg.color} ${
+                          t.completed ? 'opacity-50 line-through' : ''
+                        } ${draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} hover:brightness-125`}
+                      >
+                        {t.title}
+                      </button>
+                      {!t.completed && (
+                        <button
+                          type="button"
+                          title="Concluir"
+                          onClick={() => setCompletingTask(t)}
+                          className="shrink-0 text-zinc-500 hover:text-emerald-400 light:hover:text-emerald-600"
+                        >
+                          <CheckCircle2 size={11} />
+                        </button>
+                      )}
+                    </div>
                   )
                 })}
                 {overflow > 0 && <span className="text-[10px] text-zinc-500 px-1">+{overflow} mais</span>}
@@ -184,6 +277,7 @@ export default function TaskCalendar({ tasks }: { tasks: Task[] }) {
       </div>
 
       {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} />}
+      {completingTask && <CompleteTaskModal task={completingTask} onClose={() => setCompletingTask(null)} />}
     </div>
   )
 }

@@ -46,7 +46,6 @@ export default function TaskCard({
   const currentUserId = authUser?.id
   const toggleSubtask = useAppStore((s) => s.toggleSubtask)
   const setTaskStarted = useAppStore((s) => s.setTaskStarted)
-  const completeTask = useAppStore((s) => s.completeTask)
   const reopenTask = useAppStore((s) => s.reopenTask)
   const deleteTask = useAppStore((s) => s.deleteTask)
   const setTaskBlocked = useAppStore((s) => s.setTaskBlocked)
@@ -80,8 +79,7 @@ export default function TaskCard({
   }
 
   function handleComplete() {
-    if (isWorkCommunity) setCompleting(true)
-    else completeTask(task.id)
+    setCompleting(true)
   }
 
   const near = !task.completed && !task.expired && isNearDeadline(task.deadline)
@@ -119,9 +117,21 @@ export default function TaskCard({
               <span className="truncate">{task.macroObjective}</span>
             </div>
           )}
-          <h3 className={`font-semibold text-white light:text-zinc-900 ${task.completed ? 'line-through decoration-zinc-600' : ''}`}>
-            {task.title}
-          </h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className={`font-semibold text-white light:text-zinc-900 ${task.completed ? 'line-through decoration-zinc-600' : ''}`}>
+              {task.title}
+            </h3>
+            {task.description && (
+              <button
+                type="button"
+                onClick={() => setViewingNote({ title: task.title, text: task.description! })}
+                title="Ver observações da tarefa"
+                className="text-zinc-600 hover:text-amber-400 light:hover:text-amber-600 shrink-0"
+              >
+                <StickyNote size={12} />
+              </button>
+            )}
+          </div>
           <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
             <span className="inline-flex items-center gap-1 text-[10px] font-medium text-zinc-400 bg-white/5 border border-white/10 rounded px-1.5 py-0.5 light:text-zinc-600 light:bg-black/[0.03] light:border-black/10">
               <Tag size={9} /> {task.category}
@@ -269,6 +279,16 @@ export default function TaskCard({
           {task.completed ? (
             <span className="flex items-center gap-1 text-emerald-400 light:text-emerald-600">
               <CheckCircle2 size={13} /> Concluída{task.completedAt && ` em ${formatDeadline(task.completedAt)}`}
+              {task.completionNote && (
+                <button
+                  type="button"
+                  onClick={() => setViewingNote({ title: 'Observações da conclusão', text: task.completionNote! })}
+                  title="Ver observações da conclusão"
+                  className="text-zinc-600 hover:text-amber-400 light:hover:text-amber-600 shrink-0"
+                >
+                  <StickyNote size={12} />
+                </button>
+              )}
             </span>
           ) : task.expired ? (
             <span className="flex items-center gap-1 text-rose-400 light:text-rose-600 font-medium">

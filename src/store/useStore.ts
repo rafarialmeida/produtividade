@@ -83,6 +83,7 @@ interface CreateTaskInput {
   userId: string
   macroObjectiveId: string
   title: string
+  description?: string
   category: string
   subtasks: { text: string; dueDate?: string; note?: string }[]
   deadline: string
@@ -96,6 +97,7 @@ interface UpdateTaskInput {
   communityId?: string
   macroObjectiveId: string
   title: string
+  description?: string
   category: string
   subtasks: { id?: string; text: string; dueDate?: string; note?: string }[]
   deadline: string
@@ -108,6 +110,7 @@ interface UpdateTaskInput {
 interface CompleteTaskMinutes {
   subtasks?: Record<string, number>
   direct?: number
+  note?: string
 }
 
 interface State {
@@ -233,6 +236,7 @@ function mapTask(row: Record<string, unknown>): Task {
     macroObjective: (macroObjective?.title as string | undefined) ?? '',
     macroObjectiveDescription: (macroObjective?.description as string | null) ?? undefined,
     title: row.title as string,
+    description: (row.description as string | null) ?? undefined,
     category: row.category as string,
     subtasks: ((row.subtasks as Record<string, unknown>[] | null) ?? []).map(mapSubtask),
     deadline: row.deadline as string,
@@ -242,6 +246,7 @@ function mapTask(row: Record<string, unknown>): Task {
     startedAt: (row.started_at as string | null) ?? undefined,
     completed: row.completed as boolean,
     completedAt: (row.completed_at as string | null) ?? undefined,
+    completionNote: (row.completion_note as string | null) ?? undefined,
     minutesSpent: (row.minutes_spent as number | null) ?? undefined,
     expired: row.expired as boolean,
     scored: (row.scored as boolean | null) ?? true,
@@ -707,7 +712,7 @@ export const useAppStore = create<State>()((set, get) => ({
     return null
   },
 
-  createTask: async ({ communityId, userId, macroObjectiveId, title, category, subtasks, deadline, urgency, complexity, scored, recurrence }) => {
+  createTask: async ({ communityId, userId, macroObjectiveId, title, description, category, subtasks, deadline, urgency, complexity, scored, recurrence }) => {
     const { data: task, error } = await supabase
       .from('tasks')
       .insert({
@@ -715,6 +720,7 @@ export const useAppStore = create<State>()((set, get) => ({
         user_id: userId,
         macro_objective_id: macroObjectiveId,
         title,
+        description: description?.trim() ? description.trim() : null,
         category,
         deadline,
         urgency,
@@ -744,13 +750,14 @@ export const useAppStore = create<State>()((set, get) => ({
     return { error: null, taskId: task.id as string }
   },
 
-  updateTask: async (taskId, { communityId, macroObjectiveId, title, category, subtasks, deadline, urgency, complexity, scored, recurrence }) => {
+  updateTask: async (taskId, { communityId, macroObjectiveId, title, description, category, subtasks, deadline, urgency, complexity, scored, recurrence }) => {
     const { error: taskError } = await supabase
       .from('tasks')
       .update({
         community_id: communityId ?? null,
         macro_objective_id: macroObjectiveId,
         title,
+        description: description?.trim() ? description.trim() : null,
         category,
         deadline,
         urgency,
@@ -839,6 +846,7 @@ export const useAppStore = create<State>()((set, get) => ({
     const { error } = await supabase.rpc('complete_task', {
       _task_id: taskId,
       _minutes_spent: totalMinutes ?? null,
+      _completion_note: minutes?.note?.trim() ? minutes.note.trim() : null,
     })
     if (error) return
 

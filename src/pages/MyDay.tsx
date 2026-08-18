@@ -5,11 +5,12 @@ import { useAppStore } from '../store/useStore'
 import TaskForm from '../components/TaskForm'
 import TaskCard from '../components/TaskCard'
 import TaskCalendar from '../components/TaskCalendar'
+import MyKanbanBoard from '../components/MyKanbanBoard'
 import TaskListModal from '../components/TaskListModal'
 import MoodWall from '../components/MoodWall'
 import { isNearDeadline } from '../utils/date'
 import { URGENCY_POINTS } from '../types'
-import type { Task } from '../types'
+import type { BoardStatus, Task } from '../types'
 import { useTheme } from '../hooks/useTheme'
 import { KANBAN_COLUMNS, resolveKanbanColumn, type KanbanColumn } from '../utils/kanbanColumn'
 
@@ -25,7 +26,7 @@ export default function MyDay() {
   const allTasks = useAppStore((s) => s.tasks)
   const levelMode = useAppStore((s) => s.levelMode)
 
-  const [showForm, setShowForm] = useState(false)
+  const [showForm, setShowForm] = useState<false | true | BoardStatus>(false)
   const [listModal, setListModal] = useState<{ title: string; tasks: Task[] } | null>(null)
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<'all' | KanbanColumn>('all')
@@ -166,13 +167,17 @@ export default function MyDay() {
         </div>
       )}
 
-      {expired.length > 0 && (
-        <Section title="Expiradas — penalizadas" icon={<TrendingDown size={16} className="text-rose-400 light:text-rose-600" />}>
-          {expired.map((t) => (
-            <TaskCard key={t.id} task={t} showCommunity={multiCommunity} />
-          ))}
-        </Section>
+      {levelFiltered.length === 0 ? (
+        <EmptyState onCreate={() => setShowForm(true)} />
+      ) : (
+        <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen px-4 sm:px-6">
+          <MyKanbanBoard tasks={levelFiltered} onNewTask={(status) => setShowForm(status ?? true)} />
+        </div>
       )}
+
+      <TaskCalendar tasks={myTasks} />
+
+      <MoodWall tasks={myTasks} />
 
       <div className="flex flex-wrap items-center gap-3">
         {availableCategories.length > 0 && (
@@ -213,6 +218,14 @@ export default function MyDay() {
         </div>
       </div>
 
+      {expired.length > 0 && (
+        <Section title="Expiradas — penalizadas" icon={<TrendingDown size={16} className="text-rose-400 light:text-rose-600" />}>
+          {expired.map((t) => (
+            <TaskCard key={t.id} task={t} showCommunity={multiCommunity} />
+          ))}
+        </Section>
+      )}
+
       {assignedSubtaskTasks.length > 0 && (
         <Section title="Subtarefas atribuídas a você" icon={<UserCog size={14} className="text-sky-300 light:text-sky-700" />}>
           {assignedSubtaskTasks.map((t) => (
@@ -221,15 +234,13 @@ export default function MyDay() {
         </Section>
       )}
 
-      <Section title="Não iniciadas" icon={<Circle size={14} className="text-zinc-400" />}>
-        {notStarted.length === 0 && inProgress.length === 0 ? (
-          <EmptyState onCreate={() => setShowForm(true)} />
-        ) : notStarted.length === 0 ? (
-          <p className="sm:col-span-2 text-sm text-zinc-500 py-2">Nenhuma tarefa esperando para começar.</p>
-        ) : (
-          notStarted.map((t) => <TaskCard key={t.id} task={t} showCommunity={multiCommunity} />)
-        )}
-      </Section>
+      {notStarted.length > 0 && (
+        <Section title="Não iniciadas" icon={<Circle size={14} className="text-zinc-400" />}>
+          {notStarted.map((t) => (
+            <TaskCard key={t.id} task={t} showCommunity={multiCommunity} />
+          ))}
+        </Section>
+      )}
 
       {inProgress.length > 0 && (
         <Section title="Em andamento" icon={<Play size={14} className="text-sky-300 light:text-sky-700" />}>
@@ -239,10 +250,6 @@ export default function MyDay() {
         </Section>
       )}
 
-      <TaskCalendar tasks={myTasks} />
-
-      <MoodWall tasks={myTasks} />
-
       {completed.length > 0 && (
         <Section title="Concluídas">
           {completed.map((t) => (
@@ -251,7 +258,13 @@ export default function MyDay() {
         </Section>
       )}
 
-      {showForm && <TaskForm userId={user.id} onClose={() => setShowForm(false)} />}
+      {showForm !== false && (
+        <TaskForm
+          userId={user.id}
+          initialBoardStatus={typeof showForm === 'string' ? showForm : undefined}
+          onClose={() => setShowForm(false)}
+        />
+      )}
       {listModal && (
         <TaskListModal
           title={listModal.title}
@@ -277,7 +290,7 @@ function Section({ title, icon, children }: { title: string; icon?: React.ReactN
 
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="sm:col-span-2 glass-panel rounded-2xl p-8 text-center">
+    <div className="glass-panel rounded-2xl p-8 text-center">
       <p className="text-zinc-400 light:text-zinc-600 text-sm">Nenhuma tarefa ativa. Planeje sua próxima execução.</p>
       <button onClick={onCreate} className="btn-secondary !w-auto px-4 mx-auto mt-4">
         <Plus size={15} /> Criar tarefa

@@ -85,6 +85,10 @@ create table if not exists public.tasks (
   macro_objective_id uuid not null references public.macro_objectives (id),
   title text not null,
   category text not null,
+  -- Bloco de observações livre da tarefa (links, menção a pessoas, contexto)
+  -- e observação opcional registrada no momento da conclusão.
+  description text,
+  completion_note text,
   deadline timestamptz not null,
   urgency text not null check (urgency in ('baixa', 'media', 'alta', 'critica')),
   complexity text not null default 'media' check (complexity in ('baixa', 'media', 'alta', 'critica')),
@@ -817,7 +821,13 @@ $$;
 -- isso funciona como a "aprovação" de quem está em Aguardando aprovação —
 -- só um admin da comunidade (ou admin da plataforma) consegue concluir a
 -- tarefa de outra pessoa.
-create or replace function public.complete_task(_task_id uuid, _minutes_spent integer default null, _order double precision default null)
+drop function if exists public.complete_task(uuid, integer, double precision);
+create or replace function public.complete_task(
+  _task_id uuid,
+  _minutes_spent integer default null,
+  _order double precision default null,
+  _completion_note text default null
+)
 returns void
 language plpgsql
 security definer
@@ -845,7 +855,8 @@ begin
     completed = true,
     completed_at = now(),
     board_order = coalesce(_order, board_order),
-    minutes_spent = coalesce(_minutes_spent, minutes_spent)
+    minutes_spent = coalesce(_minutes_spent, minutes_spent),
+    completion_note = coalesce(_completion_note, completion_note)
   where id = _task_id;
 end;
 $$;
@@ -1746,7 +1757,7 @@ grant execute on function public.assign_task(uuid, uuid) to authenticated;
 grant execute on function public.assign_subtask(uuid, uuid) to authenticated;
 grant execute on function public.set_task_blocked(uuid, boolean, text, double precision) to authenticated;
 grant execute on function public.set_task_board_status(uuid, text, double precision) to authenticated;
-grant execute on function public.complete_task(uuid, integer, double precision) to authenticated;
+grant execute on function public.complete_task(uuid, integer, double precision, text) to authenticated;
 grant execute on function public.reopen_task(uuid, double precision) to authenticated;
 grant execute on function public.soft_delete_task(uuid) to authenticated;
 grant execute on function public.restore_task(uuid) to authenticated;
@@ -1887,7 +1898,7 @@ create policy "tasks_update_own_or_community_admin" on public.tasks for update t
 
 revoke update on public.tasks from authenticated;
 grant update (
-  community_id, macro_objective_id, title, category, deadline, urgency, complexity,
+  community_id, macro_objective_id, title, category, description, deadline, urgency, complexity,
   started, started_at, completed, completed_at, minutes_spent, expired, scored,
   recurrence, blocked, blocked_reason, blocked_at, blocked_by, board_status, board_order,
   reminder_sent_at

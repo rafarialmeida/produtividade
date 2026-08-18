@@ -1,21 +1,26 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Clock, Loader2, X } from 'lucide-react'
+import { Clock, Loader2, StickyNote, X } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import type { Task } from '../types'
 
 export default function CompleteTaskModal({ task, onClose }: { task: Task; onClose: () => void }) {
   const completeTask = useAppStore((s) => s.completeTask)
+  const community = useAppStore((s) => (task.communityId ? s.getCommunityById(task.communityId) : undefined))
+  const isWorkCommunity = community?.type === 'trabalho'
   const hasSubtasks = task.subtasks.length > 0
   const [subtaskMinutes, setSubtaskMinutes] = useState<Record<string, string>>(
     Object.fromEntries(task.subtasks.map((s) => [s.id, ''])),
   )
   const [directMinutes, setDirectMinutes] = useState('')
+  const [note, setNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const isValid = hasSubtasks
-    ? task.subtasks.every((s) => subtaskMinutes[s.id].trim() !== '' && Number(subtaskMinutes[s.id]) >= 0)
-    : directMinutes.trim() !== '' && Number(directMinutes) >= 0
+  const isValid = !isWorkCommunity
+    ? true
+    : hasSubtasks
+      ? task.subtasks.every((s) => subtaskMinutes[s.id].trim() !== '' && Number(subtaskMinutes[s.id]) >= 0)
+      : directMinutes.trim() !== '' && Number(directMinutes) >= 0
 
   const totalMinutes = hasSubtasks
     ? task.subtasks.reduce((sum, s) => sum + (Number(subtaskMinutes[s.id]) || 0), 0)
@@ -25,11 +30,13 @@ export default function CompleteTaskModal({ task, onClose }: { task: Task; onClo
     if (!isValid || submitting) return
     setSubmitting(true)
     try {
-      if (hasSubtasks) {
+      if (isWorkCommunity && hasSubtasks) {
         const minutes = Object.fromEntries(task.subtasks.map((s) => [s.id, Number(subtaskMinutes[s.id])]))
-        await completeTask(task.id, { subtasks: minutes })
+        await completeTask(task.id, { subtasks: minutes, note })
+      } else if (isWorkCommunity) {
+        await completeTask(task.id, { direct: Number(directMinutes), note })
       } else {
-        await completeTask(task.id, { direct: Number(directMinutes) })
+        await completeTask(task.id, { note })
       }
       onClose()
     } finally {
@@ -51,43 +58,60 @@ export default function CompleteTaskModal({ task, onClose }: { task: Task; onClo
         </div>
 
         <div className="px-6 py-5 flex flex-col gap-4">
-          <p className="text-xs text-zinc-500">
-            Comunidades de trabalho pedem quanto tempo foi gasto antes de concluir, pra montar o relatório de horas da equipe.
-          </p>
+          {isWorkCommunity && (
+            <>
+              <p className="text-xs text-zinc-500">
+                Comunidades de trabalho pedem quanto tempo foi gasto antes de concluir, pra montar o relatório de horas da equipe.
+              </p>
 
-          {hasSubtasks ? (
-            <div className="flex flex-col gap-2.5">
-              {task.subtasks.map((s) => (
-                <div key={s.id} className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-300 light:text-zinc-700 flex-1 min-w-0 truncate">{s.text}</span>
+              {hasSubtasks ? (
+                <div className="flex flex-col gap-2.5">
+                  {task.subtasks.map((s) => (
+                    <div key={s.id} className="flex items-center gap-2">
+                      <span className="text-xs text-zinc-300 light:text-zinc-700 flex-1 min-w-0 truncate">{s.text}</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={subtaskMinutes[s.id]}
+                        onChange={(e) => setSubtaskMinutes((prev) => ({ ...prev, [s.id]: e.target.value }))}
+                        placeholder="min"
+                        className="input !w-20 !py-1 !text-xs shrink-0"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div>
+                  <label className="text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5 block">Minutos gastos</label>
                   <input
                     type="number"
                     min={0}
-                    value={subtaskMinutes[s.id]}
-                    onChange={(e) => setSubtaskMinutes((prev) => ({ ...prev, [s.id]: e.target.value }))}
-                    placeholder="min"
-                    className="input !w-20 !py-1 !text-xs shrink-0"
+                    value={directMinutes}
+                    onChange={(e) => setDirectMinutes(e.target.value)}
+                    placeholder="Ex.: 90 (1h30)"
+                    className="input"
                   />
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div>
-              <label className="text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5 block">Minutos gastos</label>
-              <input
-                type="number"
-                min={0}
-                value={directMinutes}
-                onChange={(e) => setDirectMinutes(e.target.value)}
-                placeholder="Ex.: 90 (1h30)"
-                className="input"
-              />
-            </div>
+              )}
+
+              <p className="text-[11px] text-zinc-500">
+                Total: {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}min
+              </p>
+            </>
           )}
 
-          <p className="text-[11px] text-zinc-500">
-            Total: {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}min
-          </p>
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
+              <StickyNote size={13} className="text-amber-400 light:text-amber-600" /> Observações (opcional)
+            </label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Como foi, resultado, o que ficou pendente..."
+              rows={3}
+              className="input !text-xs resize-none"
+            />
+          </div>
 
           <button onClick={handleConfirm} disabled={!isValid || submitting} className="btn-secondary disabled:opacity-50">
             {submitting ? <Loader2 size={14} className="animate-spin" /> : 'Concluir tarefa'}

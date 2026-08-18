@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { CalendarClock, ListChecks, Lock, Plus, Target } from 'lucide-react'
+import { CalendarClock, ListChecks, Lock, Plus, Target, User } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import type { BoardStatus, Task } from '../types'
 import { URGENCY_CONFIG } from '../utils/urgency'
+import { COMMUNITY_TYPE_CONFIG } from '../utils/communityType'
 import { formatRelative, isNearDeadline, isPastDeadline } from '../utils/date'
 import { KANBAN_COLUMNS as COLUMNS, resolveKanbanColumn as resolveColumn, type KanbanColumn } from '../utils/kanbanColumn'
 import BlockTaskModal from './BlockTaskModal'
@@ -11,17 +12,14 @@ import TaskDetailModal from './TaskDetailModal'
 
 const CREATABLE_STATUSES: BoardStatus[] = ['backlog', 'todo', 'in_progress', 'awaiting_approval']
 
-export default function CommunityKanbanBoard({
-  communityId,
+export default function MyKanbanBoard({
+  tasks,
   onNewTask,
 }: {
-  communityId: string
+  tasks: Task[]
   onNewTask: (initialStatus?: BoardStatus) => void
 }) {
-  const authUser = useAppStore((s) => s.authUser)
-  const community = useAppStore((s) => s.getCommunityById(communityId))
-  const users = useAppStore((s) => s.users)
-  const allTasks = useAppStore((s) => s.tasks)
+  const communities = useAppStore((s) => s.communities)
   const setTaskBoardStatus = useAppStore((s) => s.setTaskBoardStatus)
   const setTaskBlocked = useAppStore((s) => s.setTaskBlocked)
   const reopenTask = useAppStore((s) => s.reopenTask)
@@ -30,11 +28,6 @@ export default function CommunityKanbanBoard({
   const [blockingTask, setBlockingTask] = useState<Task | null>(null)
   const [completingTask, setCompletingTask] = useState<Task | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<KanbanColumn | null>(null)
-
-  const tasks = useMemo(() => allTasks.filter((t) => t.communityId === communityId), [allTasks, communityId])
-  const isCommunityAdmin = Boolean(
-    authUser && community && (authUser.role === 'admin' || community.adminIds.includes(authUser.id)),
-  )
 
   const byColumn = useMemo(() => {
     const map: Record<KanbanColumn, Task[]> = {
@@ -49,10 +42,6 @@ export default function CommunityKanbanBoard({
     for (const col of COLUMNS) map[col.key].sort((a, b) => a.boardOrder - b.boardOrder)
     return map
   }, [tasks])
-
-  function canMove(task: Task): boolean {
-    return Boolean(authUser && (task.userId === authUser.id || isCommunityAdmin))
-  }
 
   function orderBefore(column: KanbanColumn, draggedId: string, beforeTaskId: string | null): number {
     const columnTasks = byColumn[column].filter((t) => t.id !== draggedId)
@@ -107,7 +96,7 @@ export default function CommunityKanbanBoard({
       setDragOverColumn(null)
       const taskId = e.dataTransfer.getData('text/plain')
       const task = tasks.find((t) => t.id === taskId)
-      if (!task || !canMove(task)) return
+      if (!task) return
       await moveTask(task, column, orderBefore(column, taskId, null))
     }
   }
@@ -120,7 +109,7 @@ export default function CommunityKanbanBoard({
       const taskId = e.dataTransfer.getData('text/plain')
       if (taskId === beforeTaskId) return
       const task = tasks.find((t) => t.id === taskId)
-      if (!task || !canMove(task)) return
+      if (!task) return
       await moveTask(task, column, orderBefore(column, taskId, beforeTaskId))
     }
   }
@@ -128,9 +117,7 @@ export default function CommunityKanbanBoard({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <p className="text-[11px] text-zinc-500">
-          Arraste os cards entre as colunas. Só um admin da comunidade aprova (conclui) tarefa de outra pessoa.
-        </p>
+        <p className="text-[11px] text-zinc-500">Suas tarefas de todas as comunidades e pessoais, num quadro só. Arraste os cards entre as colunas.</p>
         <button onClick={() => onNewTask()} className="btn-secondary !w-auto px-3 shrink-0">
           <Plus size={14} /> Nova Tarefa
         </button>
@@ -180,8 +167,7 @@ export default function CommunityKanbanBoard({
                   <KanbanCard
                     key={t.id}
                     task={t}
-                    owner={users.find((u) => u.id === t.userId)}
-                    draggable={canMove(t)}
+                    community={t.communityId ? communities.find((c) => c.id === t.communityId) : undefined}
                     onClick={() => setSelectedTaskId(t.id)}
                     onDragStart={(e) => e.dataTransfer.setData('text/plain', t.id)}
                     onDragOver={(e) => {
@@ -206,22 +192,21 @@ export default function CommunityKanbanBoard({
 
 function KanbanCard({
   task,
-  owner,
-  draggable,
+  community,
   onClick,
   onDragStart,
   onDragOver,
   onDrop,
 }: {
   task: Task
-  owner?: { name: string }
-  draggable: boolean
+  community?: { type: 'trabalho' | 'competicao'; name: string }
   onClick: () => void
   onDragStart: (e: React.DragEvent) => void
   onDragOver: (e: React.DragEvent) => void
   onDrop: (e: React.DragEvent) => void
 }) {
   const cfg = URGENCY_CONFIG[task.urgency]
+  const communityTypeCfg = community ? COMMUNITY_TYPE_CONFIG[community.type] : null
   const doneCount = task.subtasks.filter((s) => s.done).length
   const overdue = !task.completed && isPastDeadline(task.deadline)
   const near = !task.completed && !overdue && isNearDeadline(task.deadline)
@@ -229,14 +214,12 @@ function KanbanCard({
   return (
     <button
       type="button"
-      draggable={draggable}
+      draggable
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDrop={onDrop}
       onClick={onClick}
-      className={`glass-panel rounded-xl p-3 text-left flex flex-col gap-1.5 border border-white/5 hover:border-purple-500/30 transition-colors ${
-        draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
-      }`}
+      className="glass-panel rounded-xl p-3 text-left flex flex-col gap-1.5 border border-white/5 hover:border-purple-500/30 transition-colors cursor-grab active:cursor-grabbing"
     >
       <div className="flex items-center gap-1.5">
         <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border ${cfg.bg} ${cfg.border} ${cfg.color}`}>
@@ -251,9 +234,10 @@ function KanbanCard({
         </p>
       )}
       <div className="flex items-center justify-between gap-2 mt-0.5">
-        {owner && (
-          <span className="text-[10px] text-zinc-500 truncate">{owner.name}</span>
-        )}
+        <span className={`flex items-center gap-1 text-[10px] truncate ${communityTypeCfg ? communityTypeCfg.color : 'text-zinc-500'}`}>
+          {communityTypeCfg ? <communityTypeCfg.icon size={10} className="shrink-0" /> : <User size={10} className="shrink-0" />}
+          {community?.name ?? 'Pessoal'}
+        </span>
         {task.subtasks.length > 0 && (
           <span className="flex items-center gap-1 text-[10px] text-zinc-500 shrink-0">
             <ListChecks size={10} /> {doneCount}/{task.subtasks.length}

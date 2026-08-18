@@ -194,6 +194,7 @@ export interface Task {
   macroObjective: string
   macroObjectiveDescription?: string
   title: string
+  description?: string
   category: string
   subtasks: SubTask[]
   deadline: string
@@ -203,6 +204,7 @@ export interface Task {
   startedAt?: string
   completed: boolean
   completedAt?: string
+  completionNote?: string
   minutesSpent?: number
   expired: boolean
   scored: boolean
