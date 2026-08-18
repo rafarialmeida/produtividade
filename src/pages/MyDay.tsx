@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Circle, ListFilter, Play, Plus, Podium, Tag, TrendingDown, UserCog, Users } from 'lucide-react'
+import { ChevronDown, Circle, ListFilter, Play, Plus, Podium, Tag, TrendingDown, UserCog, Users } from 'lucide-react'
 import { useAppStore } from '../store/useStore'
 import TaskForm from '../components/TaskForm'
 import TaskCard from '../components/TaskCard'
@@ -175,8 +175,6 @@ export default function MyDay() {
 
       <TaskCalendar tasks={myTasks} />
 
-      <MoodWall tasks={myTasks} />
-
       <div className="flex flex-wrap items-center gap-3">
         {availableCategories.length > 0 && (
           <div className="flex items-center gap-2">
@@ -217,7 +215,7 @@ export default function MyDay() {
       </div>
 
       {expired.length > 0 && (
-        <Section title="Expiradas — penalizadas" icon={<TrendingDown size={16} className="text-rose-400 light:text-rose-600" />}>
+        <Section title="Expiradas — penalizadas" icon={<TrendingDown size={16} className="text-rose-400 light:text-rose-600" />} count={expired.length}>
           {expired.map((t) => (
             <TaskCard key={t.id} task={t} showCommunity={multiCommunity} />
           ))}
@@ -225,7 +223,7 @@ export default function MyDay() {
       )}
 
       {assignedSubtaskTasks.length > 0 && (
-        <Section title="Subtarefas atribuídas a você" icon={<UserCog size={14} className="text-sky-300 light:text-sky-700" />}>
+        <Section title="Subtarefas atribuídas a você" icon={<UserCog size={14} className="text-sky-300 light:text-sky-700" />} count={assignedSubtaskTasks.length}>
           {assignedSubtaskTasks.map((t) => (
             <TaskCard key={t.id} task={t} showOwner showCommunity={multiCommunity} assignedSubtaskOnly />
           ))}
@@ -233,7 +231,7 @@ export default function MyDay() {
       )}
 
       {notStarted.length > 0 && (
-        <Section title="Não iniciadas" icon={<Circle size={14} className="text-zinc-400" />}>
+        <Section title="Não iniciadas" icon={<Circle size={14} className="text-zinc-400" />} count={notStarted.length}>
           {notStarted.map((t) => (
             <TaskCard key={t.id} task={t} showCommunity={multiCommunity} />
           ))}
@@ -241,7 +239,7 @@ export default function MyDay() {
       )}
 
       {inProgress.length > 0 && (
-        <Section title="Em andamento" icon={<Play size={14} className="text-sky-300 light:text-sky-700" />}>
+        <Section title="Em andamento" icon={<Play size={14} className="text-sky-300 light:text-sky-700" />} count={inProgress.length}>
           {inProgress.map((t) => (
             <TaskCard key={t.id} task={t} showCommunity={multiCommunity} />
           ))}
@@ -249,12 +247,14 @@ export default function MyDay() {
       )}
 
       {completed.length > 0 && (
-        <Section title="Concluídas">
+        <Section title="Concluídas" count={completed.length} defaultCollapsed>
           {completed.map((t) => (
             <TaskCard key={t.id} task={t} showCommunity={multiCommunity} />
           ))}
         </Section>
       )}
+
+      <MoodWall tasks={myTasks} />
 
       {showForm !== false && (
         <TaskForm
@@ -275,13 +275,32 @@ export default function MyDay() {
   )
 }
 
-function Section({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
+function Section({
+  title,
+  icon,
+  count,
+  defaultCollapsed = false,
+  children,
+}: {
+  title: string
+  icon?: React.ReactNode
+  count?: number
+  defaultCollapsed?: boolean
+  children: React.ReactNode
+}) {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed)
   return (
     <div>
-      <h2 className="flex items-center gap-1.5 text-sm font-semibold text-zinc-300 light:text-zinc-700 mb-3">
+      <button
+        type="button"
+        onClick={() => setCollapsed((c) => !c)}
+        className="flex items-center gap-1.5 text-sm font-semibold text-zinc-300 light:text-zinc-700 mb-3 w-full"
+      >
         {icon} {title}
-      </h2>
-      <div className="grid sm:grid-cols-2 gap-3">{children}</div>
+        {count !== undefined && <span className="text-xs font-normal text-zinc-500 tabular-nums">({count})</span>}
+        <ChevronDown size={15} className={`text-zinc-500 ml-auto transition-transform ${collapsed ? '-rotate-90' : ''}`} />
+      </button>
+      {!collapsed && <div className="grid sm:grid-cols-2 gap-3">{children}</div>}
     </div>
   )
 }
