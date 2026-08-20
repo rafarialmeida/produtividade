@@ -239,7 +239,6 @@ export default function TaskForm({
   const [notScored, setNotScored] = useState(task ? !task.scored : false)
   const [title, setTitle] = useState(task?.title ?? '')
   const [description, setDescription] = useState(task?.description ?? '')
-  const [showDescription, setShowDescription] = useState(Boolean(task?.description))
   const [category, setCategory] = useState(task?.category ?? CATEGORY_PRESETS[0])
   const [categories, setCategories] = useState(availableCategories)
   const [addingCategory, setAddingCategory] = useState(false)
@@ -727,27 +726,19 @@ export default function TaskForm({
               placeholder="Ex.: Finalizar landing page de vendas"
               className="input"
             />
-            {showDescription ? (
-              <div className="flex items-start gap-2 mt-2">
-                <StickyNote size={12} className="text-zinc-600 shrink-0 mt-2" />
-                <textarea
-                  autoFocus={!description}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Observações (opcional) — links, pessoas, mais contexto..."
-                  rows={3}
-                  className="input !text-xs flex-1 resize-none"
-                />
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowDescription(true)}
-                className="flex items-center gap-1 text-[11px] text-zinc-500 hover:text-emerald-300 light:hover:text-emerald-600 mt-1.5"
-              >
-                <StickyNote size={12} /> Adicionar observações
-              </button>
-            )}
+          </div>
+
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
+              <StickyNote size={13} className="text-emerald-400 light:text-emerald-600" /> Descrição (opcional)
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Detalhes, links, pessoas envolvidas, contexto..."
+              rows={4}
+              className="input !text-sm resize-none"
+            />
           </div>
 
           {canAssignAtCreation && (

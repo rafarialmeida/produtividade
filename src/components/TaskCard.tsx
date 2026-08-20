@@ -125,7 +125,7 @@ export default function TaskCard({
               <button
                 type="button"
                 onClick={() => setViewingNote({ title: task.title, text: task.description! })}
-                title="Ver observações da tarefa"
+                title="Ver descrição da tarefa"
                 className="text-zinc-600 hover:text-amber-400 light:hover:text-amber-600 shrink-0"
               >
                 <StickyNote size={12} />
