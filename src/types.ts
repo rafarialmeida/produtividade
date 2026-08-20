@@ -229,3 +229,22 @@ export interface Notification {
   createdAt: string
   read: boolean
 }
+
+export interface TaskComment {
+  id: string
+  taskId: string
+  userId: string
+  text: string
+  createdAt: string
+}
+
+export type TaskEventType = 'created' | 'completed' | 'reopened' | 'blocked' | 'unblocked' | 'assigned'
+
+export interface TaskEvent {
+  id: string
+  taskId: string
+  userId?: string
+  type: TaskEventType
+  metadata?: { assigneeId?: string; reason?: string }
+  createdAt: string
+}

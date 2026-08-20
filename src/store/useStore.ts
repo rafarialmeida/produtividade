@@ -18,6 +18,9 @@ import type {
   Severity,
   SubTask,
   Task,
+  TaskComment,
+  TaskEvent,
+  TaskEventType,
   User,
 } from '../types'
 import { URGENCY_POINTS } from '../types'
@@ -192,6 +195,9 @@ interface State {
   assignSubtask: (subtaskId: string, assigneeId: string | null) => Promise<string | null>
   setTaskBlocked: (taskId: string, blocked: boolean, reason?: string, order?: number) => Promise<string | null>
   setTaskBoardStatus: (taskId: string, status: BoardStatus, order?: number) => Promise<string | null>
+  fetchTaskActivity: (taskId: string) => Promise<{ comments: TaskComment[]; events: TaskEvent[] }>
+  addTaskComment: (taskId: string, text: string) => Promise<string | null>
+  deleteTaskComment: (commentId: string) => Promise<string | null>
 
   // notifications
   markNotificationRead: (id: string) => Promise<void>
@@ -306,6 +312,33 @@ function mapNotification(row: Record<string, unknown>): Notification {
     bugReportId: (row.bug_report_id as string | null) ?? undefined,
     createdAt: row.created_at as string,
     read: row.read as boolean,
+  }
+}
+
+function mapTaskComment(row: Record<string, unknown>): TaskComment {
+  return {
+    id: row.id as string,
+    taskId: row.task_id as string,
+    userId: row.user_id as string,
+    text: row.text as string,
+    createdAt: row.created_at as string,
+  }
+}
+
+function mapTaskEvent(row: Record<string, unknown>): TaskEvent {
+  const metadata = row.metadata as Record<string, unknown> | null
+  return {
+    id: row.id as string,
+    taskId: row.task_id as string,
+    userId: (row.user_id as string | null) ?? undefined,
+    type: row.event_type as TaskEventType,
+    metadata: metadata
+      ? {
+          assigneeId: (metadata.assignee_id as string | undefined) ?? undefined,
+          reason: (metadata.reason as string | undefined) ?? undefined,
+        }
+      : undefined,
+    createdAt: row.created_at as string,
   }
 }
 
@@ -746,6 +779,7 @@ export const useAppStore = create<State>()((set, get) => ({
       )
       if (subtaskError) return { error: subtaskError.message, taskId: null }
     }
+    await supabase.from('task_events').insert({ task_id: task.id, user_id: userId, event_type: 'created' })
     await get().refreshAll()
     return { error: null, taskId: task.id as string }
   },
@@ -898,6 +932,33 @@ export const useAppStore = create<State>()((set, get) => ({
     })
     if (error) return error.message
     await get().refreshAll()
+    return null
+  },
+
+  fetchTaskActivity: async (taskId) => {
+    const [commentsRes, eventsRes] = await Promise.all([
+      supabase.from('task_comments').select('*').eq('task_id', taskId).order('created_at', { ascending: true }),
+      supabase.from('task_events').select('*').eq('task_id', taskId).order('created_at', { ascending: true }),
+    ])
+    return {
+      comments: (commentsRes.data ?? []).map(mapTaskComment),
+      events: (eventsRes.data ?? []).map(mapTaskEvent),
+    }
+  },
+
+  addTaskComment: async (taskId, text) => {
+    const authUser = get().authUser
+    if (!authUser) return 'Não autenticado.'
+    const trimmed = text.trim()
+    if (!trimmed) return null
+    const { error } = await supabase.from('task_comments').insert({ task_id: taskId, user_id: authUser.id, text: trimmed })
+    if (error) return error.message
+    return null
+  },
+
+  deleteTaskComment: async (commentId) => {
+    const { error } = await supabase.from('task_comments').delete().eq('id', commentId)
+    if (error) return error.message
     return null
   },
 

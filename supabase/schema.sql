@@ -128,6 +128,32 @@ create table if not exists public.subtasks (
   note text
 );
 
+-- Comentários numa tarefa — visíveis pra quem já vê a tarefa (dono, membro
+-- da comunidade, ou admin da plataforma).
+create table if not exists public.task_comments (
+  id uuid primary key default gen_random_uuid(),
+  task_id uuid not null references public.tasks (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  text text not null,
+  created_at timestamptz not null default now()
+);
+
+-- Histórico de eventos de uma tarefa ("fulano criou", "fulano concluiu"...)
+-- pra montar a linha do tempo junto com os comentários. Só as funções de
+-- tarefa (security definer) escrevem aqui, exceto 'created', que o próprio
+-- cliente registra ao criar a tarefa (ver política task_events_insert_created_own).
+create table if not exists public.task_events (
+  id uuid primary key default gen_random_uuid(),
+  task_id uuid not null references public.tasks (id) on delete cascade,
+  user_id uuid references public.profiles (id) on delete set null,
+  event_type text not null check (event_type in ('created', 'completed', 'reopened', 'blocked', 'unblocked', 'assigned')),
+  metadata jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists task_comments_task_id_idx on public.task_comments (task_id);
+create index if not exists task_events_task_id_idx on public.task_events (task_id);
+
 create table if not exists public.notifications (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles (id) on delete cascade,
@@ -691,6 +717,9 @@ begin
   end if;
 
   update public.tasks set user_id = _assignee_id where id = _task_id;
+
+  insert into public.task_events (task_id, user_id, event_type, metadata)
+  values (_task_id, auth.uid(), 'assigned', jsonb_build_object('assignee_id', _assignee_id));
 end;
 $$;
 
@@ -768,6 +797,9 @@ begin
     blocked_by = case when _blocked then auth.uid() else null end,
     board_order = coalesce(_order, board_order)
   where id = _task_id;
+
+  insert into public.task_events (task_id, user_id, event_type, metadata)
+  values (_task_id, auth.uid(), case when _blocked then 'blocked' else 'unblocked' end, jsonb_build_object('reason', _reason));
 end;
 $$;
 
@@ -858,6 +890,9 @@ begin
     minutes_spent = coalesce(_minutes_spent, minutes_spent),
     completion_note = coalesce(_completion_note, completion_note)
   where id = _task_id;
+
+  insert into public.task_events (task_id, user_id, event_type)
+  values (_task_id, auth.uid(), 'completed');
 end;
 $$;
 
@@ -897,6 +932,9 @@ begin
     board_status = 'in_progress',
     board_order = coalesce(_order, board_order)
   where id = _task_id;
+
+  insert into public.task_events (task_id, user_id, event_type)
+  values (_task_id, auth.uid(), 'reopened');
 end;
 $$;
 
@@ -1793,6 +1831,8 @@ alter table public.community_join_requests enable row level security;
 alter table public.macro_objectives enable row level security;
 alter table public.tasks enable row level security;
 alter table public.subtasks enable row level security;
+alter table public.task_comments enable row level security;
+alter table public.task_events enable row level security;
 alter table public.notifications enable row level security;
 alter table public.push_subscriptions enable row level security;
 alter table public.bug_reports enable row level security;
@@ -1967,6 +2007,64 @@ create policy "subtasks_delete_owner_or_admin" on public.subtasks for delete to 
 
 revoke update on public.subtasks from authenticated;
 grant update (text, done, position, due_date, minutes_spent, note) on public.subtasks to authenticated;
+
+-- task_comments: visibilidade segue a da tarefa. Inserir exige poder ver a
+-- tarefa e comentar em nome de si mesmo. Excluir só o próprio comentário
+-- (ou admin da plataforma) — sem update (comentário não é editável).
+drop policy if exists "task_comments_select" on public.task_comments;
+create policy "task_comments_select" on public.task_comments for select to authenticated
+  using (exists (
+    select 1 from public.tasks t
+    where t.id = task_comments.task_id
+      and (
+        t.user_id = auth.uid()
+        or (t.community_id is not null and public.is_community_member(t.community_id))
+        or public.is_admin()
+      )
+  ));
+
+drop policy if exists "task_comments_insert" on public.task_comments;
+create policy "task_comments_insert" on public.task_comments for insert to authenticated
+  with check (
+    user_id = auth.uid()
+    and exists (
+      select 1 from public.tasks t
+      where t.id = task_comments.task_id
+        and (
+          t.user_id = auth.uid()
+          or (t.community_id is not null and public.is_community_member(t.community_id))
+          or public.is_admin()
+        )
+    )
+  );
+
+drop policy if exists "task_comments_delete_own" on public.task_comments;
+create policy "task_comments_delete_own" on public.task_comments for delete to authenticated
+  using (user_id = auth.uid() or public.is_admin());
+
+-- task_events: só leitura direta pro cliente (mesma visibilidade da
+-- tarefa). Toda escrita é feita pelas funções de tarefa (security definer),
+-- exceto 'created', que o próprio cliente registra ao criar a tarefa — só
+-- consegue logar esse tipo, e só pra tarefa que é dona.
+drop policy if exists "task_events_select" on public.task_events;
+create policy "task_events_select" on public.task_events for select to authenticated
+  using (exists (
+    select 1 from public.tasks t
+    where t.id = task_events.task_id
+      and (
+        t.user_id = auth.uid()
+        or (t.community_id is not null and public.is_community_member(t.community_id))
+        or public.is_admin()
+      )
+  ));
+
+drop policy if exists "task_events_insert_created_own" on public.task_events;
+create policy "task_events_insert_created_own" on public.task_events for insert to authenticated
+  with check (
+    event_type = 'created'
+    and user_id = auth.uid()
+    and exists (select 1 from public.tasks t where t.id = task_events.task_id and t.user_id = auth.uid())
+  );
 
 -- notifications: cada um só vê e mexe nas próprias.
 drop policy if exists "notifications_select_own" on public.notifications;
