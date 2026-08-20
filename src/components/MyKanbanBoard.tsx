@@ -137,12 +137,7 @@ export default function MyKanbanBoard({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[11px] text-zinc-500">Suas tarefas de todas as comunidades e pessoais, num quadro só. Arraste os cards entre as colunas.</p>
-        <button onClick={() => onNewTask()} className="btn-secondary !w-auto px-3 shrink-0">
-          <Plus size={14} /> Nova Tarefa
-        </button>
-      </div>
+      <p className="text-[11px] text-zinc-500">Suas tarefas de todas as comunidades e pessoais, num quadro só. Arraste os cards entre as colunas.</p>
 
       {(availableCommunities.length > 0 || hasPersonalTasks) && (
         <div className="flex flex-wrap items-center gap-3">
