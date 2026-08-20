@@ -115,7 +115,7 @@ function MacroEditForm({
           if (e.key === 'Escape') onCancel()
         }}
         disabled={saving}
-        placeholder={placeholder ?? 'Título do objetivo'}
+        placeholder={placeholder ?? 'Título da frente'}
         className="text-xs px-2 py-1.5 rounded-lg border border-white/10 bg-transparent text-white outline-none light:text-zinc-900 disabled:opacity-50"
       />
       {showDesc ? (
@@ -394,7 +394,7 @@ export default function TaskForm({
 
   async function handleDeleteMacro(id: string, title: string) {
     if (deletingMacroId) return
-    if (!window.confirm(`Excluir o objetivo macro "${title}"? Essa ação não pode ser desfeita.`)) return
+    if (!window.confirm(`Excluir a frente "${title}"? Essa ação não pode ser desfeita.`)) return
     setDeletingMacroId(id)
     const error = await deleteMacroObjective(id)
     setDeletingMacroId(null)
@@ -555,7 +555,7 @@ export default function TaskForm({
 
           <div>
             <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 light:text-zinc-600 mb-1.5">
-              <Target size={13} className="text-purple-400 light:text-purple-600" /> Objetivo Macro
+              <Target size={13} className="text-purple-400 light:text-purple-600" /> Frente de Trabalho
             </label>
             <div className="flex flex-wrap gap-1.5 items-center">
               {!showMacroList &&
@@ -588,7 +588,7 @@ export default function TaskForm({
                           <button
                             type="button"
                             onClick={() => setViewingMacroDescription({ title: m.title, text: m.description! })}
-                            title="Ver descrição do objetivo"
+                            title="Ver descrição da frente"
                             className="p-1.5 rounded-lg text-zinc-500 hover:text-amber-300 light:hover:text-amber-600 hover:bg-amber-500/10 transition-colors"
                           >
                             <StickyNote size={12} />
@@ -597,7 +597,7 @@ export default function TaskForm({
                         <button
                           type="button"
                           onClick={() => startEditMacro(m.id, m.title, m.description)}
-                          title="Editar objetivo macro"
+                          title="Editar frente"
                           className="p-1.5 rounded-lg text-zinc-500 hover:text-purple-300 light:hover:text-purple-600 hover:bg-purple-500/10 transition-colors"
                         >
                           <Pencil size={12} />
@@ -606,7 +606,7 @@ export default function TaskForm({
                           type="button"
                           onClick={() => handleDeleteMacro(m.id, m.title)}
                           disabled={deletingMacroId === m.id}
-                          title="Excluir objetivo macro"
+                          title="Excluir frente"
                           className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 light:hover:text-rose-600 hover:bg-rose-500/10 transition-colors disabled:opacity-50"
                         >
                           <Trash2 size={12} />
@@ -633,14 +633,14 @@ export default function TaskForm({
                   onClick={() => setAddingMacro(true)}
                   className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-dashed border-white/15 text-zinc-500 hover:text-purple-300 light:hover:text-purple-600 hover:border-purple-500/40 transition-colors light:border-black/15"
                 >
-                  <Plus size={12} /> Novo objetivo
+                  <Plus size={12} /> Nova frente
                 </button>
               )}
               {scopedMacroObjectives.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setShowMacroList((v) => !v)}
-                  title={showMacroList ? 'Ocultar objetivos já criados' : 'Ver todos os objetivos já criados'}
+                  title={showMacroList ? 'Ocultar frentes já criadas' : 'Ver todas as frentes já criadas'}
                   className="p-1.5 rounded-lg border border-white/10 text-zinc-500 hover:text-purple-300 light:hover:text-purple-600 hover:border-purple-500/40 transition-colors light:border-black/15"
                 >
                   <ChevronDown size={14} className={`transition-transform ${showMacroList ? 'rotate-180' : ''}`} />
@@ -684,7 +684,7 @@ export default function TaskForm({
                         <button
                           type="button"
                           onClick={() => setViewingMacroDescription({ title: m.title, text: m.description! })}
-                          title="Ver descrição do objetivo"
+                          title="Ver descrição da frente"
                           className="p-2 text-zinc-500 hover:text-amber-300 light:hover:text-amber-600 transition-colors"
                         >
                           <StickyNote size={13} />
@@ -693,7 +693,7 @@ export default function TaskForm({
                       <button
                         type="button"
                         onClick={() => startEditMacro(m.id, m.title, m.description)}
-                        title="Editar objetivo macro"
+                        title="Editar frente"
                         className="p-2 text-zinc-500 hover:text-purple-300 light:hover:text-purple-600 transition-colors"
                       >
                         <Pencil size={13} />
@@ -702,7 +702,7 @@ export default function TaskForm({
                         type="button"
                         onClick={() => handleDeleteMacro(m.id, m.title)}
                         disabled={deletingMacroId === m.id}
-                        title="Excluir objetivo macro"
+                        title="Excluir frente"
                         className="p-2 text-zinc-500 hover:text-rose-400 light:hover:text-rose-600 transition-colors disabled:opacity-50"
                       >
                         <Trash2 size={13} />
@@ -714,7 +714,7 @@ export default function TaskForm({
             )}
             {macroDeleteError && <p className="text-[11px] text-rose-400 light:text-rose-600 mt-1.5">{macroDeleteError}</p>}
             {scopedMacroObjectives.length === 0 && !addingMacro && (
-              <p className="text-[11px] text-zinc-500 mt-1.5">Nenhum objetivo macro ainda — crie um pra vincular essa tarefa.</p>
+              <p className="text-[11px] text-zinc-500 mt-1.5">Nenhuma frente ainda — crie uma pra vincular essa tarefa.</p>
             )}
           </div>
 
@@ -1152,7 +1152,7 @@ export default function TaskForm({
           )}
           {!isValid && (
             <p className="text-[11px] text-center text-zinc-600 -mt-2">
-              Preencha comunidade, objetivo, título, categoria, ao menos uma subtarefa e um prazo futuro para liberar o salvamento.
+              Preencha comunidade, frente, título, categoria, ao menos uma subtarefa e um prazo futuro para liberar o salvamento.
             </p>
           )}
         </form>

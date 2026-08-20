@@ -738,7 +738,7 @@ export const useAppStore = create<State>()((set, get) => ({
   deleteMacroObjective: async (id) => {
     const { error } = await supabase.from('macro_objectives').delete().eq('id', id)
     if (error) {
-      if (error.code === '23503') return 'Esse objetivo já tem tarefas vinculadas — mude ou apague as tarefas antes de excluí-lo.'
+      if (error.code === '23503') return 'Essa frente já tem tarefas vinculadas — mude ou apague as tarefas antes de excluí-la.'
       return error.message
     }
     await get().refreshAll()
