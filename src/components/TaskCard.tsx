@@ -106,22 +106,14 @@ export default function TaskCard({
     <div className={`glass-panel rounded-2xl p-5 border ${statusStyles[cardStatus]}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          {task.macroObjectiveDescription ? (
-            <button
-              type="button"
-              onClick={() => setViewingNote({ title: task.macroObjective, text: task.macroObjectiveDescription! })}
-              title="Ver descrição do objetivo"
-              className="flex items-center gap-1.5 text-[11px] text-purple-300/80 hover:text-purple-200 light:text-purple-600/80 light:hover:text-purple-700 mb-1.5 transition-colors"
-            >
-              <Target size={11} className="shrink-0" />
-              <span className="truncate">{task.macroObjective}</span>
-              <StickyNote size={10} className="shrink-0" />
-            </button>
-          ) : (
-            <div className="flex items-center gap-1.5 text-[11px] text-purple-300/80 light:text-purple-600/80 mb-1.5">
-              <Target size={11} />
-              <span className="truncate">{task.macroObjective}</span>
-            </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-purple-300/80 light:text-purple-600/80 mb-1.5">
+            <Target size={11} className="shrink-0" />
+            <span className="truncate">{task.macroObjective}</span>
+          </div>
+          {task.macroObjectiveDescription && (
+            <p className="text-[11px] text-purple-300/60 light:text-purple-600/60 mb-1.5 whitespace-pre-wrap break-words">
+              {task.macroObjectiveDescription}
+            </p>
           )}
           <h3 className={`font-semibold text-white light:text-zinc-900 ${task.completed ? 'line-through decoration-zinc-600' : ''}`}>
             {task.title}
