@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Lock,
   Loader2,
   MessageSquare,
@@ -62,15 +64,18 @@ export default function TaskActivityFeed({ taskId }: { taskId: string }) {
   const addTaskComment = useAppStore((s) => s.addTaskComment)
   const deleteTaskComment = useAppStore((s) => s.deleteTaskComment)
 
+  const [open, setOpen] = useState(false)
   const [comments, setComments] = useState<TaskComment[]>([])
   const [events, setEvents] = useState<TaskEvent[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [loaded, setLoaded] = useState(false)
   const [newComment, setNewComment] = useState('')
   const [posting, setPosting] = useState(false)
   const [postError, setPostError] = useState<string | null>(null)
   const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
+    if (!open || loaded) return
     let cancelled = false
     setLoading(true)
     fetchTaskActivity(taskId).then((data) => {
@@ -79,11 +84,12 @@ export default function TaskActivityFeed({ taskId }: { taskId: string }) {
       setEvents(data.events)
       setLoadError(Boolean(data.error))
       setLoading(false)
+      setLoaded(true)
     })
     return () => {
       cancelled = true
     }
-  }, [taskId, fetchTaskActivity])
+  }, [open, loaded, taskId, fetchTaskActivity])
 
   async function handlePost() {
     const trimmed = newComment.trim()
@@ -116,97 +122,109 @@ export default function TaskActivityFeed({ taskId }: { taskId: string }) {
     ...events.map((e): FeedItem => ({ key: `e-${e.id}`, createdAt: e.createdAt, kind: 'event', event: e })),
   ].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
+  const count = loaded ? comments.length + events.length : null
+
   return (
     <div className="flex flex-col gap-3">
-      <h4 className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300 light:text-zinc-700">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300 hover:text-white light:text-zinc-700 light:hover:text-zinc-900 transition-colors"
+      >
+        {open ? <ChevronDown size={13} className="text-zinc-500" /> : <ChevronRight size={13} className="text-zinc-500" />}
         <MessageSquare size={13} className="text-purple-400 light:text-purple-600" /> Comentário
-      </h4>
+        {count != null && count > 0 && <span className="text-zinc-500 font-normal">({count})</span>}
+      </button>
 
-      <div className="flex items-start gap-2">
-        <textarea
-          value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-              e.preventDefault()
-              handlePost()
-            }
-          }}
-          placeholder="Escrever um comentário..."
-          rows={2}
-          disabled={posting}
-          className="input !text-xs flex-1 resize-none disabled:opacity-50"
-        />
-        <button
-          type="button"
-          onClick={handlePost}
-          disabled={!newComment.trim() || posting}
-          title="Comentar"
-          className="p-2 rounded-lg bg-purple-500/15 text-purple-300 light:text-purple-600 border border-purple-500/30 hover:bg-purple-500/25 disabled:opacity-30 transition-colors shrink-0"
-        >
-          {posting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-        </button>
-      </div>
+      {open && (
+        <>
+          <div className="flex items-start gap-2">
+            <textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                  e.preventDefault()
+                  handlePost()
+                }
+              }}
+              placeholder="Escrever um comentário..."
+              rows={2}
+              disabled={posting}
+              className="input !text-xs flex-1 resize-none disabled:opacity-50"
+            />
+            <button
+              type="button"
+              onClick={handlePost}
+              disabled={!newComment.trim() || posting}
+              title="Comentar"
+              className="p-2 rounded-lg bg-purple-500/15 text-purple-300 light:text-purple-600 border border-purple-500/30 hover:bg-purple-500/25 disabled:opacity-30 transition-colors shrink-0"
+            >
+              {posting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+            </button>
+          </div>
 
-      {postError && (
-        <p className="flex items-center gap-1.5 text-xs text-rose-400 light:text-rose-600">
-          <AlertTriangle size={12} className="shrink-0" /> Não foi possível enviar: {postError}
-        </p>
-      )}
+          {postError && (
+            <p className="flex items-center gap-1.5 text-xs text-rose-400 light:text-rose-600">
+              <AlertTriangle size={12} className="shrink-0" /> Não foi possível enviar: {postError}
+            </p>
+          )}
 
-      {loading ? (
-        <p className="text-xs text-zinc-500 flex items-center gap-1.5">
-          <Loader2 size={12} className="animate-spin" /> Carregando atividade...
-        </p>
-      ) : loadError ? (
-        <p className="flex items-center gap-1.5 text-xs text-rose-400 light:text-rose-600">
-          <AlertTriangle size={12} className="shrink-0" /> Não foi possível carregar a atividade. Tente recarregar a página em instantes.
-        </p>
-      ) : feed.length === 0 ? (
-        <p className="text-xs text-zinc-500">Nenhuma atividade ainda.</p>
-      ) : (
-        <div className="flex flex-col gap-2.5">
-          {feed.map((item) => {
-            if (item.kind === 'comment') {
-              const author = getUserById(item.comment.userId)
-              const isOwn = item.comment.userId === authUser?.id
-              return (
-                <div key={item.key} className="flex items-start gap-2 rounded-xl border border-white/5 bg-white/[0.02] p-2.5 light:border-black/5 light:bg-black/[0.015]">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] text-zinc-400 light:text-zinc-600">
-                      <span className="font-medium text-zinc-300 light:text-zinc-700">{author?.name ?? 'Alguém'}</span>{' '}
-                      <span title={formatDeadline(item.comment.createdAt)}>{formatRelative(item.comment.createdAt)}</span>
-                    </p>
-                    <p className="text-xs text-zinc-300 light:text-zinc-700 whitespace-pre-wrap break-words mt-0.5">{item.comment.text}</p>
+          {loading ? (
+            <p className="text-xs text-zinc-500 flex items-center gap-1.5">
+              <Loader2 size={12} className="animate-spin" /> Carregando atividade...
+            </p>
+          ) : loadError ? (
+            <p className="flex items-center gap-1.5 text-xs text-rose-400 light:text-rose-600">
+              <AlertTriangle size={12} className="shrink-0" /> Não foi possível carregar a atividade. Tente recarregar a página em instantes.
+            </p>
+          ) : feed.length === 0 ? (
+            <p className="text-xs text-zinc-500">Nenhuma atividade ainda.</p>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {feed.map((item) => {
+                if (item.kind === 'comment') {
+                  const author = getUserById(item.comment.userId)
+                  const isOwn = item.comment.userId === authUser?.id
+                  return (
+                    <div key={item.key} className="flex items-start gap-2 rounded-xl border border-white/5 bg-white/[0.02] p-2.5 light:border-black/5 light:bg-black/[0.015]">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] text-zinc-400 light:text-zinc-600">
+                          <span className="font-medium text-zinc-300 light:text-zinc-700">{author?.name ?? 'Alguém'}</span>{' '}
+                          <span title={formatDeadline(item.comment.createdAt)}>{formatRelative(item.comment.createdAt)}</span>
+                        </p>
+                        <p className="text-xs text-zinc-300 light:text-zinc-700 whitespace-pre-wrap break-words mt-0.5">{item.comment.text}</p>
+                      </div>
+                      {isOwn && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteComment(item.comment.id)}
+                          title="Excluir comentário"
+                          className="p-1 rounded text-zinc-600 hover:text-rose-400 light:hover:text-rose-600 shrink-0"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  )
+                }
+
+                const actor = item.event.userId ? getUserById(item.event.userId) : undefined
+                const assignee = item.event.metadata?.assigneeId ? getUserById(item.event.metadata.assigneeId) : undefined
+                const Icon = eventIcon(item.event.type)
+                return (
+                  <div key={item.key} className="flex items-center gap-2 text-[11px] text-zinc-500 px-0.5">
+                    <Icon size={12} className="shrink-0 text-zinc-600" />
+                    <span className="min-w-0 truncate">{eventSentence(item.event, actor?.name ?? 'Alguém', assignee?.name)}</span>
+                    <span className="shrink-0" title={formatDeadline(item.event.createdAt)}>
+                      · {formatRelative(item.event.createdAt)}
+                    </span>
                   </div>
-                  {isOwn && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteComment(item.comment.id)}
-                      title="Excluir comentário"
-                      className="p-1 rounded text-zinc-600 hover:text-rose-400 light:hover:text-rose-600 shrink-0"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  )}
-                </div>
-              )
-            }
-
-            const actor = item.event.userId ? getUserById(item.event.userId) : undefined
-            const assignee = item.event.metadata?.assigneeId ? getUserById(item.event.metadata.assigneeId) : undefined
-            const Icon = eventIcon(item.event.type)
-            return (
-              <div key={item.key} className="flex items-center gap-2 text-[11px] text-zinc-500 px-0.5">
-                <Icon size={12} className="shrink-0 text-zinc-600" />
-                <span className="min-w-0 truncate">{eventSentence(item.event, actor?.name ?? 'Alguém', assignee?.name)}</span>
-                <span className="shrink-0" title={formatDeadline(item.event.createdAt)}>
-                  · {formatRelative(item.event.createdAt)}
-                </span>
-              </div>
-            )
-          })}
-        </div>
+                )
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

@@ -118,16 +118,6 @@ export default function TaskCard({
           <h3 className={`font-semibold text-white light:text-zinc-900 ${task.completed ? 'line-through decoration-zinc-600' : ''}`}>
             {task.title}
           </h3>
-          {task.description && (
-            <div className="mt-2">
-              <p className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-400 light:text-zinc-600 mb-1">
-                <StickyNote size={12} className="text-emerald-400 light:text-emerald-600" /> Descrição
-              </p>
-              <p className="text-xs text-zinc-300 light:text-zinc-700 whitespace-pre-wrap break-words rounded-xl bg-white/5 border border-white/10 px-3 py-2 light:bg-black/[0.03] light:border-black/10">
-                {task.description}
-              </p>
-            </div>
-          )}
           <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
             <span className="inline-flex items-center gap-1 text-[10px] font-medium text-zinc-400 bg-white/5 border border-white/10 rounded px-1.5 py-0.5 light:text-zinc-600 light:bg-black/[0.03] light:border-black/10">
               <Tag size={9} /> {task.category}
