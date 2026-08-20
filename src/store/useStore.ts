@@ -195,7 +195,7 @@ interface State {
   assignSubtask: (subtaskId: string, assigneeId: string | null) => Promise<string | null>
   setTaskBlocked: (taskId: string, blocked: boolean, reason?: string, order?: number) => Promise<string | null>
   setTaskBoardStatus: (taskId: string, status: BoardStatus, order?: number) => Promise<string | null>
-  fetchTaskActivity: (taskId: string) => Promise<{ comments: TaskComment[]; events: TaskEvent[] }>
+  fetchTaskActivity: (taskId: string) => Promise<{ comments: TaskComment[]; events: TaskEvent[]; error: string | null }>
   addTaskComment: (taskId: string, text: string) => Promise<string | null>
   deleteTaskComment: (commentId: string) => Promise<string | null>
 
@@ -943,6 +943,7 @@ export const useAppStore = create<State>()((set, get) => ({
     return {
       comments: (commentsRes.data ?? []).map(mapTaskComment),
       events: (eventsRes.data ?? []).map(mapTaskEvent),
+      error: commentsRes.error?.message ?? eventsRes.error?.message ?? null,
     }
   },
 

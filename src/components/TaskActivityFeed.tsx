@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  AlertTriangle,
   CheckCircle2,
   Lock,
   Loader2,
@@ -66,6 +67,8 @@ export default function TaskActivityFeed({ taskId }: { taskId: string }) {
   const [loading, setLoading] = useState(true)
   const [newComment, setNewComment] = useState('')
   const [posting, setPosting] = useState(false)
+  const [postError, setPostError] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -74,6 +77,7 @@ export default function TaskActivityFeed({ taskId }: { taskId: string }) {
       if (cancelled) return
       setComments(data.comments)
       setEvents(data.events)
+      setLoadError(Boolean(data.error))
       setLoading(false)
     })
     return () => {
@@ -85,13 +89,17 @@ export default function TaskActivityFeed({ taskId }: { taskId: string }) {
     const trimmed = newComment.trim()
     if (!trimmed || posting) return
     setPosting(true)
+    setPostError(null)
     try {
       const error = await addTaskComment(taskId, trimmed)
-      if (!error) {
+      if (error) {
+        setPostError(error)
+      } else {
         setNewComment('')
         const data = await fetchTaskActivity(taskId)
         setComments(data.comments)
         setEvents(data.events)
+        setLoadError(Boolean(data.error))
       }
     } finally {
       setPosting(false)
@@ -140,9 +148,19 @@ export default function TaskActivityFeed({ taskId }: { taskId: string }) {
         </button>
       </div>
 
+      {postError && (
+        <p className="flex items-center gap-1.5 text-xs text-rose-400 light:text-rose-600">
+          <AlertTriangle size={12} className="shrink-0" /> Não foi possível enviar: {postError}
+        </p>
+      )}
+
       {loading ? (
         <p className="text-xs text-zinc-500 flex items-center gap-1.5">
           <Loader2 size={12} className="animate-spin" /> Carregando atividade...
+        </p>
+      ) : loadError ? (
+        <p className="flex items-center gap-1.5 text-xs text-rose-400 light:text-rose-600">
+          <AlertTriangle size={12} className="shrink-0" /> Não foi possível carregar a atividade. Tente recarregar a página em instantes.
         </p>
       ) : feed.length === 0 ? (
         <p className="text-xs text-zinc-500">Nenhuma atividade ainda.</p>
