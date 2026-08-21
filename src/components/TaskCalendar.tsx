@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CalendarDays, ChevronLeft, ChevronRight, Users2, ListFilter, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, Users2, ListFilter, CheckCircle2 } from 'lucide-react'
 import type { Task } from '../types'
 import { useAppStore } from '../store/useStore'
 import { URGENCY_CONFIG } from '../utils/urgency'
@@ -67,6 +67,7 @@ export default function TaskCalendar({ tasks }: { tasks: Task[] }) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [completingTask, setCompletingTask] = useState<Task | null>(null)
   const [dragOverKey, setDragOverKey] = useState<string | null>(null)
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null)
   const [personFilter, setPersonFilter] = useState('me')
   const [communityFilter, setCommunityFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<'all' | KanbanColumn>('all')
@@ -119,14 +120,16 @@ export default function TaskCalendar({ tasks }: { tasks: Task[] }) {
     return tasksByDay.get(dayKey(date)) ?? []
   }
 
-  function handleDrop(e: React.DragEvent, targetDate: Date) {
+  async function handleDrop(e: React.DragEvent, targetDate: Date) {
     e.preventDefault()
     setDragOverKey(null)
     const taskId = e.dataTransfer.getData('text/plain')
     const task = filtered.find((t) => t.id === taskId)
     if (!task) return
     const newDeadline = withNewDate(new Date(task.deadline), targetDate)
-    rescheduleTask(task.id, newDeadline.toISOString())
+    setRescheduleError(null)
+    const error = await rescheduleTask(task.id, newDeadline.toISOString())
+    if (error) setRescheduleError(error)
   }
 
   const monthLabel = cursor.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
@@ -198,6 +201,12 @@ export default function TaskCalendar({ tasks }: { tasks: Task[] }) {
               ))}
             </select>
           </div>
+        </div>
+      )}
+
+      {rescheduleError && (
+        <div className="flex items-center gap-2 px-6 py-2 text-xs text-rose-400 light:text-rose-600 bg-rose-500/[0.06] border-b border-rose-500/20">
+          <AlertTriangle size={13} className="shrink-0" /> Não foi possível mover a tarefa: {rescheduleError}
         </div>
       )}
 

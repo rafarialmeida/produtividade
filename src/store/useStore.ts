@@ -189,7 +189,7 @@ interface State {
   restoreTask: (taskId: string) => Promise<void>
   permanentlyDeleteTask: (taskId: string) => Promise<void>
   fetchTrash: () => Promise<void>
-  rescheduleTask: (taskId: string, deadline: string) => Promise<void>
+  rescheduleTask: (taskId: string, deadline: string) => Promise<string | null>
   checkExpirations: () => Promise<void>
   assignTask: (taskId: string, assigneeId: string) => Promise<string | null>
   assignSubtask: (subtaskId: string, assigneeId: string | null) => Promise<string | null>
@@ -1042,8 +1042,10 @@ export const useAppStore = create<State>()((set, get) => ({
   },
 
   rescheduleTask: async (taskId, deadline) => {
-    await supabase.from('tasks').update({ deadline, reminder_sent_at: null, expired: false }).eq('id', taskId)
+    const { error } = await supabase.from('tasks').update({ deadline, reminder_sent_at: null, expired: false }).eq('id', taskId)
+    if (error) return error.message
     await get().refreshAll()
+    return null
   },
 
   checkExpirations: async () => {
